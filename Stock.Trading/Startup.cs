@@ -14,6 +14,7 @@ using Stock.Trading.Service;
 using Swashbuckle.AspNetCore.Swagger;
 using System.IO;
 using System.Linq;
+using FluentValidation.AspNetCore;
 
 namespace Stock.Trading
 {
@@ -68,7 +69,9 @@ namespace Stock.Trading
             
             // lowercase routing
             services.AddRouting(options => options.LowercaseUrls = true);
-            services.AddMvc();
+            services.AddMvc()
+            .AddFluentValidation(fvc =>
+                fvc.RegisterValidatorsFromAssemblyContaining<Startup>());
 
             var basePath = PlatformServices.Default.Application.ApplicationBasePath;
 
