@@ -16,7 +16,7 @@ namespace MatchingEngine.Validators
             RuleFor(request => request.OrderDateUtc).NotEmpty();
             RuleFor(request => request.UserId).NotEmpty();
             RuleFor(request => request.CurrencyPariId).NotEmpty();
-            RuleFor(request => request.UserId).NotEmpty();
+           
         }
     }
 }
