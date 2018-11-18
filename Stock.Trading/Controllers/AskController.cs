@@ -50,6 +50,9 @@ namespace Stock.Trading.Controllers
         [HttpPost]
         public async Task<IActionResult> Post([FromBody]AddRequest request)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             var newId = await _service.CreateAsk(request);
 
             return Ok(new CreateOrderResult { Id = newId});
