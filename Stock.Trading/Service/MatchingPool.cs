@@ -31,6 +31,7 @@ namespace Stock.Trading.Service
 
         private readonly MarketDataService _marketDataService;
         private readonly BrokerageService _brokerageService;
+        private readonly DealEndingService _dealEndingService;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ILogger _logger;
         private readonly OrdersMatcher _ordersMatcher;
@@ -41,22 +42,25 @@ namespace Stock.Trading.Service
         /// </summary>
         /// <param name="marketDataService"></param>
         /// <param name="brokerageService"></param>
+        /// <param name="dealEndingService"></param>
         /// <param name="logger"></param>
         /// <param name="ordersMatcher"></param>
         /// <param name="serviceScopeFactory"></param>
         public MatchingPool(
             MarketDataService marketDataService,
             BrokerageService brokerageService,
+            DealEndingService dealEndingService,
             ILogger<MatchingPool> logger,
             OrdersMatcher ordersMatcher,
             IServiceScopeFactory serviceScopeFactory, MarketDataHolder marketDataHolder)
         {
             _serviceScopeFactory = serviceScopeFactory;
             _marketDataHolder = marketDataHolder;
+            _brokerageService = brokerageService;
+            _dealEndingService = dealEndingService;
             _logger = logger;
             _ordersMatcher = ordersMatcher;
             _marketDataService = marketDataService;
-            _brokerageService = brokerageService;
 
             LoadOrders();
         }
@@ -275,7 +279,7 @@ namespace Stock.Trading.Service
                 foreach (var item in matcher.Deals)
                 {
                     var dbDeal = dbDeals[item.DealId];
-                    var t1 = Task.Run(async () => { await SendDealToBrokerage(item); });
+                    var t1 = Task.Run(async () => { await SendDealToDealEnding(item); });
                     var t2 = Task.Run(async () => { await SendFeedToMarketData(item); });
                     var t3 = Task.Run(async () => { await SendDealToMarketData(dbDeal); });
 
@@ -475,11 +479,11 @@ namespace Stock.Trading.Service
             }
         }
 
-        private async Task SendDealToBrokerage(MDeal deal)
+        private async Task SendDealToDealEnding(MDeal deal)
         {
             try
             {
-                await _brokerageService.ExecuteDeal(deal.DealId);
+                await _dealEndingService.SendDeal(deal.DealId);
             }
             catch (Exception ex)
             {

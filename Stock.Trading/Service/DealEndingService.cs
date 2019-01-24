@@ -8,19 +8,18 @@ using Stock.Trading.Models;
 
 namespace Stock.Trading.Service
 {
-    public class BrokerageService
+    public class DealEndingService
     {
         private readonly GatewayHttpClient _gatewayHttpClient;
 
-        public BrokerageService(GatewayHttpClient gatewayHttpClient)
+        public DealEndingService(GatewayHttpClient gatewayHttpClient)
         {
             _gatewayHttpClient = gatewayHttpClient;
         }
 
-        public async Task CloseOrder(MOrder order)
+        public async Task SendDeal(Guid dealId)
         {
-            await _gatewayHttpClient.PutAsync($"brokerage/{(order.IsBid ? "tradingaddbid" : "tradingaddask")}/{order.Id}/{order.UserId}/{order.CurrencyPairId}",
-                null);
+            await _gatewayHttpClient.PostJsonAsync($"dealending/deal/{dealId}", null);
         }
     }
 }
