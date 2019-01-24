@@ -46,6 +46,7 @@ namespace Stock.Trading
 
             services.AddTransient<MarketDataService>();
             services.AddTransient<BrokerageService>();
+            services.AddTransient<DealEndingService>();
             services.AddTransient<TradingService>();
 
             services.AddScoped<IDbInitializer, DbInitializer>();
@@ -76,11 +77,11 @@ namespace Stock.Trading
             var basePath = PlatformServices.Default.Application.ApplicationBasePath;
 
             //Set the comments path for the swagger json and ui.
-            var xmlPath = Path.Combine(basePath, "Stock.Trading.xml");
+            var xmlPath = Path.Combine(basePath, "MatchingEngine.xml");
 
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new Info { Title = "Transactions", Version = "v1" });
+                c.SwaggerDoc("v1", new Info { Title = "MatchingEngine", Version = "v1" });
                 c.IncludeXmlComments(xmlPath);
             });
         }
@@ -101,7 +102,7 @@ namespace Stock.Trading
 
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Trading V1");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "MatchingEngine V1");
             });
 
             app.UseMvc();
