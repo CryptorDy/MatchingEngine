@@ -45,7 +45,6 @@ namespace Stock.Trading
                 options.UseNpgsql(Configuration["ConnectionStrings:DefaultConnection"]));
 
             services.AddTransient<MarketDataService>();
-            services.AddTransient<BrokerageService>();
             services.AddTransient<DealEndingService>();
             services.AddTransient<TradingService>();
 
@@ -67,7 +66,7 @@ namespace Stock.Trading
 
             services.Configure<AppSettings>(Configuration);
             services.Configure<AppSettings>(settings => settings.ConnectionString = Configuration.GetSection("ConnectionStrings:DefaultConnection").Value);
-            
+
             // lowercase routing
             services.AddRouting(options => options.LowercaseUrls = true);
             services.AddMvc()
@@ -96,7 +95,6 @@ namespace Stock.Trading
                 app.UseDeveloperExceptionPage();
                 app.UseDatabaseErrorPage();
             }
-
 
             app.UseSwagger();
 

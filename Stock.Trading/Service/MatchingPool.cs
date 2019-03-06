@@ -30,7 +30,6 @@ namespace Stock.Trading.Service
         private readonly List<MOrder> _orders = new List<MOrder>();
 
         private readonly MarketDataService _marketDataService;
-        private readonly BrokerageService _brokerageService;
         private readonly DealEndingService _dealEndingService;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ILogger _logger;
@@ -41,14 +40,12 @@ namespace Stock.Trading.Service
         /// DI constructor
         /// </summary>
         /// <param name="marketDataService"></param>
-        /// <param name="brokerageService"></param>
         /// <param name="dealEndingService"></param>
         /// <param name="logger"></param>
         /// <param name="ordersMatcher"></param>
         /// <param name="serviceScopeFactory"></param>
         public MatchingPool(
             MarketDataService marketDataService,
-            BrokerageService brokerageService,
             DealEndingService dealEndingService,
             ILogger<MatchingPool> logger,
             OrdersMatcher ordersMatcher,
@@ -56,7 +53,6 @@ namespace Stock.Trading.Service
         {
             _serviceScopeFactory = serviceScopeFactory;
             _marketDataHolder = marketDataHolder;
-            _brokerageService = brokerageService;
             _dealEndingService = dealEndingService;
             _logger = logger;
             _ordersMatcher = ordersMatcher;
@@ -65,7 +61,7 @@ namespace Stock.Trading.Service
             LoadOrders();
         }
 
-        MBid GetMBid(Bid bid)
+        private MBid GetMBid(Bid bid)
         {
             return new MBid()
             {
@@ -81,7 +77,8 @@ namespace Stock.Trading.Service
                 Status = MStatus.Active
             };
         }
-        MAsk GetMAsk(Ask ask)
+
+        private MAsk GetMAsk(Ask ask)
         {
             return new MAsk()
             {
@@ -137,7 +134,8 @@ namespace Stock.Trading.Service
         public CurrencyPairPrices GetCurrencyPairPrices(string currencyPairCode)
         {
             var orders = _orders.Where(_ => _.Status == MStatus.Active && _.CurrencyPairId == currencyPairCode && !_.FromInnerTradingBot).ToList();
-            return new CurrencyPairPrices {
+            return new CurrencyPairPrices
+            {
                 CurrencyPair = currencyPairCode,
                 BidMax = orders.Where(_ => _.CurrencyPairId == currencyPairCode && _.IsBid).Select(_ => _.Price).DefaultIfEmpty().Max(),
                 AskMin = _orders.Where(_ => _.CurrencyPairId == currencyPairCode && !_.IsBid).Select(_ => _.Price).DefaultIfEmpty().Min(),
@@ -287,23 +285,13 @@ namespace Stock.Trading.Service
                     await t2;
                     await t3;
                 }
-
-                if (matcher.CompletedOrders.Count > 0)
-                {
-                    foreach (var item in matcher.CompletedOrders)
-                    {
-                        if (item is MBid)
-                        {
-                            await SendCompletedOrderToBrokerage(item);
-                        }
-                    }
-                }
             }
             catch (Exception ex)
             {
                 _logger.LogError("0", ex);
             }
         }
+
         public async Task<SaveExternalOrderResult> UpdateExternalOrder(ExternalCreatedOrder createdOrder)
         {
             var deals = new List<MDeal>();
@@ -348,7 +336,8 @@ namespace Stock.Trading.Service
                 {
                     if (createdOrder.IsBid)
                     {
-                        newAsk = new MAsk {
+                        newAsk = new MAsk
+                        {
                             Id = newExternalOrderId,
                             IsBid = ask.IsBid,
                             Created = ask.Created,
@@ -364,7 +353,8 @@ namespace Stock.Trading.Service
                     }
                     else
                     {
-                        newBid = new MBid {
+                        newBid = new MBid
+                        {
                             Id = newExternalOrderId,
                             IsBid = bid.IsBid,
                             Created = bid.Created,
@@ -453,15 +443,16 @@ namespace Stock.Trading.Service
                     }
                 }
                 await ReportData(db, result);
-                return new SaveExternalOrderResult {
+                return new SaveExternalOrderResult
+                {
                     NewExternalOrderId = deals.Count > 0 ? newExternalOrderId.ToString() : null,
                     CreatedDealId = resultDealId?.ToString() ?? null
                 };
             }
         }
+
         private async Task SendOrdersToMarketData()
         {
-
             try
             {
                 List<MOrder> activeOrders;
@@ -488,18 +479,6 @@ namespace Stock.Trading.Service
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while sending deal to brokerage");
-            }
-        }
-
-        private async Task SendCompletedOrderToBrokerage(MOrder order)
-        {
-            try
-            {
-                await _brokerageService.CloseOrder(order);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error while sending completed order to brokerage");
             }
         }
 
@@ -560,7 +539,7 @@ namespace Stock.Trading.Service
                 lock (_orders) //no access to pool (for removing) while matching is performed
                 {
                     DateTime start = DateTime.Now;
-                    var matchingOrders = _orders.Where(o => o.CurrencyPairId == newOrder.CurrencyPairId 
+                    var matchingOrders = _orders.Where(o => o.CurrencyPairId == newOrder.CurrencyPairId
                         && o.FromInnerTradingBot == newOrder.FromInnerTradingBot).ToList();
                     result = _ordersMatcher.Match(matchingOrders, newOrder);
                     UpdateDatabase(db, result);
@@ -598,6 +577,7 @@ namespace Stock.Trading.Service
             }
             await SendOrdersToMarketData();
         }
+
         public async Task RemoveOrders(int exchangeId, string currencyPairId)
         {
             lock (_orders)
@@ -606,6 +586,7 @@ namespace Stock.Trading.Service
             }
             await SendOrdersToMarketData();
         }
+
         public async Task RemoveOldInnerBotOrders()
         {
             lock (_orders)
@@ -629,8 +610,8 @@ namespace Stock.Trading.Service
                     _orders.Remove(order);
             }
             await SendOrdersToMarketData();
-
         }
+
         /// <summary>
         /// only for updating orders from other exchanges
         /// </summary>
