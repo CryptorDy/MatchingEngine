@@ -1,8 +1,7 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Stock.Trading.Data.Entities;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Stock.Trading.Data
 {
@@ -44,6 +43,7 @@ namespace Stock.Trading.Data
     public interface IDbInitializer
     {
         void Seed();
+
         void Init();
     }
 }

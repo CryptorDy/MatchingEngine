@@ -1,6 +1,6 @@
-using System.Collections.Generic;
 using Stock.Trading.Models;
 using Stock.Trading.Service;
+using System.Collections.Generic;
 using Xunit;
 
 namespace Stock.Trading.Tests

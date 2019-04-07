@@ -26,8 +26,6 @@ namespace Stock.Trading
                 {
                     dbInitializer.Seed();
                 }
-
-
             }
 
             var matchingPool = host.Services.GetService<MatchingPoolAccessor>().MatchingPool;

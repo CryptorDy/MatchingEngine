@@ -1,8 +1,8 @@
-using System;
-using System.Net.Http;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
+using System;
+using System.Net.Http;
 
 namespace Stock.Trading.Integration.Tests
 {

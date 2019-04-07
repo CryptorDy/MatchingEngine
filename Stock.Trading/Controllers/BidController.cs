@@ -50,7 +50,7 @@ namespace Stock.Trading.Controllers
         {
             var newId = await _service.CreateBid(request);
 
-            return Ok(new CreateOrderResult { Id = newId});
+            return Ok(new CreateOrderResult { Id = newId });
         }
 
         /*

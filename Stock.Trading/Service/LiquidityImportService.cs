@@ -1,10 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Stock.Trading.HttpClients;
 using Stock.Trading.Models.LiquidityImport;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Stock.Trading.Service
@@ -12,6 +9,7 @@ namespace Stock.Trading.Service
     public interface ILiquidityImportService
     {
         Task CreateTrade(ExternalMatchingPair matchingPair);
+
         Task RemoveOrderbook(Exchange exchange, string currencyPairCode);
     }
 

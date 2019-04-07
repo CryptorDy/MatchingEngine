@@ -57,7 +57,7 @@ namespace Stock.Trading.Service
                     .Include(o => o.OrderType)
                     .Include(o => o.DealList)
                     .SingleOrDefaultAsync(_ => _.Id == Guid.Parse(id));
-                foreach(var deal in result.DealList)
+                foreach (var deal in result.DealList)
                 {
                     deal.Ask = null;
                     deal.Bid = null;
@@ -199,8 +199,6 @@ namespace Stock.Trading.Service
             return new BidResponse();
         }
 
-
-
         public async Task<List<Deal>> GetDeals(string currencyPairId, int? lastNum, string userId, DateTime? sinceDate = null)
         {
             try
@@ -218,7 +216,7 @@ namespace Stock.Trading.Service
                 if (lastNum.HasValue)
                     allDeals = allDeals.Take(lastNum.Value).ToList();
 
-                foreach(var deal in allDeals) // remove circular dependency
+                foreach (var deal in allDeals) // remove circular dependency
                 {
                     if (deal.Bid != null)
                         deal.Bid.DealList = null;
@@ -269,7 +267,8 @@ namespace Stock.Trading.Service
                     return new DealResponse();
                 }
 
-                return new DealResponse {
+                return new DealResponse
+                {
                     DealId = deal.DealId,
                     DealDateUtc = deal.DealDateUtc,
                     Price = deal.Price,
@@ -285,11 +284,13 @@ namespace Stock.Trading.Service
             }
             return new DealResponse();
         }
-        #endregion
+
+        #endregion GET-requests
 
         public async Task<Guid> CreateAsk(AddRequest request)
         {
-            var ask = new Ask {
+            var ask = new Ask
+            {
                 Id = Guid.NewGuid(),
                 Volume = request.Amount,
                 Price = request.Price,
@@ -307,7 +308,8 @@ namespace Stock.Trading.Service
                 await _context.SaveChangesAsync();
             }
 
-            MAsk ma = new MAsk() {
+            MAsk ma = new MAsk()
+            {
                 Id = ask.Id,
                 UserId = ask.UserId,
                 Volume = ask.Volume,
@@ -350,7 +352,8 @@ namespace Stock.Trading.Service
 
         public async Task<Guid> CreateBid(AddRequest request)
         {
-            var bid = new Bid {
+            var bid = new Bid
+            {
                 Id = Guid.NewGuid(),
                 Volume = request.Amount,
                 Price = request.Price,
@@ -361,14 +364,15 @@ namespace Stock.Trading.Service
                 FromInnerTradingBot = request.FromInnerTradingBot,
                 OrderTypeCode = OrderType.Active.Code
             };
-            
+
             if (!bid.FromInnerTradingBot)
             {
                 _context.Bids.Add(bid);
                 await _context.SaveChangesAsync();
             }
 
-            MBid mb = new MBid() {
+            MBid mb = new MBid()
+            {
                 Id = bid.Id,
                 UserId = bid.UserId,
                 Volume = bid.Volume,

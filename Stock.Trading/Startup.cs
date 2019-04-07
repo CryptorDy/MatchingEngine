@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -12,8 +12,6 @@ using Stock.Trading.HttpClients;
 using Stock.Trading.Service;
 using Swashbuckle.AspNetCore.Swagger;
 using System.IO;
-using System.Linq;
-using FluentValidation.AspNetCore;
 
 namespace Stock.Trading
 {

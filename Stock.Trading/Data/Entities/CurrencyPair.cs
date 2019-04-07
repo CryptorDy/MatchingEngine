@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace Stock.Trading.Data
 {
@@ -9,7 +9,7 @@ namespace Stock.Trading.Data
     {
         [Key]
         public string Code { get; set; }
-        
+
         /// <summary>
         /// Is currency pair halted
         /// </summary>

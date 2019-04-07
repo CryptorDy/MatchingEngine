@@ -1,6 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
-using System;
-using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Stock.Trading.Migrations
 {

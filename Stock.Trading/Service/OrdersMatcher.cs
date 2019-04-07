@@ -1,9 +1,8 @@
+using Stock.Trading.Models;
+using Stock.Trading.Models.LiquidityImport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Stock.Trading.Models;
-using Stock.Trading.Models.LiquidityImport;
 
 namespace Stock.Trading.Service
 {
@@ -63,11 +62,10 @@ namespace Stock.Trading.Service
                     {
                         _liquidityImportService.CreateTrade(new ExternalMatchingPair { Bid = newOrder, Ask = ask });
                     }
-                    
+
                     modified = true;
                     newOrder.Fulfilled += fulfilmentAmount;
                     ask.Fulfilled += fulfilmentAmount;
-                    
 
                     if (ask.Fulfilled == ask.Volume)
                     {
@@ -96,7 +94,7 @@ namespace Stock.Trading.Service
             }
             else
             {
-                var bids = pool.Where(o => o is MBid && o.Price >= newOrder.Price && (newOrder.ExchangeId == 0 || o.ExchangeId == 0) 
+                var bids = pool.Where(o => o is MBid && o.Price >= newOrder.Price && (newOrder.ExchangeId == 0 || o.ExchangeId == 0)
                     && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
                     .OrderByDescending(o => o.Price).Cast<MBid>().ToList();
                 for (int i = 0; i < bids.Count; i++)
@@ -125,8 +123,6 @@ namespace Stock.Trading.Service
                     modified = true;
                     newOrder.Fulfilled += fulfilmentAmount;
                     bid.Fulfilled += fulfilmentAmount;
-
-                    
 
                     if (bid.Fulfilled == bid.Volume)
                     {

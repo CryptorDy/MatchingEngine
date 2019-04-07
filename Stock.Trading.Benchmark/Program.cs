@@ -1,16 +1,14 @@
+using Stock.Trading.Models;
+using Stock.Trading.Service;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using Stock.Trading.Models;
-using Stock.Trading.Service;
 
 namespace Stock.Trading.Benchmark
 {
-    class Program
+    internal class Program
     {
-
-        static void TestDeals(int ordersCount = 100)
+        private static void TestDeals(int ordersCount = 100)
         {
             Console.WriteLine($"test {ordersCount} orders start");
             List<MOrder> orders = new List<MOrder>();
@@ -52,7 +50,8 @@ namespace Stock.Trading.Benchmark
             Console.WriteLine($"test {ordersCount} was orders done in {watch.ElapsedMilliseconds} ms. {deals} was created");
             Console.WriteLine("-----------------------------------");
         }
-        static void Main(string[] args)
+
+        private static void Main(string[] args)
         {
             TestDeals();
             TestDeals(1000);

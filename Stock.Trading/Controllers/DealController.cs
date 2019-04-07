@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Stock.Trading.Entities;
-using Stock.Trading.Requests;
 using Stock.Trading.Responses;
 using Stock.Trading.Service;
 using System;

@@ -1,17 +1,13 @@
-﻿using Microsoft.Extensions.Logging;
-using Stock.Trading.Data;
-using Stock.Trading.Entities;
+using Microsoft.Extensions.Logging;
 using Stock.Trading.HttpClients;
 using Stock.Trading.Models;
 using Stock.Trading.Responses;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Stock.Trading.Service
 {
-    public class MarketDataService 
+    public class MarketDataService
     {
         private readonly GatewayHttpClient _gatewayHttpClient;
         private readonly ILogger _logger;

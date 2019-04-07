@@ -1,9 +1,4 @@
 using Microsoft.Extensions.Options;
-using Stock.Trading.Models;
-using System;
-using System.Globalization;
-using System.Net.Http;
-using System.Threading.Tasks;
 
 namespace Stock.Trading.HttpClients
 {

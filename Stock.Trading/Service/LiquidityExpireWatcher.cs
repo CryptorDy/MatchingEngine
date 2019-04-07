@@ -1,10 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stock.Trading.Models.LiquidityImport;
-using Stock.Trading.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,7 +21,7 @@ namespace Stock.Trading.Service
         private List<CurrencyPairExpiration> CurrencyPairExpirations = new List<CurrencyPairExpiration>();
 
         public LiquidityExpireWatcher(
-            IServiceScopeFactory scopeFactory, 
+            IServiceScopeFactory scopeFactory,
             ILiquidityImportService liquidityImportService,
             IOptions<AppSettings> settings,
             ILogger<LiquidityExpireWatcher> logger)
@@ -58,7 +55,8 @@ namespace Stock.Trading.Service
                     .FirstOrDefault(_ => (int)_.Exchange == exchangeId && _.CurrencyPairCode == currencyPairCode);
                 if (expiration == null)
                 {
-                    CurrencyPairExpirations.Add(new CurrencyPairExpiration {
+                    CurrencyPairExpirations.Add(new CurrencyPairExpiration
+                    {
                         Exchange = (Exchange)exchangeId,
                         CurrencyPairCode = currencyPairCode,
                         ExpirationDate = newExpirationDate
@@ -71,7 +69,7 @@ namespace Stock.Trading.Service
             }
         }
 
-        async Task CheckExpirationDates()
+        private async Task CheckExpirationDates()
         {
             lock (CurrencyPairExpirations)
             {
@@ -88,7 +86,7 @@ namespace Stock.Trading.Service
             }
         }
 
-        async Task DeleteTradingOrders(int exchangeId, string currencyPairCode)
+        private async Task DeleteTradingOrders(int exchangeId, string currencyPairCode)
         {
             await _matchingPool.RemoveOrders(exchangeId, currencyPairCode);
         }

@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Stock.Trading.Data.Entities;
 using Stock.Trading.Entities;
-using Stock.Trading.Models;
 
 namespace Stock.Trading.Data
 {

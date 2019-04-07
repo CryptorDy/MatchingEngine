@@ -1,5 +1,4 @@
-﻿using Stock.Trading.Data.Entities;
-using Stock.Trading.Models;
+using Stock.Trading.Data.Entities;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;

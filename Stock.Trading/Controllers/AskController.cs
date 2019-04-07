@@ -3,7 +3,6 @@ using Stock.Trading.Entities;
 using Stock.Trading.Requests;
 using Stock.Trading.Responses;
 using Stock.Trading.Service;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -55,7 +54,7 @@ namespace Stock.Trading.Controllers
 
             var newId = await _service.CreateAsk(request);
 
-            return Ok(new CreateOrderResult { Id = newId});
+            return Ok(new CreateOrderResult { Id = newId });
         }
 
         /// <summary>

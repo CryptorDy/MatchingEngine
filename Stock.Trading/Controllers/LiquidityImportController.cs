@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -13,6 +8,11 @@ using Stock.Trading.Models;
 using Stock.Trading.Models.LiquidityImport;
 using Stock.Trading.Requests;
 using Stock.Trading.Service;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace Stock.Trading.Controllers
 {
@@ -25,7 +25,7 @@ namespace Stock.Trading.Controllers
         private readonly LiquidityExpireWatcher _liquidityExpireWatcher;
         private readonly ILogger _logger;
 
-        public LiquidityImportController(TradingDbContext context, 
+        public LiquidityImportController(TradingDbContext context,
             TradingService tradingService,
             MatchingPoolAccessor matchingPoolAccessor,
             LiquidityExpireWatcherAccessor liquidityExpireWatcherAccessor,
@@ -56,7 +56,7 @@ namespace Stock.Trading.Controllers
                 if (orderDb.ExchangeId == 0)
                     return StatusCode((int)HttpStatusCode.MethodNotAllowed);
                 if (orderDb.Fulfilled > order.Amount)
-                    order.Amount = orderDb.Fulfilled; 
+                    order.Amount = orderDb.Fulfilled;
                 orderDb.Volume = order.Amount;
             }
             else
@@ -75,6 +75,7 @@ namespace Stock.Trading.Controllers
             await _context.SaveChangesAsync();
             return Ok();
         }
+
         [HttpPut("orders/update")]
         public async Task<IActionResult> UpdateOrders([FromBody]IEnumerable<AddRequestLiquidity> orders)
         {
@@ -122,7 +123,6 @@ namespace Stock.Trading.Controllers
                 Console.WriteLine(e);
                 throw;
             }
-           
 
             return Ok();
         }
@@ -145,8 +145,9 @@ namespace Stock.Trading.Controllers
             //await _context.SaveChangesAsync();
             return Ok();
         }
+
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="orders"></param>
         /// <returns></returns>
@@ -166,7 +167,7 @@ namespace Stock.Trading.Controllers
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="orders"></param>
         /// <returns></returns>

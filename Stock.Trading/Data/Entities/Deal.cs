@@ -1,4 +1,3 @@
-﻿using Stock.Trading.Entities;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -51,7 +50,7 @@ namespace Stock.Trading.Entities
         /// <summary>
         /// Bid id
         /// </summary>
-        public Guid BidId{get; set; }
+        public Guid BidId { get; set; }
 
         /// <summary>
         /// Bid

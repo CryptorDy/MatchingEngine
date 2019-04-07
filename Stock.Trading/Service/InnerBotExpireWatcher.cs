@@ -1,13 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Stock.Trading.Models.LiquidityImport;
-using Stock.Trading.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,7 +14,7 @@ namespace Stock.Trading.Service
         private readonly ILogger _logger;
 
         public InnerBotExpireWatcher(
-            IServiceScopeFactory scopeFactory, 
+            IServiceScopeFactory scopeFactory,
             IOptions<AppSettings> settings,
             ILogger<LiquidityExpireWatcher> logger)
         {

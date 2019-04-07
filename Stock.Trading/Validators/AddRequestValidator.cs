@@ -1,9 +1,5 @@
 using FluentValidation;
 using Stock.Trading.Requests;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace MatchingEngine.Validators
 {
@@ -16,7 +12,6 @@ namespace MatchingEngine.Validators
             RuleFor(request => request.OrderDateUtc).NotEmpty();
             RuleFor(request => request.UserId).NotEmpty();
             RuleFor(request => request.CurrencyPariId).NotEmpty();
-           
         }
     }
 }

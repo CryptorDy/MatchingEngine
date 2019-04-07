@@ -1,23 +1,21 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stock.Trading.Data;
 using Stock.Trading.Data.Entities;
 using Stock.Trading.Entities;
 using Stock.Trading.Models;
+using Stock.Trading.Models.InnerTradingBot;
+using Stock.Trading.Models.LiquidityImport;
+using Stock.Trading.Requests;
 using Stock.Trading.Responses;
+using Stock.Trading.Services;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Stock.Trading.HttpClients;
-using Stock.Trading.Models.LiquidityImport;
-using Stock.Trading.Services;
-using Stock.Trading.Requests;
-using Stock.Trading.Models.InnerTradingBot;
 
 namespace Stock.Trading.Service
 {
