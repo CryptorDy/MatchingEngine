@@ -7,7 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.PlatformAbstractions;
-using Stock.Shared;
 using Stock.Trading.Data;
 using Stock.Trading.HttpClients;
 using Stock.Trading.Service;
@@ -88,8 +87,6 @@ namespace Stock.Trading
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, Microsoft.AspNetCore.Hosting.IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
-            loggerFactory.AddStockLogger(new StockLoggerConfiguration() { Application = "Trading", LogService = Configuration["LogServiceUrl"], LogLevel = LogLevel.Debug });
-
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
