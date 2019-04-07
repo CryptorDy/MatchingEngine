@@ -25,17 +25,7 @@ namespace Stock.Trading.Service
             _marketDataHolder = marketDataHolder;
             _gatewayHttpClient = gatewayHttpClient;
         }
-        public async Task NotifyOrders()
-        {
-            try
-            {
-                await _gatewayHttpClient.PostAsync("webapp/trades/notify-update/mainorders", null);
-            }
-            catch (Exception e)
-            {
-                _logger.LogInformation(e, "error during notify about new orders");
-            }
-        }
+
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
@@ -46,7 +36,6 @@ namespace Stock.Trading.Service
                     {
                         await _marketDataService.SendOrders(_marketDataHolder.GetOrders());
                         _marketDataHolder.SendComplete();
-                        await NotifyOrders();
                     }
                     else
                     {
