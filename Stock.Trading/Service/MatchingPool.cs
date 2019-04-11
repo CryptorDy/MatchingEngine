@@ -457,7 +457,7 @@ namespace Stock.Trading.Service
                 lock (_orders)
                 {
                     //.Where(_ => _.Status == MStatus.Active)
-                    activeOrders = _orders.ToList();
+                    activeOrders = _orders.Where(_ => _.Status == MStatus.Active).ToList();
                 }
                 _marketDataHolder.SendOrders(activeOrders);
                 //await _marketDataService.SendOrders(activeOrders);
