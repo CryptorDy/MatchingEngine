@@ -546,6 +546,22 @@ namespace Stock.Trading.Service
 
                     DateTime end = DateTime.Now;
                     _logger.LogInformation($"Matching completed: {(end - start).TotalMilliseconds} ms ; Orders in pool: {_orders.Count};");
+
+                    // debug, find when bids are bigger than asks
+                    var biggestBid = _orders
+                        .Where(o => o.CurrencyPairId == newOrder.CurrencyPairId && o.IsBid)
+                        .OrderByDescending(_ => _.Price).FirstOrDefault();
+                    var lowestAsk = _orders
+                        .Where(o => o.CurrencyPairId == newOrder.CurrencyPairId && !o.IsBid)
+                        .OrderBy(_ => _.Price).FirstOrDefault();
+                    if (biggestBid != null && lowestAsk != null && biggestBid.Price > lowestAsk.Price)
+                    {
+                        _logger.LogError($"\n\n\n!!!!!!! bids are bigger than asks. {newOrder.CurrencyPairId}");
+                        _logger.LogError($"newOrder:   {newOrder.ExchangeId},{newOrder.FromInnerTradingBot},{newOrder.IsBid}, {newOrder.Price},{newOrder.Volume},{newOrder.Created}, {newOrder.UserId},{newOrder.Id}");
+                        _logger.LogError($"biggestBid: {biggestBid.ExchangeId},{biggestBid.FromInnerTradingBot},{biggestBid.IsBid}, {biggestBid.Price},{biggestBid.Volume},{biggestBid.Created}, {biggestBid.UserId},{biggestBid.Id}");
+                        _logger.LogError($"lowestAsk: {lowestAsk.ExchangeId},{lowestAsk.FromInnerTradingBot},{lowestAsk.IsBid}, {lowestAsk.Price},{lowestAsk.Volume},{lowestAsk.Created}, {lowestAsk.UserId},{lowestAsk.Id}");
+                    }
+                    // end debug
                 }
                 await ReportData(db, result);
             }
