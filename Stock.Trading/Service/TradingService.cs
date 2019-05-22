@@ -30,7 +30,7 @@ namespace Stock.Trading.Service
 
         #region GET-requests
 
-        public async Task<List<Ask>> Asks()
+        public async Task<List<Ask>> Asks(string userId = null)
         {
             List<Ask> result = new List<Ask>();
 
@@ -38,6 +38,7 @@ namespace Stock.Trading.Service
             {
                 result = await _context.Asks
                     .Include(o => o.OrderType)
+                    .Where(_ => string.IsNullOrEmpty(userId) || _.UserId == userId)
                     .ToAsyncEnumerable()
                     .ToList();
             }
@@ -71,7 +72,7 @@ namespace Stock.Trading.Service
             }
         }
 
-        public async Task<List<Bid>> Bids()
+        public async Task<List<Bid>> Bids(string userId = null)
         {
             List<Bid> result = new List<Bid>();
 
@@ -79,6 +80,7 @@ namespace Stock.Trading.Service
             {
                 result = await _context.Bids
                     .Include(o => o.OrderType)
+                    .Where(_ => string.IsNullOrEmpty(userId) || _.UserId == userId)
                     .ToAsyncEnumerable()
                     .ToList();
             }

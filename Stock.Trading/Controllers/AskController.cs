@@ -23,9 +23,9 @@ namespace Stock.Trading.Controllers
         /// </summary>
         /// <returns>Asks list</returns>
         [HttpGet("asks")]
-        public async Task<List<Ask>> Asks()
+        public async Task<List<Ask>> Asks(string userId = null)
         {
-            return await _service.Asks();
+            return await _service.Asks(userId);
         }
 
         /// <summary>
