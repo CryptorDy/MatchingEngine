@@ -201,7 +201,8 @@ namespace Stock.Trading.Service
             return new BidResponse();
         }
 
-        public async Task<List<Deal>> GetDeals(string currencyPairId, int? lastNum, string userId, DateTime? sinceDate = null)
+        public async Task<List<Deal>> GetDeals(string currencyPairId, int? lastNum, string userId,
+            DateTime? sinceDate = null, List<string> dealIds = null)
         {
             try
             {
@@ -210,7 +211,8 @@ namespace Stock.Trading.Service
                     .Include(m => m.Bid)
                     .Where(_ => (!sinceDate.HasValue || _.DealDateUtc > sinceDate)
                         && (string.IsNullOrWhiteSpace(currencyPairId) || (_.Bid != null && _.Bid.CurrencyPairId == currencyPairId))
-                        && (string.IsNullOrWhiteSpace(userId) || (_.Bid != null && _.Bid.UserId == userId) || (_.Ask != null && _.Ask.UserId == userId)))
+                        && (string.IsNullOrWhiteSpace(userId) || (_.Bid != null && _.Bid.UserId == userId) || (_.Ask != null && _.Ask.UserId == userId))
+                        && (dealIds == null || dealIds.Count == 0 || dealIds.Contains(_.DealId.ToString())))
                     .OrderByDescending(m => m.DealDateUtc)
                     .ThenBy(m => m.DealDateUtc)
                     .ToListAsync();

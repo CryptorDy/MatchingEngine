@@ -45,9 +45,10 @@ namespace Stock.Trading.Controllers
         /// <param name="count">Count</param>
         /// <returns>Deals list</returns>
         [HttpGet("deals")]
-        public async Task<List<Deal>> GetDeals(string currencyPairId = null, int? count = null, string userId = null, DateTime? sinceDate = null)
+        public async Task<List<Deal>> GetDeals(string currencyPairId = null, int? count = null, string userId = null,
+            DateTime? sinceDate = null, List<string> dealIds = null)
         {
-            var result = await _service.GetDeals(currencyPairId, count, userId, sinceDate);
+            var result = await _service.GetDeals(currencyPairId, count, userId, sinceDate, dealIds);
             return result;
         }
     }
