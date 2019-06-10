@@ -25,6 +25,11 @@ namespace Stock.Trading.Requests
         public string UserId { get; set; }
 
         /// <summary>
+        /// Busines process id,  order Id
+        /// </summary>
+        public string ActionId { get; set; }
+
+        /// <summary>
         /// Валютная пара
         /// </summary>
         public string CurrencyPariId { get; set; }

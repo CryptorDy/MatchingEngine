@@ -295,7 +295,7 @@ namespace Stock.Trading.Service
         {
             var ask = new Ask
             {
-                Id = Guid.NewGuid(),
+                Id = new Guid(request.ActionId),
                 Volume = request.Amount,
                 Price = request.Price,
                 OrderDateUtc = request.OrderDateUtc,
@@ -358,7 +358,7 @@ namespace Stock.Trading.Service
         {
             var bid = new Bid
             {
-                Id = Guid.NewGuid(),
+                Id = new Guid(request.ActionId),
                 Volume = request.Amount,
                 Price = request.Price,
                 OrderDateUtc = request.OrderDateUtc,
