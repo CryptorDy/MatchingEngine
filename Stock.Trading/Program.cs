@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Stock.Trading.Data;
 using Stock.Trading.Service;
+using System;
+using System.Reflection;
 
 namespace Stock.Trading
 {
@@ -34,6 +36,7 @@ namespace Stock.Trading
             var innerBotExpireWatcher = host.Services.GetService<LiquidityExpireWatcherAccessor>().InnerBotExpireWatcher;
             innerBotExpireWatcher.SetMatchingPool(matchingPool);
 
+            Console.WriteLine($"Version: {Assembly.GetExecutingAssembly().GetName().Version}");
             host.Run();
         }
 

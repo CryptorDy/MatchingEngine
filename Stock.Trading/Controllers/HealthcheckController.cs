@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System.Reflection;
 
 namespace Stock.Trading.Controllers
@@ -13,7 +13,8 @@ namespace Stock.Trading.Controllers
         [HttpGet]
         public IActionResult Get()
         {
-            return Json(Assembly.GetEntryAssembly().GetName().Name);
+            var assemblyName = Assembly.GetExecutingAssembly().GetName();
+            return Json($"{assemblyName.Name} v{assemblyName.Version}");
         }
     }
 }
