@@ -345,7 +345,7 @@ namespace Stock.Trading.Service
                             Fulfilled = createdOrder.Fulfilled,
                             Price = ask.Price,
                             Status = MStatus.Completed,
-                            UserId = ask.UserId
+                            UserId = $"{ask.UserId}_matched"
                         };
                         modifiedAsks.Add(newAsk);
                     }
@@ -362,7 +362,7 @@ namespace Stock.Trading.Service
                             Fulfilled = createdOrder.Fulfilled,
                             Price = bid.Price,
                             Status = MStatus.Completed,
-                            UserId = bid.UserId
+                            UserId = $"{bid.UserId}_matched"
                         };
                         modifiedBids.Add(newBid);
                     }
