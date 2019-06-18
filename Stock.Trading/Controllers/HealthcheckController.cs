@@ -9,7 +9,7 @@ namespace Stock.Trading.Controllers
         /// <summary>
         /// Returns assembly name to check if service is alive
         /// </summary>
-        /// <returns>Assembly name</returns>
+        /// <returns>Assembly info</returns>
         [HttpGet]
         public IActionResult Get()
         {
