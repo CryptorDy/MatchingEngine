@@ -44,28 +44,23 @@ namespace Stock.Trading.Service
                 for (int i = 0; i < asks.Count; i++)
                 {
                     var ask = asks[i];
-                    //if (ask.Price > newOrder.Price) //stop when asks become too expensive
-                    //{
-                    //    break;
-                    //}
-
-                    var newOrderRemainingAmount = newOrder.Volume - newOrder.Fulfilled;
-                    var askRemainingAmount = ask.Volume - ask.Fulfilled;
-                    var fulfilmentAmount = Math.Min(newOrderRemainingAmount, askRemainingAmount);
+                    var fulfilmentAmount = Math.Min(newOrder.FreeVolume, ask.FreeVolume);
                     if (fulfilmentAmount == 0)
-                    {
                         continue;
-                    }
 
                     bool isExternal = newOrder.ExchangeId != 0 || ask.ExchangeId != 0; // from LiquidityImport
                     if (isExternal)
                     {
                         _liquidityImportService.CreateTrade(new ExternalMatchingPair { Bid = newOrder, Ask = ask });
+                        newOrder.Blocked += fulfilmentAmount;
+                        ask.Blocked += fulfilmentAmount;
                     }
-
+                    else
+                    {
+                        newOrder.Fulfilled += fulfilmentAmount;
+                        ask.Fulfilled += fulfilmentAmount;
+                    }
                     modified = true;
-                    newOrder.Fulfilled += fulfilmentAmount;
-                    ask.Fulfilled += fulfilmentAmount;
 
                     if (ask.Fulfilled == ask.Volume)
                     {
@@ -83,7 +78,7 @@ namespace Stock.Trading.Service
                     {
                         newOrder.Status = MStatus.Completed;
                         if (newOrder.ExchangeId == 0) completedOrders.Add(newOrder);
-                        break;                                  // if new order is completely fulfilled there's no reason to iterate further
+                        break; // if new order is completely fulfilled there's no reason to iterate further
                     }
                 }
 
@@ -100,29 +95,23 @@ namespace Stock.Trading.Service
                 for (int i = 0; i < bids.Count; i++)
                 {
                     var bid = bids[i];
-                    //if (bid.Price < newOrder.Price) //stop when bids become too cheap
-                    //{
-                    //    break;
-                    //}
-
-                    var newOrderRemainingAmount = newOrder.Volume - newOrder.Fulfilled;
-                    var bidRemainingAmount = bid.Volume - bid.Fulfilled;
-
-                    var fulfilmentAmount = Math.Min(newOrderRemainingAmount, bidRemainingAmount);
+                    var fulfilmentAmount = Math.Min(newOrder.FreeVolume, bid.FreeVolume);
                     if (fulfilmentAmount == 0)
-                    {
                         continue;
-                    }
 
                     bool isExternal = newOrder.ExchangeId != 0 || bid.ExchangeId != 0; // from LiquidityImport
                     if (isExternal)
                     {
                         _liquidityImportService.CreateTrade(new ExternalMatchingPair { Bid = bid, Ask = newOrder });
+                        newOrder.Blocked += fulfilmentAmount;
+                        bid.Blocked += fulfilmentAmount;
                     }
-
+                    else
+                    {
+                        newOrder.Fulfilled += fulfilmentAmount;
+                        bid.Fulfilled += fulfilmentAmount;
+                    }
                     modified = true;
-                    newOrder.Fulfilled += fulfilmentAmount;
-                    bid.Fulfilled += fulfilmentAmount;
 
                     if (bid.Fulfilled == bid.Volume)
                     {
@@ -140,7 +129,7 @@ namespace Stock.Trading.Service
                     {
                         newOrder.Status = MStatus.Completed;
                         if (newOrder.ExchangeId == 0) completedOrders.Add(newOrder);
-                        break;                              // if new order is completely fulfilled there's no reason to iterate further
+                        break; // if new order is completely fulfilled there's no reason to iterate further
                     }
                 }
 

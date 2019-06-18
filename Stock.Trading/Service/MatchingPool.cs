@@ -373,7 +373,8 @@ namespace Stock.Trading.Service
                 {
                     if (createdOrder.IsBid)
                     {
-                        ask.Fulfilled -= unfulfilled;
+                        ask.Blocked -= createdOrder.Amount;
+                        ask.Fulfilled += createdOrder.Fulfilled;
                         if (createdOrder.Fulfilled > 0)
                         {
                             var deal = new MDeal
@@ -401,7 +402,8 @@ namespace Stock.Trading.Service
                     }
                     else
                     {
-                        bid.Fulfilled -= unfulfilled;
+                        bid.Blocked -= createdOrder.Amount;
+                        bid.Fulfilled += createdOrder.Fulfilled;
                         if (createdOrder.Fulfilled > 0)
                         {
                             var deal = new MDeal

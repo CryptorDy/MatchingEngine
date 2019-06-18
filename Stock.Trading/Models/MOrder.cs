@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Stock.Trading.Models
 {
@@ -12,9 +12,17 @@ namespace Stock.Trading.Models
         public decimal Volume { get; set; }
         public int ExchangeId { get; set; }
         public bool FromInnerTradingBot { get; set; }
+
+        /// <summary>
+        /// Amount that is being processed by LiquidityImport
+        /// </summary>
+        public decimal Blocked { get; set; }
+
         public decimal Fulfilled { get; set; }
         public DateTime Created { get; set; }
         public string CurrencyPairId { get; set; }
         public MStatus Status { get; set; }
+
+        public decimal FreeVolume => (Volume - Fulfilled - Blocked);
     }
 }
