@@ -148,7 +148,7 @@ namespace Stock.Trading.Service
                 BidId = mDeal.Bid.Id,
                 Volume = mDeal.Volume,
                 DealId = Guid.NewGuid(),
-                DealDateUtc = DateTime.Now,
+                DealDateUtc = DateTime.UtcNow,
                 Price = mDeal.Price,
                 FromInnerTradingBot = mDeal.FromInnerTradingBot,
             };
@@ -373,42 +373,13 @@ namespace Stock.Trading.Service
                 {
                     if (createdOrder.IsBid)
                     {
-                        ask.Blocked -= createdOrder.Amount;
-                        ask.Fulfilled += createdOrder.Fulfilled;
-                        if (createdOrder.Fulfilled > 0)
-                        {
-                            var deal = new MDeal
-                            {
-                                Created = DateTime.Now,
-                                Ask = newAsk ?? ask,
-                                Bid = newBid ?? bid,
-                                Price = createdOrder.Price,
-                                Volume = createdOrder.Fulfilled
-                            };
-                            deals.Add(deal);
-                        }
-                        if (ask.Fulfilled == ask.Volume)
-                        {
-                            ask.Status = MStatus.Completed;
-                            if (ask.ExchangeId == 0)
-                                completedOrders.Add(ask);
-                        }
-                        else
-                        {
-                            ask.Status = MStatus.Active;
-                            updateOrder = true;
-                        }
-                        modifiedAsks.Add(ask);
-                    }
-                    else
-                    {
                         bid.Blocked -= createdOrder.Amount;
                         bid.Fulfilled += createdOrder.Fulfilled;
                         if (createdOrder.Fulfilled > 0)
                         {
                             var deal = new MDeal
                             {
-                                Created = DateTime.Now,
+                                Created = DateTime.UtcNow,
                                 Ask = newAsk ?? ask,
                                 Bid = newBid ?? bid,
                                 Price = createdOrder.Price,
@@ -428,6 +399,35 @@ namespace Stock.Trading.Service
                             updateOrder = true;
                         }
                         modifiedBids.Add(bid);
+                    }
+                    else
+                    {
+                        ask.Blocked -= createdOrder.Amount;
+                        ask.Fulfilled += createdOrder.Fulfilled;
+                        if (createdOrder.Fulfilled > 0)
+                        {
+                            var deal = new MDeal
+                            {
+                                Created = DateTime.UtcNow,
+                                Ask = newAsk ?? ask,
+                                Bid = newBid ?? bid,
+                                Price = createdOrder.Price,
+                                Volume = createdOrder.Fulfilled
+                            };
+                            deals.Add(deal);
+                        }
+                        if (ask.Fulfilled == ask.Volume)
+                        {
+                            ask.Status = MStatus.Completed;
+                            if (ask.ExchangeId == 0)
+                                completedOrders.Add(ask);
+                        }
+                        else
+                        {
+                            ask.Status = MStatus.Active;
+                            updateOrder = true;
+                        }
+                        modifiedAsks.Add(ask);
                     }
 
                     result = new MatchingResult(modifiedAsks, modifiedBids, deals, completedOrders);
@@ -538,7 +538,7 @@ namespace Stock.Trading.Service
 
                 lock (_orders) //no access to pool (for removing) while matching is performed
                 {
-                    DateTime start = DateTime.Now;
+                    DateTime start = DateTime.UtcNow;
                     var matchingOrders = _orders.Where(o => o.CurrencyPairId == newOrder.CurrencyPairId
                         && o.FromInnerTradingBot == newOrder.FromInnerTradingBot).ToList();
                     result = _ordersMatcher.Match(matchingOrders, newOrder);
@@ -546,7 +546,7 @@ namespace Stock.Trading.Service
                     _orders.Add(newOrder);
                     _orders.RemoveAll(o => o.Status == MStatus.Completed);
 
-                    DateTime end = DateTime.Now;
+                    DateTime end = DateTime.UtcNow;
                     _logger.LogInformation($"Matching completed: {(end - start).TotalMilliseconds} ms ; Orders in pool: {_orders.Count};");
 
                     // debug, find when bids are bigger than asks

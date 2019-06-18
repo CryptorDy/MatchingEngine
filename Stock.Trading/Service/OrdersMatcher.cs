@@ -19,7 +19,7 @@ namespace Stock.Trading.Service
         {
             return new MDeal
             {
-                Created = DateTime.Now,
+                Created = DateTime.UtcNow,
                 Ask = ask,
                 Bid = bid,
                 Price = price,

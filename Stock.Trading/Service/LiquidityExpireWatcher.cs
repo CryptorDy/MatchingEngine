@@ -48,7 +48,7 @@ namespace Stock.Trading.Service
 
         public void UpdateExpirationDate(int exchangeId, string currencyPairCode)
         {
-            DateTime newExpirationDate = DateTime.Now.AddMinutes(_settings.Value.ImportedOrdersExpirationMinutes);
+            DateTime newExpirationDate = DateTime.UtcNow.AddMinutes(_settings.Value.ImportedOrdersExpirationMinutes);
             lock (CurrencyPairExpirations)
             {
                 var expiration = CurrencyPairExpirations
@@ -75,7 +75,7 @@ namespace Stock.Trading.Service
             {
                 for (int i = 0; i < CurrencyPairExpirations.Count; i++)
                 {
-                    if (CurrencyPairExpirations[i].ExpirationDate < DateTime.Now)
+                    if (CurrencyPairExpirations[i].ExpirationDate < DateTime.UtcNow)
                     {
                         _matchingPool.RemoveOrders((int)CurrencyPairExpirations[i].Exchange, CurrencyPairExpirations[i].CurrencyPairCode);
                         _liquidityImportService.RemoveOrderbook(CurrencyPairExpirations[i].Exchange, CurrencyPairExpirations[i].CurrencyPairCode);
