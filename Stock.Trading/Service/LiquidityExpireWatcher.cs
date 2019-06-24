@@ -77,6 +77,7 @@ namespace Stock.Trading.Service
                 {
                     if (CurrencyPairExpirations[i].ExpirationDate < DateTime.UtcNow)
                     {
+                        _logger.LogWarning($"Liquidity expired:{CurrencyPairExpirations[i].Exchange}-{CurrencyPairExpirations[i].CurrencyPairCode}");
                         _matchingPool.RemoveOrders((int)CurrencyPairExpirations[i].Exchange, CurrencyPairExpirations[i].CurrencyPairCode);
                         _liquidityImportService.RemoveOrderbook(CurrencyPairExpirations[i].Exchange, CurrencyPairExpirations[i].CurrencyPairCode);
                         CurrencyPairExpirations.RemoveAt(i);
