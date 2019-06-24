@@ -129,8 +129,10 @@ namespace Stock.Trading.Service
                     {
                         newOrder.Status = MStatus.Completed;
                         if (newOrder.ExchangeId == 0) completedOrders.Add(newOrder);
-                        break; // if new order is completely fulfilled there's no reason to iterate further
                     }
+
+                    if (newOrder.FreeVolume <= 0)
+                        break; // if new order is completely fulfilled/blocked, there's no reason to iterate further
                 }
 
                 if (modified)
