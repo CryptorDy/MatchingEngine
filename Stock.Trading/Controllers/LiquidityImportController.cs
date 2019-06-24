@@ -45,6 +45,18 @@ namespace Stock.Trading.Controllers
             return result;
         }
 
+        /// <summary>
+        /// Notify that liquidity import is working
+        /// </summary>
+        /// <param name="orders"></param>
+        /// <returns></returns>
+        [HttpGet("ping/{exchange}/{curPairCode}")]
+        public async Task<IActionResult> Ping(Exchange exchange, string curPairCode)
+        {
+            _liquidityExpireWatcher.UpdateExpirationDate((int)exchange, curPairCode);
+            return Ok();
+        }
+
         [HttpPut("order/{isBid}/{id}")]
         public async Task<IActionResult> UpdateOrder(bool isBid, string id, [FromBody]AddRequest order)
         {
@@ -77,13 +89,11 @@ namespace Stock.Trading.Controllers
         }
 
         [HttpPut("orders/update")]
-        public async Task<IActionResult> UpdateOrders([FromBody]IEnumerable<AddRequestLiquidity> orders)
+        public async Task<IActionResult> UpdateOrders([FromBody]List<AddRequestLiquidity> orders)
         {
             try
             {
                 await _matchingPool.UpdateOrders(orders);
-                if (orders.Count() > 0)
-                    _liquidityExpireWatcher.UpdateExpirationDate(orders.First().ExchangeId, orders.First().CurrencyPariId);
 
                 //var bids = orders.Where(_ => _.IsBid).ToDictionary(x => x.TradingOrderId);
                 //var bidsIds = bids.Keys.Select(Guid.Parse).ToList();
@@ -147,7 +157,7 @@ namespace Stock.Trading.Controllers
         }
 
         /// <summary>
-        ///
+        /// Delete previously imported orders
         /// </summary>
         /// <param name="orders"></param>
         /// <returns></returns>
@@ -167,16 +177,13 @@ namespace Stock.Trading.Controllers
         }
 
         /// <summary>
-        ///
+        /// Add imported orders
         /// </summary>
         /// <param name="orders"></param>
         /// <returns></returns>
         [HttpPost("orders/add")]
         public async Task<IActionResult> AddOrders([FromBody]List<AddRequestLiquidity> orders)
         {
-            if (orders.Count() > 0)
-                _liquidityExpireWatcher.UpdateExpirationDate(orders.First().ExchangeId, orders.First().CurrencyPariId);
-
             List<MBid> bids = new List<MBid>();
             var bidsDb = new List<Bid>();
             orders.Where(_ => _.IsBid).ToList().ForEach(_ =>
