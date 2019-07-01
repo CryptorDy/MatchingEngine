@@ -387,7 +387,7 @@ namespace Stock.Trading.Service
                             };
                             deals.Add(deal);
                         }
-                        if (bid.Fulfilled == bid.Volume)
+                        if (bid.Fulfilled >= bid.Volume)
                         {
                             bid.Status = MStatus.Completed;
                             if (bid.ExchangeId == 0)
@@ -416,7 +416,7 @@ namespace Stock.Trading.Service
                             };
                             deals.Add(deal);
                         }
-                        if (ask.Fulfilled == ask.Volume)
+                        if (ask.Fulfilled >= ask.Volume)
                         {
                             ask.Status = MStatus.Completed;
                             if (ask.ExchangeId == 0)

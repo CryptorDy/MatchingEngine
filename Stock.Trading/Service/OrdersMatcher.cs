@@ -62,7 +62,7 @@ namespace Stock.Trading.Service
                     }
                     modified = true;
 
-                    if (ask.Fulfilled == ask.Volume)
+                    if (ask.Fulfilled >= ask.Volume)
                     {
                         ask.Status = MStatus.Completed;
                         if (ask.ExchangeId == 0) completedOrders.Add(ask);
@@ -74,7 +74,7 @@ namespace Stock.Trading.Service
                     }
                     modifiedAsks.Add(ask);
 
-                    if (newOrder.Fulfilled == newOrder.Volume)
+                    if (newOrder.Fulfilled >= newOrder.Volume)
                     {
                         newOrder.Status = MStatus.Completed;
                         if (newOrder.ExchangeId == 0)
@@ -116,7 +116,7 @@ namespace Stock.Trading.Service
                     }
                     modified = true;
 
-                    if (bid.Fulfilled == bid.Volume)
+                    if (bid.Fulfilled >= bid.Volume)
                     {
                         bid.Status = MStatus.Completed;
                         if (bid.ExchangeId == 0) completedOrders.Add(bid);
@@ -128,7 +128,7 @@ namespace Stock.Trading.Service
                     }
                     modifiedBids.Add(bid);
 
-                    if (newOrder.Fulfilled == newOrder.Volume)
+                    if (newOrder.Fulfilled >= newOrder.Volume)
                     {
                         newOrder.Status = MStatus.Completed;
                         if (newOrder.ExchangeId == 0) completedOrders.Add(newOrder);
