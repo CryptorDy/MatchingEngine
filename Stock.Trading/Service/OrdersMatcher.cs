@@ -77,9 +77,12 @@ namespace Stock.Trading.Service
                     if (newOrder.Fulfilled == newOrder.Volume)
                     {
                         newOrder.Status = MStatus.Completed;
-                        if (newOrder.ExchangeId == 0) completedOrders.Add(newOrder);
-                        break; // if new order is completely fulfilled there's no reason to iterate further
+                        if (newOrder.ExchangeId == 0)
+                            completedOrders.Add(newOrder);
                     }
+
+                    if (newOrder.FreeVolume <= 0)
+                        break; // if new order is completely fulfilled/blocked, there's no reason to iterate further
                 }
 
                 if (modified)
@@ -139,11 +142,6 @@ namespace Stock.Trading.Service
                 {
                     modifiedAsks.Add((MAsk)newOrder);
                 }
-            }
-
-            if (newOrder.Fulfilled == newOrder.Volume)
-            {
-                newOrder.Status = MStatus.Completed;
             }
 
             return new MatchingResult(modifiedAsks, modifiedBids, deals, completedOrders);
