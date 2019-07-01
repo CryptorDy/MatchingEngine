@@ -435,6 +435,16 @@ namespace Stock.Trading.Service
                     var savedDeals = UpdateDatabase(db, result);
                     if (savedDeals.Count > 0)
                         resultDealId = savedDeals.First().DealId;
+
+                    // checks for correct finishing state
+                    foreach (var completedOrder in completedOrders)
+                    {
+                        if (completedOrder.Fulfilled > completedOrder.Volume)
+                            _logger.LogWarning($"CompletedOrder {completedOrder.Id} Fulfilled>Volume");
+                        if (completedOrder.Blocked > 0)
+                            _logger.LogWarning($"CompletedOrder {completedOrder.Id} Blocked={completedOrder.Blocked}");
+                    }
+
                     _orders.RemoveAll(o => o.Status == MStatus.Completed);
                     if (updateOrder)
                     {
