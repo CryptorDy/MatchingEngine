@@ -38,8 +38,8 @@ namespace Stock.Trading.Service
             var modified = false;
             if (newOrder is MBid)
             {
-                var asks = pool.Where(o => o is MAsk && o.Price <= newOrder.Price && (newOrder.ExchangeId == 0 || o.ExchangeId == 0)
-                    && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
+                var asks = pool.Where(o => o is MAsk && o.Status == MStatus.Active && o.Price <= newOrder.Price
+                    && (newOrder.ExchangeId == 0 || o.ExchangeId == 0) && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
                     .OrderBy(o => o.Price).Cast<MAsk>().ToList();
                 for (int i = 0; i < asks.Count; i++)
                 {
@@ -92,8 +92,8 @@ namespace Stock.Trading.Service
             }
             else
             {
-                var bids = pool.Where(o => o is MBid && o.Price >= newOrder.Price && (newOrder.ExchangeId == 0 || o.ExchangeId == 0)
-                    && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
+                var bids = pool.Where(o => o is MBid && o.Status == MStatus.Active && o.Price >= newOrder.Price
+                    && (newOrder.ExchangeId == 0 || o.ExchangeId == 0) && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
                     .OrderByDescending(o => o.Price).Cast<MBid>().ToList();
                 for (int i = 0; i < bids.Count; i++)
                 {
