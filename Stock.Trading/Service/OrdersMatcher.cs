@@ -38,8 +38,8 @@ namespace Stock.Trading.Service
             var modified = false;
             if (newOrder is MBid)
             {
-                var asks = pool.Where(o => o is MAsk && o.Price <= newOrder.Price && (newOrder.ExchangeId == 0 || o.ExchangeId == 0)
-                    && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
+                var asks = pool.Where(o => o is MAsk && o.Status == MStatus.Active && o.Price <= newOrder.Price
+                    && (newOrder.ExchangeId == 0 || o.ExchangeId == 0) && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
                     .OrderBy(o => o.Price).Cast<MAsk>().ToList();
                 for (int i = 0; i < asks.Count; i++)
                 {
@@ -62,7 +62,7 @@ namespace Stock.Trading.Service
                     }
                     modified = true;
 
-                    if (ask.Fulfilled == ask.Volume)
+                    if (ask.Fulfilled >= ask.Volume)
                     {
                         ask.Status = MStatus.Completed;
                         if (ask.ExchangeId == 0) completedOrders.Add(ask);
@@ -74,12 +74,15 @@ namespace Stock.Trading.Service
                     }
                     modifiedAsks.Add(ask);
 
-                    if (newOrder.Fulfilled == newOrder.Volume)
+                    if (newOrder.Fulfilled >= newOrder.Volume)
                     {
                         newOrder.Status = MStatus.Completed;
-                        if (newOrder.ExchangeId == 0) completedOrders.Add(newOrder);
-                        break; // if new order is completely fulfilled there's no reason to iterate further
+                        if (newOrder.ExchangeId == 0)
+                            completedOrders.Add(newOrder);
                     }
+
+                    if (newOrder.FreeVolume <= 0)
+                        break; // if new order is completely fulfilled/blocked, there's no reason to iterate further
                 }
 
                 if (modified)
@@ -89,8 +92,8 @@ namespace Stock.Trading.Service
             }
             else
             {
-                var bids = pool.Where(o => o is MBid && o.Price >= newOrder.Price && (newOrder.ExchangeId == 0 || o.ExchangeId == 0)
-                    && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
+                var bids = pool.Where(o => o is MBid && o.Status == MStatus.Active && o.Price >= newOrder.Price
+                    && (newOrder.ExchangeId == 0 || o.ExchangeId == 0) && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
                     .OrderByDescending(o => o.Price).Cast<MBid>().ToList();
                 for (int i = 0; i < bids.Count; i++)
                 {
@@ -113,7 +116,7 @@ namespace Stock.Trading.Service
                     }
                     modified = true;
 
-                    if (bid.Fulfilled == bid.Volume)
+                    if (bid.Fulfilled >= bid.Volume)
                     {
                         bid.Status = MStatus.Completed;
                         if (bid.ExchangeId == 0) completedOrders.Add(bid);
@@ -125,7 +128,7 @@ namespace Stock.Trading.Service
                     }
                     modifiedBids.Add(bid);
 
-                    if (newOrder.Fulfilled == newOrder.Volume)
+                    if (newOrder.Fulfilled >= newOrder.Volume)
                     {
                         newOrder.Status = MStatus.Completed;
                         if (newOrder.ExchangeId == 0) completedOrders.Add(newOrder);
@@ -139,11 +142,6 @@ namespace Stock.Trading.Service
                 {
                     modifiedAsks.Add((MAsk)newOrder);
                 }
-            }
-
-            if (newOrder.Fulfilled == newOrder.Volume)
-            {
-                newOrder.Status = MStatus.Completed;
             }
 
             return new MatchingResult(modifiedAsks, modifiedBids, deals, completedOrders);
