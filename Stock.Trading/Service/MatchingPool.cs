@@ -439,10 +439,9 @@ namespace Stock.Trading.Service
                     // checks for correct finishing state
                     foreach (var completedOrder in completedOrders)
                     {
-                        if (completedOrder.Fulfilled > completedOrder.Volume)
-                            _logger.LogWarning($"CompletedOrder {completedOrder.Id} Fulfilled>Volume");
-                        if (completedOrder.Blocked > 0)
-                            _logger.LogWarning($"CompletedOrder {completedOrder.Id} Blocked={completedOrder.Blocked}");
+                        if (completedOrder.FreeVolume != 0 || completedOrder.Blocked != 0)
+                            _logger.LogWarning($"CompletedOrder {completedOrder.Id} incorrect state: Fulfilled={completedOrder.Fulfilled} " +
+                                $"Volume={completedOrder.Volume} Blocked={completedOrder.Blocked} FreeVolume={completedOrder.FreeVolume}");
                     }
 
                     _orders.RemoveAll(o => o.Status == MStatus.Completed);
