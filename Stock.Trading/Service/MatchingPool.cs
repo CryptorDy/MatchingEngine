@@ -603,7 +603,7 @@ namespace Stock.Trading.Service
         {
             lock (_orders)
             {
-                int removed = _orders.RemoveAll(_ => ids.Contains(_.Id));
+                _orders.RemoveAll(_ => ids.Contains(_.Id));
             }
             await SendOrdersToMarketData();
         }
