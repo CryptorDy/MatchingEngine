@@ -140,7 +140,7 @@ namespace Stock.Trading.Controllers
         [HttpDelete("orders/{exchangeId}/{currencyPairId}")]
         public async Task<IActionResult> DeleteOrders(int exchangeId, string currencyPairId)
         {
-            await _matchingPool.RemoveOrders(exchangeId, currencyPairId);
+            _matchingPool.RemoveLiquidityOrderbook(exchangeId, currencyPairId);
 
             //var bids = await _context.Bids.Where(_ => _.ExchangeId == exchangeId && _.CurrencyPairId.ToLowerInvariant() == currencyPairId.ToLowerInvariant()).ToListAsync();
             // await _matchingPool.RemoveBids(bids.Select(_ => _.Id).ToList());
@@ -190,7 +190,7 @@ namespace Stock.Trading.Controllers
             {
                 var bid = new Bid
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.Parse(_.TradingOrderId),
                     Volume = _.Amount,
                     Price = _.Price,
                     OrderDateUtc = _.OrderDateUtc,
@@ -223,7 +223,7 @@ namespace Stock.Trading.Controllers
             {
                 var ask = new Ask
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.Parse(_.TradingOrderId),
                     Volume = _.Amount,
                     Price = _.Price,
                     OrderDateUtc = _.OrderDateUtc,
