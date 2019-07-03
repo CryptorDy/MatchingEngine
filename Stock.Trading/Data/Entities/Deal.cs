@@ -15,13 +15,13 @@ namespace Stock.Trading.Entities
         /// <summary>
         /// Date time deal created
         /// </summary>
-        public DateTime DealDateUtc { get; set; }
+        public DateTimeOffset DealCreated { get; set; }
 
         /// <summary>
-        /// Deal volume
+        /// Deal amount
         /// </summary>
         [Required]
-        public decimal Volume { get; set; }
+        public decimal Amount { get; set; }
 
         /// <summary>
         /// Deal price
@@ -45,7 +45,7 @@ namespace Stock.Trading.Entities
         /// </summary>
         [Required]
         [ForeignKey("AskId")]
-        public Ask Ask { get; set; }
+        public Order Ask { get; set; }
 
         /// <summary>
         /// Bid id
@@ -57,6 +57,6 @@ namespace Stock.Trading.Entities
         /// </summary>
         [Required]
         [ForeignKey("BidId")]
-        public Bid Bid { get; set; }
+        public Order Bid { get; set; }
     }
 }
