@@ -48,7 +48,7 @@ namespace Stock.Trading.Service
 
         public void UpdateExpirationDate(int exchangeId, string currencyPairCode)
         {
-            DateTime newExpirationDate = DateTime.UtcNow.AddMinutes(_settings.Value.ImportedOrdersExpirationMinutes);
+            DateTime newExpirationDate = DateTime.UtcNow.AddMinutes(_settings.Value.ImportedOrderbooksExpirationMinutes);
             lock (CurrencyPairExpirations)
             {
                 var expiration = CurrencyPairExpirations
@@ -73,23 +73,19 @@ namespace Stock.Trading.Service
         {
             lock (CurrencyPairExpirations)
             {
-                for (int i = 0; i < CurrencyPairExpirations.Count; i++)
+                foreach (var expiration in CurrencyPairExpirations)
                 {
-                    if (CurrencyPairExpirations[i].ExpirationDate < DateTime.UtcNow)
+                    if (expiration.ExpirationDate < DateTime.UtcNow)
                     {
-                        _logger.LogWarning($"Liquidity expired:{CurrencyPairExpirations[i].Exchange}-{CurrencyPairExpirations[i].CurrencyPairCode}");
-                        _matchingPool.RemoveOrders((int)CurrencyPairExpirations[i].Exchange, CurrencyPairExpirations[i].CurrencyPairCode);
-                        _liquidityImportService.RemoveOrderbook(CurrencyPairExpirations[i].Exchange, CurrencyPairExpirations[i].CurrencyPairCode);
-                        CurrencyPairExpirations.RemoveAt(i);
-                        i--;
+                        _logger.LogWarning($"Liquidity expired:{expiration.Exchange}-{expiration.CurrencyPairCode}");
+                        _matchingPool.RemoveLiquidityOrderbook((int)expiration.Exchange, expiration.CurrencyPairCode);
+                        _liquidityImportService.RemoveOrderbook(expiration.Exchange, expiration.CurrencyPairCode);
                     }
                 }
+                CurrencyPairExpirations = CurrencyPairExpirations.Where(_ => !_.IsExecuted).ToList();
             }
-        }
-
-        private async Task DeleteTradingOrders(int exchangeId, string currencyPairCode)
-        {
-            await _matchingPool.RemoveOrders(exchangeId, currencyPairCode);
+            _matchingPool.RemoveLiquidityOldOrders();
+            await _matchingPool.SendOrdersToMarketData();
         }
     }
 }

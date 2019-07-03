@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Stock.Trading.Data;
 using Stock.Trading.Data.Entities;
 using Stock.Trading.Entities;
@@ -27,12 +28,13 @@ namespace Stock.Trading.Service
         private readonly BufferBlock<MOrder> _newOrdersBuffer = new BufferBlock<MOrder>();
         private readonly List<MOrder> _orders = new List<MOrder>();
 
-        private readonly MarketDataService _marketDataService;
-        private readonly DealEndingService _dealEndingService;
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly ILogger _logger;
         private readonly OrdersMatcher _ordersMatcher;
+        private readonly MarketDataService _marketDataService;
         private readonly MarketDataHolder _marketDataHolder;
+        private readonly DealEndingService _dealEndingService;
+        private readonly IOptions<AppSettings> _settings;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// DI constructor
@@ -43,18 +45,21 @@ namespace Stock.Trading.Service
         /// <param name="ordersMatcher"></param>
         /// <param name="serviceScopeFactory"></param>
         public MatchingPool(
-            MarketDataService marketDataService,
-            DealEndingService dealEndingService,
-            ILogger<MatchingPool> logger,
+            IServiceScopeFactory serviceScopeFactory,
             OrdersMatcher ordersMatcher,
-            IServiceScopeFactory serviceScopeFactory, MarketDataHolder marketDataHolder)
+            MarketDataService marketDataService,
+            MarketDataHolder marketDataHolder,
+            DealEndingService dealEndingService,
+            IOptions<AppSettings> settings,
+            ILogger<MatchingPool> logger)
         {
             _serviceScopeFactory = serviceScopeFactory;
-            _marketDataHolder = marketDataHolder;
-            _dealEndingService = dealEndingService;
-            _logger = logger;
             _ordersMatcher = ordersMatcher;
             _marketDataService = marketDataService;
+            _marketDataHolder = marketDataHolder;
+            _dealEndingService = dealEndingService;
+            _settings = settings;
+            _logger = logger;
 
             LoadOrders();
         }
@@ -460,7 +465,7 @@ namespace Stock.Trading.Service
             }
         }
 
-        private async Task SendOrdersToMarketData()
+        public async Task SendOrdersToMarketData()
         {
             try
             {
@@ -603,13 +608,23 @@ namespace Stock.Trading.Service
             await SendOrdersToMarketData();
         }
 
-        public async Task RemoveOrders(int exchangeId, string currencyPairId)
+        public void RemoveLiquidityOrderbook(int exchangeId, string currencyPairId)
         {
             lock (_orders)
             {
                 _orders.RemoveAll(_ => _.ExchangeId == exchangeId && _.CurrencyPairId == currencyPairId);
             }
-            await SendOrdersToMarketData();
+        }
+
+        public void RemoveLiquidityOldOrders()
+        {
+            lock (_orders)
+            {
+                var minDate = DateTime.UtcNow.AddMinutes(-_settings.Value.ImportedOrdersExpirationMinutes);
+                int removedOrdersCount = _orders.RemoveAll(_ => _.ExchangeId != 0 && _.Created < minDate);
+                if (removedOrdersCount > 0)
+                    Console.WriteLine($"RemoveLiquidityOldOrders() expired {removedOrdersCount} orders");
+            }
         }
 
         public async Task RemoveOldInnerBotOrders()
@@ -648,6 +663,7 @@ namespace Stock.Trading.Service
                 if (order != null)
                 {
                     order.Volume = changedOrder.Amount;
+                    order.Created = changedOrder.OrderDateUtc;
                 }
             }
             await SendOrdersToMarketData();
@@ -663,6 +679,7 @@ namespace Stock.Trading.Service
                     if (o != null)
                     {
                         o.Volume = order.Amount;
+                        o.Created = order.OrderDateUtc;
                     }
                 }
             }
