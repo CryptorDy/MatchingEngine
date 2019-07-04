@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Stock.Trading.Entities
+namespace MatchingEngine.Models
 {
     public class Order
     {
@@ -16,6 +16,11 @@ namespace Stock.Trading.Entities
             CurrencyPairCode = currencyPairCode;
             Price = price;
             Amount = amount;
+        }
+
+        public Order Clone()
+        {
+            return (Order)MemberwiseClone();
         }
 
         [Key]
@@ -48,8 +53,7 @@ namespace Stock.Trading.Entities
         [Required]
         public string UserId { get; set; }
 
-        [Required]
-        public OrderStatus Status { get; set; } = OrderStatus.Active;
+        public bool IsCanceled { get; set; }
 
         /// <summary>
         /// Original order exchange
@@ -62,13 +66,10 @@ namespace Stock.Trading.Entities
         [Required]
         public bool FromInnerTradingBot { get; set; } = false;
 
+        public virtual List<Deal> DealList { get; set; }
+
         public decimal AvailableAmount => (Amount - Fulfilled - Blocked);
 
-        public virtual List<Deal> DealList { get; set; }
-    }
-
-    public enum OrderStatus
-    {
-        Active = 1, Canceled, Completed
+        public bool IsActive => !IsCanceled && Fulfilled < Amount;
     }
 }
