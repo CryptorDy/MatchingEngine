@@ -1,8 +1,9 @@
+using Stock.Trading.Entities;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Stock.Trading.Entities
+namespace MatchingEngine.Models
 {
     public class Deal
     {
@@ -15,7 +16,7 @@ namespace Stock.Trading.Entities
         /// <summary>
         /// Date time deal created
         /// </summary>
-        public DateTime DealDateUtc { get; set; }
+        public DateTimeOffset DateCreated { get; set; }
 
         /// <summary>
         /// Deal volume
@@ -45,7 +46,7 @@ namespace Stock.Trading.Entities
         /// </summary>
         [Required]
         [ForeignKey("AskId")]
-        public Ask Ask { get; set; }
+        public Order Ask { get; set; }
 
         /// <summary>
         /// Bid id
@@ -57,6 +58,6 @@ namespace Stock.Trading.Entities
         /// </summary>
         [Required]
         [ForeignKey("BidId")]
-        public Bid Bid { get; set; }
+        public Order Bid { get; set; }
     }
 }
