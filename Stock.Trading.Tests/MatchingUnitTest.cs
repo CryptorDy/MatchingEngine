@@ -61,7 +61,6 @@ namespace Stock.Trading.Tests
                 var pool = new List<Order> { bid };
 
                 var service = new OrdersMatcher(null);
-
                 var result = service.Match(pool, ask);
 
                 decimal expectedDealVolume = Math.Min(bid.AvailableAmount, ask.AvailableAmount);
@@ -79,6 +78,22 @@ namespace Stock.Trading.Tests
                 Assert.True(resultBid.Status == (resultBid.Fulfilled == resultBid.Amount ? OrderStatus.Completed : OrderStatus.Active));
                 Assert.True(resultAsk.Status == (resultAsk.Fulfilled == resultAsk.Amount ? OrderStatus.Completed : OrderStatus.Active));
             }
+        }
+
+        [Fact]
+        public void CorrectMatchFor3Orders()
+        {
+            var pool = new List<Order> { _cheapAskWithFulfilled, _cheapAskWithBlocked };
+
+            var service = new OrdersMatcher(null);
+            var result = service.Match(pool, _cheapBid);
+
+            Assert.True(result.Deals.Count == 2);
+            Assert.True(result.ModifiedOrders.Count == 3);
+            Order resultBid = result.ModifiedOrders.Single(_ => _.IsBid);
+            Assert.True(resultBid.AvailableAmount == 0);
+            Assert.True(resultBid.Fulfilled == resultBid.Amount);
+            Assert.True(resultBid.Status == OrderStatus.Completed);
         }
     }
 }
