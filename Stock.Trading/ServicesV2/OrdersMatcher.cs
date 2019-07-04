@@ -21,8 +21,8 @@ namespace MatchingEngine.Services
             return new Deal
             {
                 DateCreated = DateTimeOffset.UtcNow,
-                Ask = ask,
                 Bid = bid,
+                Ask = ask,
                 Price = price,
                 Volume = volume,
                 FromInnerTradingBot = bid.FromInnerTradingBot
@@ -54,13 +54,13 @@ namespace MatchingEngine.Services
                 bool isExternal = newOrder.Exchange != Exchange.Local || order.Exchange != Exchange.Local; // from LiquidityImport
                 if (isExternal)
                 {
-                    _liquidityImportService.CreateTrade(new MatchingEngine.Models.LiquidityImport.ExternalMatchingPair { Bid = bid, Ask = ask });
+                    _liquidityImportService.CreateTrade(bid, ask);
                     newOrder.Blocked += fulfilmentAmount;
                     order.Blocked += fulfilmentAmount;
                 }
                 else
                 {
-                    newDeals.Add(CreateDeal(newOrder, order, fulfilmentAmount, order.Price));
+                    newDeals.Add(CreateDeal(bid, ask, fulfilmentAmount, order.Price));
                     newOrder.Fulfilled += fulfilmentAmount;
                     order.Fulfilled += fulfilmentAmount;
                 }

@@ -4,7 +4,7 @@
     <BumpPatch>true</BumpPatch>
   </PropertyGroup>
   <PropertyGroup>
-    <Version>1.0.59</Version>
+    <Version>1.0.63</Version>
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
