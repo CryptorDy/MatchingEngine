@@ -10,6 +10,10 @@ namespace MatchingEngine.Models
 {
     public class Order
     {
+        public Order()
+        {
+        }
+
         public Order(bool isBid, string currencyPairCode, decimal price, decimal amount)
         {
             IsBid = isBid;
@@ -71,5 +75,10 @@ namespace MatchingEngine.Models
         public decimal AvailableAmount => (Amount - Fulfilled - Blocked);
 
         public bool IsActive => !IsCanceled && Fulfilled < Amount;
+
+        public override string ToString() => $"##{(IsBid ? "Bid" : "Ask")} {Id} {CurrencyPairCode} created:{DateCreated} " +
+            $"{(IsCanceled ? "canceled" : IsActive ? "active" : "completed")} {Exchange} " +
+            $"{(FromInnerTradingBot ? "FromInnerTradingBot" : "")} Available:{AvailableAmount} " +
+            $"filled:{Fulfilled}+{Blocked}/{Amount} for price:{Price}, user:{UserId} ##";
     }
 }
