@@ -16,63 +16,49 @@ namespace MatchingEngine.Services
             _liquidityImportService = liquidityImportService;
         }
 
-        private static Deal CreateDeal(Order bid, Order ask, decimal volume, decimal price)
-        {
-            return new Deal
-            {
-                DateCreated = DateTimeOffset.UtcNow,
-                Bid = bid,
-                Ask = ask,
-                Price = price,
-                Volume = volume,
-                FromInnerTradingBot = bid.FromInnerTradingBot
-            };
-        }
-
         public MatchingEngine.Models.MatchingResult Match(IEnumerable<Order> pool, Order newOrder)
         {
             var modifiedOrders = new List<Order>();
             var newDeals = new List<Deal>();
 
-            var orders = pool.Where(o => o.IsBid != newOrder.IsBid && o.IsActive
+            var poolOrders = pool.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode && o.IsBid != newOrder.IsBid && o.IsActive
                 && (newOrder.Exchange == Exchange.Local || o.Exchange == Exchange.Local)
                 && newOrder.FromInnerTradingBot == o.FromInnerTradingBot).ToList();
             if (newOrder.IsBid)
-                orders = orders.Where(o => o.Price <= newOrder.Price).OrderBy(o => o.Price).ToList();
+                poolOrders = poolOrders.Where(o => o.Price <= newOrder.Price).OrderBy(o => o.Price).ToList();
             else
-                orders = orders.Where(o => o.Price >= newOrder.Price).OrderByDescending(o => o.Price).ToList();
+                poolOrders = poolOrders.Where(o => o.Price >= newOrder.Price).OrderByDescending(o => o.Price).ToList();
 
-            foreach (var order in orders)
+            foreach (var poolOrder in poolOrders)
             {
-                var bid = newOrder.IsBid ? newOrder : order;
-                var ask = newOrder.IsBid ? order : newOrder;
+                var bid = newOrder.IsBid ? newOrder : poolOrder;
+                var ask = newOrder.IsBid ? poolOrder : newOrder;
 
-                var fulfilmentAmount = Math.Min(newOrder.AvailableAmount, order.AvailableAmount);
+                var fulfilmentAmount = Math.Min(newOrder.AvailableAmount, poolOrder.AvailableAmount);
                 if (fulfilmentAmount == 0)
                     continue;
 
-                bool isExternal = newOrder.Exchange != Exchange.Local || order.Exchange != Exchange.Local; // from LiquidityImport
-                if (isExternal)
+                bool isExternalTrade = newOrder.Exchange != Exchange.Local || poolOrder.Exchange != Exchange.Local;
+                if (isExternalTrade)
                 {
                     _liquidityImportService.CreateTrade(bid, ask);
                     newOrder.Blocked += fulfilmentAmount;
-                    order.Blocked += fulfilmentAmount;
+                    poolOrder.Blocked += fulfilmentAmount;
                 }
                 else
                 {
-                    newDeals.Add(CreateDeal(bid, ask, fulfilmentAmount, order.Price));
+                    newDeals.Add(new Deal(bid, ask, poolOrder.Price, fulfilmentAmount));
                     newOrder.Fulfilled += fulfilmentAmount;
-                    order.Fulfilled += fulfilmentAmount;
+                    poolOrder.Fulfilled += fulfilmentAmount;
                 }
 
-                modifiedOrders.Add(order);
+                modifiedOrders.Add(poolOrder);
                 if (newOrder.AvailableAmount <= 0)
                     break; // if new order is completely fulfilled/blocked, there's no reason to iterate further
             }
 
             if (modifiedOrders.Count > 0)
                 modifiedOrders.Add(newOrder);
-
             return new MatchingEngine.Models.MatchingResult(modifiedOrders, newDeals);
         }
     }
