@@ -652,23 +652,6 @@ namespace Stock.Trading.Service
             await SendOrdersToMarketData();
         }
 
-        /// <summary>
-        /// only for updating orders from other exchanges
-        /// </summary>
-        public async Task UpdateOrder(Guid id, AddRequest changedOrder)
-        {
-            lock (_orders)
-            {
-                var order = _orders.FirstOrDefault(_ => _.Id == id);
-                if (order != null)
-                {
-                    order.Volume = changedOrder.Amount;
-                    order.Created = changedOrder.OrderDateUtc;
-                }
-            }
-            await SendOrdersToMarketData();
-        }
-
         public async Task UpdateOrders(IEnumerable<AddRequestLiquidity> orders)
         {
             lock (_orders)

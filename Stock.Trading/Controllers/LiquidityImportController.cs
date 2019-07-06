@@ -57,37 +57,6 @@ namespace Stock.Trading.Controllers
             return Ok();
         }
 
-        [HttpPut("order/{isBid}/{id}")]
-        public async Task<IActionResult> UpdateOrder(bool isBid, string id, [FromBody]AddRequest order)
-        {
-            if (isBid)
-            {
-                var orderDb = await _context.Bids.SingleOrDefaultAsync(_ => _.Id.ToString() == id);
-                if (orderDb == null)
-                    return NotFound();
-                if (orderDb.ExchangeId == 0)
-                    return StatusCode((int)HttpStatusCode.MethodNotAllowed);
-                if (orderDb.Fulfilled > order.Amount)
-                    order.Amount = orderDb.Fulfilled;
-                orderDb.Volume = order.Amount;
-            }
-            else
-            {
-                var orderDb = await _context.Asks.SingleOrDefaultAsync(_ => _.Id.ToString() == id);
-                if (orderDb == null)
-                    return NotFound();
-                if (orderDb.ExchangeId == 0)
-                    return StatusCode((int)HttpStatusCode.MethodNotAllowed);
-                if (orderDb.Fulfilled > order.Amount)
-                    order.Amount = orderDb.Fulfilled;
-                orderDb.Volume = order.Amount;
-            }
-
-            await _matchingPool.UpdateOrder(Guid.Parse(id), order);
-            await _context.SaveChangesAsync();
-            return Ok();
-        }
-
         [HttpPut("orders/update")]
         public async Task<IActionResult> UpdateOrders([FromBody]List<AddRequestLiquidity> orders)
         {
