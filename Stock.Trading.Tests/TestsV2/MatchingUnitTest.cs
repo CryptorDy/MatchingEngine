@@ -1,4 +1,5 @@
 using MatchingEngine.Models;
+using Moq;
 using Stock.Trading.Entities;
 using Stock.Trading.Models;
 using Stock.Trading.Service;
@@ -95,6 +96,30 @@ namespace Stock.Trading.Tests.TestsV2
             Assert.Equal(0, resultBid.AvailableAmount);
             Assert.True(resultBid.Fulfilled == resultBid.Amount);
             Assert.True(!resultBid.IsActive);
+        }
+
+        [Fact]
+        public void CorrectMatchOfImportedOrder()
+        {
+            var ask = new Order(false, _currencyPairCode, 3, 10) { Exchange = Models.LiquidityImport.Exchange.Binance };
+            var pool = new List<Order> { _cheapBid.Clone() };
+            var liquidityImportService = new Mock<MatchingEngine.Services.ILiquidityImportService>();
+            int callbackCounter = 0;
+            liquidityImportService
+                .Setup(_ => _.CreateTrade(It.IsAny<Order>(), It.IsAny<Order>()))
+                .Callback<Order, Order>((resultBid, resultAsk) =>
+                {
+                    callbackCounter++;
+                    Console.WriteLine($"LiquidityImportService.CreateTrade() callback {callbackCounter}");
+                });
+            var service = new MatchingEngine.Services.OrdersMatcher(liquidityImportService.Object);
+            var result = service.Match(pool, ask);
+
+            Assert.Empty(result.NewDeals);
+            Assert.Equal(1, callbackCounter);
+            Assert.Equal(2, result.ModifiedOrders.Count);
+            Assert.True(result.ModifiedOrders[0].Blocked > 0);
+            Assert.True(result.ModifiedOrders[1].Blocked > 0);
         }
     }
 }
