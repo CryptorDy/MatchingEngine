@@ -140,8 +140,8 @@ namespace Stock.Trading.Service
             return new CurrencyPairPrices
             {
                 CurrencyPair = currencyPairCode,
-                BidMax = orders.Where(_ => _.CurrencyPairId == currencyPairCode && _.IsBid).Select(_ => _.Price).DefaultIfEmpty().Max(),
-                AskMin = _orders.Where(_ => _.CurrencyPairId == currencyPairCode && !_.IsBid).Select(_ => _.Price).DefaultIfEmpty().Min(),
+                BidMax = orders.Where(_ => _.IsBid).Select(_ => _.Price).DefaultIfEmpty().Max(),
+                AskMin = orders.Where(_ => !_.IsBid).Select(_ => _.Price).DefaultIfEmpty().Min(),
             };
         }
 
