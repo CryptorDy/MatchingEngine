@@ -30,9 +30,10 @@ namespace Stock.Trading.Tests.TestsV2
         public void EmptyDataReturnEmptyResult()
         {
             var service = new MatchingEngine.Services.OrdersMatcher(null);
-            var result = service.Match(new List<Order>(), _cheapBid.Clone());
-            Assert.Empty(result.NewDeals);
-            Assert.Empty(result.ModifiedOrders);
+            var (modifiedOrders, newDeals) = service.Match(new List<Order>(), _cheapBid.Clone());
+
+            Assert.Empty(modifiedOrders);
+            Assert.Empty(newDeals);
         }
 
         [Fact]
@@ -41,10 +42,10 @@ namespace Stock.Trading.Tests.TestsV2
             var pool = new List<Order> { _cheapBid.Clone() };
 
             var service = new MatchingEngine.Services.OrdersMatcher(null);
+            var (modifiedOrders, newDeals) = service.Match(pool, _expensiveAsk.Clone());
 
-            var result = service.Match(pool, _expensiveAsk.Clone());
-            Assert.Empty(result.NewDeals);
-            Assert.Empty(result.ModifiedOrders);
+            Assert.Empty(modifiedOrders);
+            Assert.Empty(newDeals);
         }
 
         [Fact]
@@ -63,16 +64,16 @@ namespace Stock.Trading.Tests.TestsV2
                 var pool = new List<Order> { bid.Clone() };
 
                 var service = new MatchingEngine.Services.OrdersMatcher(null);
-                var result = service.Match(pool, ask.Clone());
+                var (modifiedOrders, newDeals) = service.Match(pool, ask.Clone());
 
                 decimal expectedDealVolume = Math.Min(bid.AvailableAmount, ask.AvailableAmount);
                 decimal expectedDealPrice = bid.Price;
-                Assert.Single(result.NewDeals);
-                Assert.Equal(expectedDealVolume, result.NewDeals.First().Volume);
-                Assert.Equal(expectedDealPrice, result.NewDeals.First().Price);
+                Assert.Single(newDeals);
+                Assert.Equal(expectedDealVolume, newDeals.First().Volume);
+                Assert.Equal(expectedDealPrice, newDeals.First().Price);
 
-                Order resultBid = result.ModifiedOrders.Single(_ => _.IsBid),
-                    resultAsk = result.ModifiedOrders.Single(_ => !_.IsBid);
+                Order resultBid = modifiedOrders.Single(_ => _.IsBid),
+                    resultAsk = modifiedOrders.Single(_ => !_.IsBid);
                 Assert.Equal(bid.AvailableAmount - expectedDealVolume, resultBid.AvailableAmount);
                 Assert.Equal(ask.AvailableAmount - expectedDealVolume, resultAsk.AvailableAmount);
                 Assert.True(resultBid.Fulfilled <= resultBid.Amount);
@@ -88,11 +89,11 @@ namespace Stock.Trading.Tests.TestsV2
             var pool = new List<Order> { _cheapAskWithFulfilled.Clone(), _cheapAskWithBlocked.Clone() };
 
             var service = new MatchingEngine.Services.OrdersMatcher(null);
-            var result = service.Match(pool, _cheapBid.Clone());
+            var (modifiedOrders, newDeals) = service.Match(pool, _cheapBid.Clone());
 
-            Assert.Equal(2, result.NewDeals.Count);
-            Assert.Equal(3, result.ModifiedOrders.Count);
-            Order resultBid = result.ModifiedOrders.Single(_ => _.IsBid);
+            Assert.Equal(2, newDeals.Count);
+            Assert.Equal(3, modifiedOrders.Count);
+            Order resultBid = modifiedOrders.Single(_ => _.IsBid);
             Assert.Equal(0, resultBid.AvailableAmount);
             Assert.True(resultBid.Fulfilled == resultBid.Amount);
             Assert.True(!resultBid.IsActive);
@@ -112,14 +113,20 @@ namespace Stock.Trading.Tests.TestsV2
                     callbackCounter++;
                     Console.WriteLine($"LiquidityImportService.CreateTrade() callback {callbackCounter}");
                 });
-            var service = new MatchingEngine.Services.OrdersMatcher(liquidityImportService.Object);
-            var result = service.Match(pool, ask);
+            var ordersMatcher = new MatchingEngine.Services.OrdersMatcher(liquidityImportService.Object);
+            var (modifiedOrders, newDeals) = ordersMatcher.Match(pool, ask);
 
-            Assert.Empty(result.NewDeals);
+            Assert.Empty(newDeals);
             Assert.Equal(1, callbackCounter);
-            Assert.Equal(2, result.ModifiedOrders.Count);
-            Assert.True(result.ModifiedOrders[0].Blocked > 0);
-            Assert.True(result.ModifiedOrders[1].Blocked > 0);
+            Assert.Equal(2, modifiedOrders.Count);
+            Assert.True(modifiedOrders[0].Blocked > 0);
+            Assert.True(modifiedOrders[1].Blocked > 0);
+
+            callbackCounter = 0;
+            ordersMatcher = new MatchingEngine.Services.OrdersMatcher(liquidityImportService.Object);
+            var matchingPool = new MatchingEngine.Services.MatchingPool(null, ordersMatcher, null, null, null, null, null);
+            matchingPool.AppendOrder(pool[0]);
+            matchingPool.AppendOrder(ask);
         }
     }
 }
