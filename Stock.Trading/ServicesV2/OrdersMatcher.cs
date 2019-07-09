@@ -21,9 +21,9 @@ namespace MatchingEngine.Services
             var modifiedOrders = new List<Order>();
             var newDeals = new List<Deal>();
 
-            var poolOrders = pool.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode && o.IsBid != newOrder.IsBid && o.IsActive
-                && (newOrder.Exchange == Exchange.Local || o.Exchange == Exchange.Local)
-                && newOrder.FromInnerTradingBot == o.FromInnerTradingBot).ToList();
+            var poolOrders = pool.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode && o.IsBid != newOrder.IsBid
+                && o.IsActive && (newOrder.IsLocal || o.IsLocal) && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
+                .ToList();
             if (newOrder.IsBid)
                 poolOrders = poolOrders.Where(o => o.Price <= newOrder.Price).OrderBy(o => o.Price).ToList();
             else
@@ -34,19 +34,17 @@ namespace MatchingEngine.Services
                 var bid = newOrder.IsBid ? newOrder : poolOrder;
                 var ask = newOrder.IsBid ? poolOrder : newOrder;
 
-                var fulfilmentAmount = Math.Min(newOrder.AvailableAmount, poolOrder.AvailableAmount);
-                if (fulfilmentAmount == 0)
-                    continue;
-
-                bool isExternalTrade = newOrder.Exchange != Exchange.Local || poolOrder.Exchange != Exchange.Local;
+                bool isExternalTrade = !newOrder.IsLocal || !poolOrder.IsLocal;
                 if (isExternalTrade)
                 {
                     _liquidityImportService.CreateTrade(bid, ask);
-                    newOrder.Blocked += fulfilmentAmount;
-                    poolOrder.Blocked += fulfilmentAmount;
+                    // liquidity will try to fill all amount of local order
+                    newOrder.Blocked = newOrder.AvailableAmount;
+                    poolOrder.Blocked = poolOrder.AvailableAmount;
                 }
                 else
                 {
+                    decimal fulfilmentAmount = Math.Min(newOrder.AvailableAmount, poolOrder.AvailableAmount);
                     newDeals.Add(new Deal(bid, ask, poolOrder.Price, fulfilmentAmount));
                     newOrder.Fulfilled += fulfilmentAmount;
                     poolOrder.Fulfilled += fulfilmentAmount;

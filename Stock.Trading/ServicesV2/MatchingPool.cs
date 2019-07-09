@@ -181,10 +181,10 @@ namespace MatchingEngine.Services
                 // Update matched orders
                 lock (_orders)
                 {
-                    matchedLocalOrder.Blocked -= createdOrder.Amount;
+                    matchedImportedOrder.Blocked = 0;
+                    matchedLocalOrder.Blocked = 0;
                     matchedLocalOrder.Fulfilled += createdOrder.Fulfilled;
                     modifiedOrders.Add(matchedLocalOrder);
-                    matchedImportedOrder.Blocked -= createdOrder.Amount;
                     _orders.RemoveAll(o => !o.IsActive);
                 }
 
@@ -307,17 +307,7 @@ namespace MatchingEngine.Services
                     _orders.RemoveAll(o => !o.IsActive);
                     _logger.LogInformation($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
                         $"Orders in pool: {_orders.Count};");
-
-                    // debug, find when bids are bigger than asks
-                    var currencyPairOrders = _orders.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode);
-                    var biggestBid = currencyPairOrders.Where(o => o.IsBid).OrderByDescending(_ => _.Price).FirstOrDefault();
-                    var lowestAsk = currencyPairOrders.Where(o => !o.IsBid).OrderBy(_ => _.Price).FirstOrDefault();
-                    if (biggestBid != null && lowestAsk != null && biggestBid.Price > lowestAsk.Price)
-                    {
-                        _logger.LogError($"\n!!!!!!! bids are bigger than asks.");
-                        _logger.LogError($"newOrder: {newOrder}\nbiggestBid: {biggestBid}\nlowestAsk: {lowestAsk}");
-                    }
-                    // end debug
+                    CheckOrderbookIntersection(newOrder);
                 }
                 await UpdateDatabase(context, modifiedOrders, newDeals);
                 await ReportData(context, modifiedOrders, newDeals);
@@ -392,6 +382,21 @@ namespace MatchingEngine.Services
                 _orders.RemoveAll(_ => _.FromInnerTradingBot && _.DateCreated < DateTimeOffset.UtcNow.AddSeconds(-7));
             }
             await SendOrdersToMarketData();
+        }
+
+        /// <summary>
+        /// Log when bids are bigger than asks
+        /// </summary>
+        private void CheckOrderbookIntersection(Order newOrder)
+        {
+            var currencyPairOrders = _orders.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode);
+            var biggestBid = currencyPairOrders.Where(o => o.IsBid).OrderByDescending(_ => _.Price).FirstOrDefault();
+            var lowestAsk = currencyPairOrders.Where(o => !o.IsBid).OrderBy(_ => _.Price).FirstOrDefault();
+            if (biggestBid != null && lowestAsk != null && biggestBid.Price > lowestAsk.Price)
+            {
+                _logger.LogError($"\n!!!!!!! bids are bigger than asks.");
+                _logger.LogError($"newOrder: {newOrder}\nbiggestBid: {biggestBid}\nlowestAsk: {lowestAsk}");
+            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)

@@ -77,6 +77,8 @@ namespace MatchingEngine.Models
 
         public bool IsActive => !IsCanceled && Fulfilled < Amount;
 
+        public bool IsLocal => Exchange == Exchange.Local;
+
         public override string ToString() => $"##{(IsBid ? "Bid" : "Ask")} {Id} {CurrencyPairCode} created:{DateCreated} " +
             $"{(IsCanceled ? "canceled" : IsActive ? "active" : "completed")} {Exchange} " +
             $"{(FromInnerTradingBot ? "FromInnerTradingBot" : "")} Available:{AvailableAmount} " +
