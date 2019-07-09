@@ -16,7 +16,7 @@ namespace MatchingEngine.Services
             _liquidityImportService = liquidityImportService;
         }
 
-        public MatchingEngine.Models.MatchingResult Match(IEnumerable<Order> pool, Order newOrder)
+        public (List<Order> modifiedOrders, List<Deal> newDeals) Match(IEnumerable<Order> pool, Order newOrder)
         {
             var modifiedOrders = new List<Order>();
             var newDeals = new List<Deal>();
@@ -59,7 +59,7 @@ namespace MatchingEngine.Services
 
             if (modifiedOrders.Count > 0)
                 modifiedOrders.Add(newOrder);
-            return new MatchingEngine.Models.MatchingResult(modifiedOrders, newDeals);
+            return (modifiedOrders, newDeals);
         }
     }
 }
