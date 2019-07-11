@@ -37,6 +37,8 @@ namespace MatchingEngine.Services
                 bool isExternalTrade = !newOrder.IsLocal || !poolOrder.IsLocal;
                 if (isExternalTrade)
                 {
+                    if (bid.Blocked != 0 || ask.Blocked != 0)
+                        Console.WriteLine($"Incorrect blocked state: {bid}, {ask}");
                     _liquidityImportService.CreateTrade(bid, ask);
                     // liquidity will try to fill all amount of local order
                     newOrder.Blocked = newOrder.AvailableAmount;

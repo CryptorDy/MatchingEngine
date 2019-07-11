@@ -18,8 +18,8 @@ namespace MatchingEngine.Models
             if (ask.IsBid) throw new Exception($"No asks passed to Deal(): {order1}, {order2}");
 
             DateCreated = DateTimeOffset.UtcNow;
-            Bid = bid;
-            Ask = ask;
+            BidId = bid.Id;
+            AskId = ask.Id;
             Price = price;
             Volume = volume;
             FromInnerTradingBot = bid.FromInnerTradingBot;
@@ -64,7 +64,7 @@ namespace MatchingEngine.Models
         /// </summary>
         [Required]
         [ForeignKey("AskId")]
-        public Order Ask { get; set; }
+        public Ask Ask { get; set; }
 
         /// <summary>
         /// Bid id
@@ -76,6 +76,6 @@ namespace MatchingEngine.Models
         /// </summary>
         [Required]
         [ForeignKey("BidId")]
-        public Order Bid { get; set; }
+        public Bid Bid { get; set; }
     }
 }

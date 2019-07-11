@@ -71,7 +71,7 @@ namespace MatchingEngine.Services
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                var dbOrders = context.BidsV2.AsNoTracking().Where(a => a.IsActive)
+                var dbOrders = context.BidsV2.AsNoTracking().Where(a => a.IsActive).Cast<Order>()
                     .Union(context.AsksV2.AsNoTracking().Where(a => a.IsActive))
                     .ToList();
                 foreach (var order in dbOrders.OrderBy(o => o.DateCreated))
@@ -99,17 +99,17 @@ namespace MatchingEngine.Services
             if (modifiedOrders.Count > 0)
             {
                 _logger.LogInformation($"Updating {modifiedOrders.Count} orders");
-                var dbOrdersDict = (await context.GetDbOrders(modifiedOrders)).ToDictionary(_ => _.Id, _ => _);
+                var dbOrdersDict = (await context.GetOrders(modifiedOrders)).ToDictionary(_ => _.Id, _ => _);
 
                 foreach (var order in modifiedOrders)
                 {
                     if (!dbOrdersDict.TryGetValue(order.Id, out var dbOrder))
                     {
+
                         // create if external or FromInnerBot and wasn't created yet
                         if (dbOrder == null && (order.Exchange != Exchange.Local || order.FromInnerTradingBot))
                         {
-                            dbOrder = order;
-                            await context.AddOrder(dbOrder);
+                            dbOrder = await context.AddOrder(order, false);
                         }
                         if (dbOrder == null)
                             throw new Exception($"Couldn't find in DB: {order}");
@@ -202,7 +202,7 @@ namespace MatchingEngine.Services
                         Price = matchedImportedOrder.Price,
                         Amount = createdOrder.Fulfilled,
                         Fulfilled = createdOrder.Fulfilled,
-                        UserId = $"{matchedImportedOrder.UserId}_matched"
+                        UserId = $"{matchedImportedOrder.Exchange}_matched"
                     };
                     modifiedOrders.Add(newImportedOrder);
 

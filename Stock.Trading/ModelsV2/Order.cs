@@ -9,6 +9,10 @@ using System.Threading.Tasks;
 
 namespace MatchingEngine.Models
 {
+    public class Bid : Order { }
+
+    public class Ask : Order { }
+
     public class Order
     {
         public Order()
@@ -21,11 +25,6 @@ namespace MatchingEngine.Models
             CurrencyPairCode = currencyPairCode;
             Price = price;
             Amount = amount;
-        }
-
-        public Order Clone()
-        {
-            return (Order)MemberwiseClone();
         }
 
         [Key]
@@ -83,5 +82,7 @@ namespace MatchingEngine.Models
             $"{(IsCanceled ? "canceled" : IsActive ? "active" : "completed")} {Exchange} " +
             $"{(FromInnerTradingBot ? "FromInnerTradingBot" : "")} Available:{AvailableAmount} " +
             $"filled:{Fulfilled}+{Blocked}/{Amount} for price:{Price}, user:{UserId} ##";
+
+        public Order Clone() => (Order)MemberwiseClone();
     }
 }

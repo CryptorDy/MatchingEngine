@@ -1,4 +1,6 @@
+using AutoMapper;
 using FluentValidation.AspNetCore;
+using MatchingEngine.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -63,6 +65,14 @@ namespace Stock.Trading
 
             services.Configure<AppSettings>(Configuration);
             services.Configure<AppSettings>(settings => settings.ConnectionString = Configuration.GetSection("ConnectionStrings:DefaultConnection").Value);
+
+            var mapperConfig = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<Order, Bid>();
+                cfg.CreateMap<Order, Ask>();
+            });
+            mapperConfig.AssertConfigurationIsValid();
+            services.AddSingleton(mapperConfig.CreateMapper());
 
             // lowercase routing
             services.AddRouting(options => options.LowercaseUrls = true);
