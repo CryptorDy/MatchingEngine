@@ -105,6 +105,9 @@ namespace MatchingEngine.Services
                 {
                     if (!dbOrdersDict.TryGetValue(order.Id, out var dbOrder))
                     {
+                        // only save copy of imported order (after external trade), not the initial imported order
+                        if (!order.IsLocal && order.Fulfilled == 0)
+                            continue;
 
                         // create if external or FromInnerBot and wasn't created yet
                         if (dbOrder == null && (order.Exchange != Exchange.Local || order.FromInnerTradingBot))
@@ -207,8 +210,9 @@ namespace MatchingEngine.Services
                     modifiedOrders.Add(newImportedOrder);
 
                     // Create deal
+                    decimal dealPrice = bid.DateCreated > ask.DateCreated ? ask.Price : bid.Price;
                     newDeals.Add(new MatchingEngine.Models.Deal(matchedLocalOrder, newImportedOrder,
-                        createdOrder.Price, createdOrder.Fulfilled));
+                        dealPrice, createdOrder.Fulfilled));
                 }
 
                 await UpdateDatabase(db, modifiedOrders, newDeals);
