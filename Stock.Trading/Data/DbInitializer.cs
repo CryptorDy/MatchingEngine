@@ -1,5 +1,6 @@
+using MatchingEngine.Models;
 using Microsoft.EntityFrameworkCore;
-using Stock.Trading.Data.Entities;
+using Stock.Trading.Models.LiquidityImport;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -18,18 +19,66 @@ namespace Stock.Trading.Data
         {
             _dbContext.Database.Migrate();
 
-            if (_dbContext.OrderTypes.Any())
+            TransferOrdersAndDeals();
+        }
+
+        public void TransferOrdersAndDeals()
+        {
+            if (_dbContext.BidsV2.Any())
                 return;
-
-            var orderTypes = new List<OrderType>
+            var bids = _dbContext.Bids.ToList();
+            foreach (var order in bids)
             {
-                OrderType.Active,
-                OrderType.Blocked,
-                OrderType.Canceled,
-                OrderType.Completed
-            };
+                _dbContext.BidsV2.Add(new Bid
+                {
+                    Id = order.Id,
+                    IsBid = true,
+                    Price = order.Price,
+                    Amount = order.Volume,
+                    Fulfilled = order.OrderTypeCode == Data.Entities.OrderType.Completed.Code ? order.Volume : order.Fulfilled,
+                    Blocked = 0,
+                    CurrencyPairCode = order.CurrencyPairId,
+                    DateCreated = order.OrderDateUtc,
+                    UserId = order.UserId,
+                    IsCanceled = order.OrderTypeCode == Data.Entities.OrderType.Canceled.Code,
+                    Exchange = (Exchange)order.ExchangeId,
+                    FromInnerTradingBot = order.FromInnerTradingBot,
+                });
+            }
+            var asks = _dbContext.Asks.ToList();
+            foreach (var order in asks)
+            {
+                _dbContext.AsksV2.Add(new Ask
+                {
+                    Id = order.Id,
+                    IsBid = true,
+                    Price = order.Price,
+                    Amount = order.Volume,
+                    Fulfilled = order.OrderTypeCode == Data.Entities.OrderType.Completed.Code ? order.Volume : order.Fulfilled,
+                    Blocked = 0,
+                    CurrencyPairCode = order.CurrencyPairId,
+                    DateCreated = order.OrderDateUtc,
+                    UserId = order.UserId,
+                    IsCanceled = order.OrderTypeCode == Data.Entities.OrderType.Canceled.Code,
+                    Exchange = (Exchange)order.ExchangeId,
+                    FromInnerTradingBot = order.FromInnerTradingBot,
+                });
+            }
 
-            _dbContext.OrderTypes.AddRange(orderTypes);
+            var deals = _dbContext.Deals.ToList();
+            foreach (var deal in deals)
+            {
+                _dbContext.DealsV2.Add(new Deal
+                {
+                    DealId = deal.DealId,
+                    Price = deal.Price,
+                    Volume = deal.Volume,
+                    DateCreated = deal.DealDateUtc,
+                    BidId = deal.BidId,
+                    AskId = deal.AskId,
+                    FromInnerTradingBot = deal.FromInnerTradingBot,
+                });
+            }
             _dbContext.SaveChanges();
         }
 
