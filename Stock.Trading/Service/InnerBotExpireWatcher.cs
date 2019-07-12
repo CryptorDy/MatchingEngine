@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Stock.Trading.Service
+namespace MatchingEngine.Services
 {
     public class InnerBotExpireWatcher : Services.BackgroundService
     {

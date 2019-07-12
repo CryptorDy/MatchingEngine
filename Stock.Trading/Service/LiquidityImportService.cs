@@ -1,14 +1,15 @@
+using MatchingEngine.HttpClients;
+using MatchingEngine.Models;
+using MatchingEngine.Models.LiquidityImport;
 using Microsoft.Extensions.Logging;
-using Stock.Trading.HttpClients;
-using Stock.Trading.Models.LiquidityImport;
 using System;
 using System.Threading.Tasks;
 
-namespace Stock.Trading.Service
+namespace MatchingEngine.Services
 {
     public interface ILiquidityImportService
     {
-        Task CreateTrade(ExternalMatchingPair matchingPair);
+        Task CreateTrade(Order bid, Order ask);
 
         Task RemoveOrderbook(Exchange exchange, string currencyPairCode);
     }
@@ -25,11 +26,12 @@ namespace Stock.Trading.Service
             _logger = logger;
         }
 
-        public async Task CreateTrade(ExternalMatchingPair matchingPair)
+        public async Task CreateTrade(Order bid, Order ask)
         {
             try
             {
-                await _gatewayHttpClient.PostJsonAsync($"liquiditymain/trade/create", matchingPair);
+                await _gatewayHttpClient.PostJsonAsync($"liquiditymain/trade/create",
+                    new ExternalMatchingPair { Bid = bid, Ask = ask });
             }
             catch (Exception e)
             {

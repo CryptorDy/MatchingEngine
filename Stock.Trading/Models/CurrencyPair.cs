@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Stock.Trading.Data
+namespace MatchingEngine.Models
 {
     /// <summary>
     /// Валютная пара

@@ -1,7 +1,6 @@
+using MatchingEngine.Models;
 using Newtonsoft.Json;
-using Stock.Trading.Data.Entities;
-using Stock.Trading.Requests;
-using Stock.Trading.Responses;
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -21,93 +20,54 @@ namespace Stock.Trading.Integration.Tests
         private readonly TestContext _testContext;
 
         [Fact]
-        public async Task CanCreateReadAndCancelAsk()
+        public async Task CanCreateReadAndCancelBid()
         {
-            var json = JsonConvert.SerializeObject(new AddRequest
-            {
-                Amount = 1,
-                CurrencyPariId = "1",
-                Price = 1,
-                UserId = "userId"
-            });
-
-            var stringContent = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _testContext.Client.PostAsync("/api/ask", stringContent);
-
-            response.EnsureSuccessStatusCode();
-
-            var content = await response.Content.ReadAsStringAsync();
-            var result = JsonConvert.DeserializeObject<dynamic>(content);
-            string id = result.id;
-
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-            response = await _testContext.Client.GetAsync($"/api/ask/{id}");
-
-            response.EnsureSuccessStatusCode();
-
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            content = await response.Content.ReadAsStringAsync();
-            var ask = JsonConvert.DeserializeObject<AskResponse>(content);
-            Assert.NotNull(ask);
-            Assert.Equal(id, ask.Id);
-
-            response = await _testContext.Client.DeleteAsync($"/api/ask/{id}?userId=userId");
-
-            response.EnsureSuccessStatusCode();
-
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-            response = await _testContext.Client.GetAsync($"/api/ask/{id}");
-
-            response.EnsureSuccessStatusCode();
-
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            content = await response.Content.ReadAsStringAsync();
-            ask = JsonConvert.DeserializeObject<AskResponse>(content);
-            Assert.NotNull(ask);
-            Assert.Equal(ask.OrderTypeId, OrderType.Canceled.Code);
+            CanCreateReadAndCancelOrder(true);
         }
 
         [Fact]
-        public async Task CanCreateReadAndCancelBid()
+        public async Task CanCreateReadAndCancelAsk()
         {
-            var json = JsonConvert.SerializeObject(new AddRequest
+            CanCreateReadAndCancelOrder(false);
+        }
+
+        public async Task CanCreateReadAndCancelOrder(bool isBid)
+        {
+            var json = JsonConvert.SerializeObject(new OrderCreateRequest
             {
+                ActionId = Guid.NewGuid().ToString(),
+                IsBid = isBid,
                 Amount = 1,
-                CurrencyPariId = "1",
                 Price = 1,
+                CurrencyPairCode = "ETH_BTC",
+                DateCreated = DateTimeOffset.UtcNow,
                 UserId = "userId"
             });
 
             var stringContent = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _testContext.Client.PostAsync("/api/bid", stringContent);
+            var response = await _testContext.Client.PostAsync("/api/order", stringContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             var content = await response.Content.ReadAsStringAsync();
             var result = JsonConvert.DeserializeObject<dynamic>(content);
             string id = result.id;
 
-            response = await _testContext.Client.GetAsync($"/api/bid/{id}");
-
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-            content = await response.Content.ReadAsStringAsync();
-            var bid = JsonConvert.DeserializeObject<BidResponse>(content);
-            Assert.NotNull(bid);
-            Assert.Equal(id, bid.Id);
-
-            response = await _testContext.Client.DeleteAsync($"/api/bid/{id}?userId=userId");
-
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-            response = await _testContext.Client.GetAsync($"/api/bid/{id}");
-
+            response = await _testContext.Client.GetAsync($"/api/order/{isBid}/{id}");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             content = await response.Content.ReadAsStringAsync();
-            bid = JsonConvert.DeserializeObject<BidResponse>(content);
-            Assert.NotNull(bid);
-            Assert.Equal(bid.OrderTypeId, OrderType.Canceled.Code);
+            var order = JsonConvert.DeserializeObject<Order>(content);
+            Assert.NotNull(order);
+            Assert.Equal(id, order.Id.ToString());
+
+            response = await _testContext.Client.DeleteAsync($"/api/order/{isBid}/{id}?userId=userId");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            response = await _testContext.Client.GetAsync($"/api/order/{isBid}/{id}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            content = await response.Content.ReadAsStringAsync();
+            order = JsonConvert.DeserializeObject<Order>(content);
+            Assert.NotNull(order);
+            Assert.True(order.IsCanceled);
         }
 
         [Fact]

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Hosting;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Stock.Trading.Service
+namespace MatchingEngine.Services
 {
     public class MatchingPoolAccessor
     {

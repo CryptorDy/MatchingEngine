@@ -1,14 +1,14 @@
+using MatchingEngine.Models.LiquidityImport;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Stock.Trading.Models.LiquidityImport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Stock.Trading.Service
+namespace MatchingEngine.Services
 {
     public class LiquidityExpireWatcher : Services.BackgroundService
     {
@@ -78,7 +78,7 @@ namespace Stock.Trading.Service
                     if (expiration.ExpirationDate < DateTime.UtcNow)
                     {
                         _logger.LogWarning($"Liquidity expired:{expiration.Exchange}-{expiration.CurrencyPairCode}");
-                        _matchingPool.RemoveLiquidityOrderbook((int)expiration.Exchange, expiration.CurrencyPairCode);
+                        _matchingPool.RemoveLiquidityOrderbook(expiration.Exchange, expiration.CurrencyPairCode);
                         _liquidityImportService.RemoveOrderbook(expiration.Exchange, expiration.CurrencyPairCode);
                     }
                 }

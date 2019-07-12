@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Reflection;
 
-namespace Stock.Trading.Controllers
+namespace MatchingEngine.Controllers
 {
     [Route("api/[controller]")]
     public class HealthcheckController : Controller

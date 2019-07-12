@@ -1,4 +1,4 @@
-﻿namespace Stock.Trading.Data
+namespace MatchingEngine.Models
 {
     public class Currency
     {

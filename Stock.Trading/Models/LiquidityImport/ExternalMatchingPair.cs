@@ -1,8 +1,8 @@
-namespace Stock.Trading.Models.LiquidityImport
+namespace MatchingEngine.Models.LiquidityImport
 {
     public class ExternalMatchingPair
     {
-        public MOrder Bid { get; set; }
-        public MOrder Ask { get; set; }
+        public Order Bid { get; set; }
+        public Order Ask { get; set; }
     }
 }

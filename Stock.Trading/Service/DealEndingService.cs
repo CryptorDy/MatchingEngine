@@ -1,8 +1,8 @@
-using Stock.Trading.HttpClients;
+using MatchingEngine.HttpClients;
 using System;
 using System.Threading.Tasks;
 
-namespace Stock.Trading.Service
+namespace MatchingEngine.Services
 {
     public class DealEndingService
     {

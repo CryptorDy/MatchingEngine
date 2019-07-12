@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 
-namespace Stock.Trading.Models
+namespace MatchingEngine.Models
 {
     public class MarketDataFeed
     {

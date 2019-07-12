@@ -1,12 +1,12 @@
+using MatchingEngine.Data;
+using MatchingEngine.Services;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Stock.Trading.Data;
-using Stock.Trading.Service;
 using System;
 using System.Reflection;
 
-namespace Stock.Trading
+namespace MatchingEngine
 {
     public class Program
     {

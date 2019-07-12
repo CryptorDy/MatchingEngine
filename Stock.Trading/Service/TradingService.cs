@@ -1,63 +1,50 @@
+using MatchingEngine.Data;
+using MatchingEngine.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Stock.Trading.Data;
-using Stock.Trading.Data.Entities;
-using Stock.Trading.Entities;
-using Stock.Trading.Models;
-using Stock.Trading.Requests;
-using Stock.Trading.Responses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Stock.Trading.Service
+namespace MatchingEngine.Services
 {
     public class TradingService
     {
         private readonly TradingDbContext _context;
-        private readonly ILogger _logger;
         private readonly MatchingPool _matchingPool;
+        private readonly ILogger _logger;
 
         public TradingService(TradingDbContext context,
             MatchingPoolAccessor matchingPoolAccessor,
             ILogger<TradingService> logger)
         {
             _context = context;
-            _logger = logger;
             _matchingPool = matchingPoolAccessor.MatchingPool;
+            _logger = logger;
         }
 
         #region GET-requests
 
-        public async Task<List<Ask>> Asks(string userId = null)
+        public async Task<List<Order>> GetOrders(bool isBid, string userId = null)
         {
-            List<Ask> result = new List<Ask>();
-
             try
             {
-                result = await _context.Asks
-                    .Include(o => o.OrderType)
-                    .Where(_ => string.IsNullOrEmpty(userId) || _.UserId == userId)
-                    .ToAsyncEnumerable()
-                    .ToList();
+                var result = await _context.GetOrders(isBid, userId);
+                return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError("0", ex);
+                _logger.LogError("", ex);
+                return new List<Order>();
             }
-
-            return result;
         }
 
-        public async Task<Ask> Ask(string id)
+        public async Task<Order> GetOrder(bool isBid, string id)
         {
             try
             {
-                var result = await _context.Asks
-                    .Include(o => o.OrderType)
-                    .Include(o => o.DealList)
-                    .SingleOrDefaultAsync(_ => _.Id == Guid.Parse(id));
+                var result = await _context.GetOrder(isBid, Guid.Parse(id));
                 foreach (var deal in result.DealList)
                 {
                     deal.Ask = null;
@@ -72,166 +59,34 @@ namespace Stock.Trading.Service
             }
         }
 
-        public async Task<List<Bid>> Bids(string userId = null)
-        {
-            List<Bid> result = new List<Bid>();
-
-            try
-            {
-                result = await _context.Bids
-                    .Include(o => o.OrderType)
-                    .Where(_ => string.IsNullOrEmpty(userId) || _.UserId == userId)
-                    .ToAsyncEnumerable()
-                    .ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("0", ex);
-            }
-
-            return result;
-        }
-
-        public async Task<Bid> Bid(string id)
+        public async Task<List<Deal>> GetDeals(string currencyPairCode, int? lastNum, string userId,
+            DateTimeOffset? sinceDate = null, List<string> dealIds = null)
         {
             try
             {
-                var result = await _context.Bids
-                    .Include(o => o.OrderType)
-                    .Include(o => o.DealList)
-                    .SingleOrDefaultAsync(_ => _.Id == Guid.Parse(id));
-                foreach (var deal in result.DealList)
-                {
-                    deal.Ask = null;
-                    deal.Bid = null;
-                }
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("0", ex);
-                return null;
-            }
-        }
-
-        public AskResponse GetAsk(string id)
-        {
-            try
-            {
-                var response = _context.Asks
-                    .Include(m => m.DealList)
-                    .Where(o => o.Id == Guid.Parse(id))
-                    .Select(order => new AskResponse
-                    {
-                        OrderDate = order.OrderDateUtc,
-                        Price = order.Price,
-                        Amount = order.Volume,
-                        RemainingAmount = order.Volume - order.DealList.Select(_ => _.Volume).DefaultIfEmpty(0).Sum(),
-                        Id = order.Id.ToString(),
-                        UserId = order.UserId,
-                        OrderTypeId = order.OrderTypeCode,
-                        CurrencyPairId = order.CurrencyPairId
-                    }).FirstOrDefault();
-
-                if (response == null)
-                {
-                    return new AskResponse();
-                }
-                return response;
-                //return new AskResponse {
-                //    OrderDate = order.OrderDateUtc,
-                //    Price = order.Price,
-                //    Amount = order.Volume,
-                //    RemainingAmount = order.Volume - order.DealList.Sum(d => d.Volume),
-                //    Id = order.Id.ToString(),
-                //    UserId = order.UserId,
-                //    OrderTypeId = order.OrderTypeCode,
-                //    CurrencyPairId = order.CurrencyPairId
-                //};
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "0");
-            }
-
-            return new AskResponse();
-        }
-
-        public BidResponse GetBid(string id)
-        {
-            try
-            {
-                var response = _context.Bids
-                    .Include(m => m.DealList)
-                    .Where(o => o.Id.ToString() == id)
-                    .Select(order => new BidResponse
-                    {
-                        OrderDate = order.OrderDateUtc,
-                        Price = order.Price,
-                        Amount = order.Volume,
-                        RemainingAmount = order.Volume - order.DealList.Select(_ => _.Volume).DefaultIfEmpty(0).Sum(),
-                        RemainingReservationAmount = order.Volume * order.Price - order.DealList.Select(_ => _.Price * _.Volume).DefaultIfEmpty(0).Sum(),
-                        Id = order.Id.ToString(),
-                        UserId = order.UserId,
-                        OrderTypeId = order.OrderTypeCode,
-                        CurrencyPairId = order.CurrencyPairId
-                    }).FirstOrDefault();
-
-                if (response == null)
-                {
-                    return new BidResponse();
-                }
-                return response;
-                //return new BidResponse {
-                //    OrderDate = order.OrderDateUtc,
-                //    Price = order.Price,
-                //    Amount = order.Volume,
-                //    RemainingAmount = order.Volume - order.DealList.Sum(d => d.Volume),
-                //    Id = order.Id.ToString(),
-                //    UserId = order.UserId,
-                //    OrderTypeId = order.OrderTypeCode,
-                //    CurrencyPairId = order.CurrencyPairId
-                //};
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "0");
-            }
-
-            return new BidResponse();
-        }
-
-        public async Task<List<Deal>> GetDeals(string currencyPairId, int? lastNum, string userId,
-            DateTime? sinceDate = null, List<string> dealIds = null)
-        {
-            try
-            {
-                var allDeals = await _context.Deals
+                var deals = await _context.DealsV2
                     .Include(m => m.Ask)
                     .Include(m => m.Bid)
-                    .Where(_ => (!sinceDate.HasValue || _.DealDateUtc > sinceDate)
-                        && (string.IsNullOrWhiteSpace(currencyPairId) || (_.Bid != null && _.Bid.CurrencyPairId == currencyPairId))
+                    .Where(_ => (!sinceDate.HasValue || _.DateCreated > sinceDate)
+                        && (string.IsNullOrWhiteSpace(currencyPairCode) || (_.Bid != null && _.Bid.CurrencyPairCode == currencyPairCode))
                         && (string.IsNullOrWhiteSpace(userId) || (_.Bid != null && _.Bid.UserId == userId) || (_.Ask != null && _.Ask.UserId == userId))
                         && (dealIds == null || dealIds.Count == 0 || dealIds.Contains(_.DealId.ToString())))
-                    .OrderByDescending(m => m.DealDateUtc)
-                    .ThenBy(m => m.DealDateUtc)
+                    .OrderByDescending(m => m.DateCreated)
+                    .Take(lastNum ?? int.MaxValue)
                     .ToListAsync();
 
-                if (lastNum.HasValue)
-                    allDeals = allDeals.Take(lastNum.Value).ToList();
-
-                foreach (var deal in allDeals) // remove circular dependency
+                foreach (var deal in deals) // remove circular dependency to prevent json error
                 {
                     if (deal.Bid != null)
                         deal.Bid.DealList = null;
                     if (deal.Ask != null)
                         deal.Ask.DealList = null;
                 }
-                return allDeals;
+                return deals;
             }
             catch (Exception ex)
             {
-                _logger.LogError("0", ex);
+                _logger.LogError("", ex);
                 return new List<Deal>();
             }
         }
@@ -240,10 +95,10 @@ namespace Stock.Trading.Service
         {
             try
             {
-                var deal = _context.Deals
+                var deal = _context.DealsV2
                     .Include(d => d.Ask)
                     .Include(d => d.Bid)
-                    .FirstOrDefault(o => o.DealId.ToString() == id);
+                    .FirstOrDefault(o => o.DealId == Guid.Parse(id));
                 if (deal != null)
                 {
                     if (deal.Ask != null)
@@ -255,7 +110,7 @@ namespace Stock.Trading.Service
             }
             catch (Exception ex)
             {
-                _logger.LogError("0", ex);
+                _logger.LogError("", ex);
                 return null;
             }
         }
@@ -265,152 +120,58 @@ namespace Stock.Trading.Service
             try
             {
                 var deal = GetDeal(id);
-
-                if (deal == null)
-                {
-                    return new DealResponse();
-                }
-
-                return new DealResponse
-                {
-                    DealId = deal.DealId,
-                    DealDateUtc = deal.DealDateUtc,
-                    Price = deal.Price,
-                    Volume = deal.Volume,
-                    FromInnerTradingBot = deal.FromInnerTradingBot,
-                    AskId = deal.Ask.Id,
-                    BidId = deal.Bid.Id
-                };
+                var dealResponse = deal.GetDealResponse();
+                return dealResponse;
             }
             catch (Exception ex)
             {
-                _logger.LogError("0", ex);
+                _logger.LogError("", ex);
+                return null;
             }
-            return new DealResponse();
         }
 
         #endregion GET-requests
 
-        public async Task<Guid> CreateAsk(AddRequest request)
+        public async Task<Guid> CreateOrder(OrderCreateRequest request)
         {
-            var ask = new Ask
+            var order = new Order
             {
                 Id = new Guid(request.ActionId),
-                Volume = request.Amount,
+                IsBid = request.IsBid,
                 Price = request.Price,
-                OrderDateUtc = request.OrderDateUtc,
-                CurrencyPairId = request.CurrencyPariId, //todo: fixme
+                Amount = request.Amount,
+                CurrencyPairCode = request.CurrencyPairCode,
+                DateCreated = request.DateCreated,
                 UserId = request.UserId,
-                ExchangeId = request.ExchangeId,
+                Exchange = request.Exchange,
                 FromInnerTradingBot = request.FromInnerTradingBot,
-                OrderTypeCode = OrderType.Active.Code
             };
 
-            if (!ask.FromInnerTradingBot)
-            {
-                _context.Asks.Add(ask);
-                await _context.SaveChangesAsync();
-            }
+            if (!order.FromInnerTradingBot)
+                await _context.AddOrder(order, true);
+            _matchingPool.AppendOrder(order);
 
-            MAsk ma = new MAsk()
-            {
-                Id = ask.Id,
-                UserId = ask.UserId,
-                Volume = ask.Volume,
-                Fulfilled = ask.Fulfilled,
-                Price = ask.Price,
-                Created = ask.OrderDateUtc,
-                CurrencyPairId = ask.CurrencyPairId,
-                ExchangeId = ask.ExchangeId,
-                FromInnerTradingBot = ask.FromInnerTradingBot,
-                Status = MStatus.Active
-            };
-
-            _matchingPool.AppendAsk(ma);
-
-            return ask.Id;
+            return order.Id;
         }
 
-        public async Task<int> DeleteAskAsync(string id, string userId)
+        public async Task<int> DeleteOrder(bool isBid, string id, string userId)
         {
             try
             {
-                int res = 0;
-                var order = await _context.Asks
-                    .SingleOrDefaultAsync(o => o.Id.ToString() == id);
+                int result = 0;
+                var order = await _context.GetOrder(isBid, Guid.Parse(id));
 
                 if (order != null && order.UserId == userId)
                 {
-                    order.OrderTypeCode = OrderType.Canceled.Code;
-                    res = await _context.SaveChangesAsync();
+                    order.IsCanceled = true;
+                    result = await _context.SaveChangesAsync();
                 }
-                await _matchingPool.RemoveAsk(Guid.Parse(id));
-                return res;
+                await _matchingPool.RemoveOrder(Guid.Parse(id));
+                return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError("Delete ask error", ex);
-                return 0;
-            }
-        }
-
-        public async Task<Guid> CreateBid(AddRequest request)
-        {
-            var bid = new Bid
-            {
-                Id = new Guid(request.ActionId),
-                Volume = request.Amount,
-                Price = request.Price,
-                OrderDateUtc = request.OrderDateUtc,
-                CurrencyPairId = request.CurrencyPariId,
-                UserId = request.UserId,
-                ExchangeId = request.ExchangeId,
-                FromInnerTradingBot = request.FromInnerTradingBot,
-                OrderTypeCode = OrderType.Active.Code
-            };
-
-            if (!bid.FromInnerTradingBot)
-            {
-                _context.Bids.Add(bid);
-                await _context.SaveChangesAsync();
-            }
-
-            MBid mb = new MBid()
-            {
-                Id = bid.Id,
-                UserId = bid.UserId,
-                Volume = bid.Volume,
-                Fulfilled = bid.Fulfilled,
-                Price = bid.Price,
-                Created = bid.OrderDateUtc,
-                CurrencyPairId = bid.CurrencyPairId,
-                ExchangeId = bid.ExchangeId,
-                FromInnerTradingBot = bid.FromInnerTradingBot,
-                Status = MStatus.Active
-            };
-
-            _matchingPool.AppendBid(mb);
-
-            return bid.Id;
-        }
-
-        public async Task<int> DeleteBidAsync(string id, string userId)
-        {
-            try
-            {
-                int res = 0;
-                var order = await _context.Bids.SingleOrDefaultAsync(o => o.Id == Guid.Parse(id));
-                if (order != null && order.UserId == userId)
-                {
-                    order.OrderTypeCode = OrderType.Canceled.Code;
-                    res = await _context.SaveChangesAsync();
-                }
-                await _matchingPool.RemoveBid(Guid.Parse(id));
-                return res;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("Delete bid error", ex);
+                _logger.LogError("Delete order error", ex);
                 return 0;
             }
         }

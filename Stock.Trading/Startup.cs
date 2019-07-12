@@ -1,4 +1,9 @@
+using AutoMapper;
 using FluentValidation.AspNetCore;
+using MatchingEngine.Data;
+using MatchingEngine.HttpClients;
+using MatchingEngine.Models;
+using MatchingEngine.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -7,13 +12,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.PlatformAbstractions;
-using Stock.Trading.Data;
-using Stock.Trading.HttpClients;
-using Stock.Trading.Service;
 using Swashbuckle.AspNetCore.Swagger;
 using System.IO;
 
-namespace Stock.Trading
+namespace MatchingEngine
 {
     public class Startup
     {
@@ -63,6 +65,14 @@ namespace Stock.Trading
 
             services.Configure<AppSettings>(Configuration);
             services.Configure<AppSettings>(settings => settings.ConnectionString = Configuration.GetSection("ConnectionStrings:DefaultConnection").Value);
+
+            var mapperConfig = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<Order, Bid>();
+                cfg.CreateMap<Order, Ask>();
+            });
+            mapperConfig.AssertConfigurationIsValid();
+            services.AddSingleton(mapperConfig.CreateMapper());
 
             // lowercase routing
             services.AddRouting(options => options.LowercaseUrls = true);

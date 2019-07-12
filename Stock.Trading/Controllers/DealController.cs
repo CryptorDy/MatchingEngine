@@ -1,7 +1,6 @@
+using MatchingEngine.Models;
+using MatchingEngine.Services;
 using Microsoft.AspNetCore.Mvc;
-using Stock.Trading.Entities;
-using Stock.Trading.Responses;
-using Stock.Trading.Service;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;

@@ -1,15 +1,15 @@
-using Stock.Trading.Models;
+using MatchingEngine.Models;
 using System.Collections.Generic;
 
-namespace Stock.Trading.Service
+namespace MatchingEngine.Services
 {
     public class MarketDataHolder
     {
         private static readonly object Locker = new object();
         private bool _updateMarketData;
-        private List<MOrder> _orders;
+        private List<Order> _orders;
 
-        public void SendOrders(List<MOrder> orders)
+        public void SendOrders(List<Order> orders)
         {
             _orders = orders;
             lock (Locker)
@@ -18,7 +18,7 @@ namespace Stock.Trading.Service
             }
         }
 
-        public List<MOrder> GetOrders()
+        public List<Order> GetOrders()
         {
             return _orders;
         }

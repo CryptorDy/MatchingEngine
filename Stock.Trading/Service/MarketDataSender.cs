@@ -1,11 +1,10 @@
+using MatchingEngine.HttpClients;
 using Microsoft.Extensions.Logging;
-using Stock.Trading.HttpClients;
-using Stock.Trading.Services;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Stock.Trading.Service
+namespace MatchingEngine.Services
 {
     public class MarketDataSender : BackgroundService
     {

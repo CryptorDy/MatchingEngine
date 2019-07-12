@@ -1,7 +1,7 @@
-namespace Stock.Trading.Models.LiquidityImport
+namespace MatchingEngine.Models.LiquidityImport
 {
     public enum Exchange
     {
-        Binance = 1, Okex = 2, Kraken = 3
+        Local = 0, Binance = 1, Okex = 2, Kraken = 3
     }
 }

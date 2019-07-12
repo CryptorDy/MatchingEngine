@@ -1,4 +1,6 @@
-namespace Stock.Trading.Models.LiquidityImport
+using System;
+
+namespace MatchingEngine.Models.LiquidityImport
 {
     public class ExternalCreatedOrder
     {
@@ -6,6 +8,7 @@ namespace Stock.Trading.Models.LiquidityImport
 
         public decimal Amount { get; set; }
 
+        [Obsolete]
         public decimal Price { get; set; }
 
         public string ExchangeOrderId { get; set; }

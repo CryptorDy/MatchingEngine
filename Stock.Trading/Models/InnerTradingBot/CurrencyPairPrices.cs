@@ -1,4 +1,4 @@
-namespace Stock.Trading.Models.InnerTradingBot
+namespace MatchingEngine.Models.InnerTradingBot
 {
     public class CurrencyPairPrices
     {

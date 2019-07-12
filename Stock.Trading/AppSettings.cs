@@ -1,4 +1,4 @@
-namespace Stock.Trading
+namespace MatchingEngine
 {
     public class AppSettings
     {
