@@ -1,4 +1,3 @@
-using Stock.Trading.Entities;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -77,5 +76,22 @@ namespace MatchingEngine.Models
         [Required]
         [ForeignKey("BidId")]
         public Bid Bid { get; set; }
+
+        public DealResponse GetDealResponse()
+        {
+            return new DealResponse()
+            {
+                DealId = DealId,
+                Price = Price,
+                Volume = Volume,
+                DealDateUtc = DateCreated.DateTime,
+                CurrencyPairId = Ask.CurrencyPairCode,
+                BidId = Bid.Id,
+                AskId = Ask.Id,
+                UserBidId = Bid.UserId,
+                UserAskId = Ask.UserId,
+                IsBuy = Bid.DateCreated > Ask.DateCreated
+            };
+        }
     }
 }

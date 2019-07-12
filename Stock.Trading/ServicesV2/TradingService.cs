@@ -1,12 +1,7 @@
+using MatchingEngine.Data;
 using MatchingEngine.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Stock.Trading.Data;
-using Stock.Trading.Data.Entities;
-using Stock.Trading.Entities;
-using Stock.Trading.Models;
-using Stock.Trading.Requests;
-using Stock.Trading.Responses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,21 +26,21 @@ namespace MatchingEngine.Services
 
         #region GET-requests
 
-        public async Task<List<MatchingEngine.Models.Order>> GetOrders(string userId = null)
+        public async Task<List<Order>> GetOrders(bool isBid, string userId = null)
         {
             try
             {
-                var result = await _context.GetOrders(userId);
+                var result = await _context.GetOrders(isBid, userId);
                 return result;
             }
             catch (Exception ex)
             {
                 _logger.LogError("", ex);
-                return new List<MatchingEngine.Models.Order>();
+                return new List<Order>();
             }
         }
 
-        public async Task<MatchingEngine.Models.Order> GetOrder(bool isBid, string id)
+        public async Task<Order> GetOrder(bool isBid, string id)
         {
             try
             {
@@ -64,7 +59,7 @@ namespace MatchingEngine.Services
             }
         }
 
-        public async Task<List<MatchingEngine.Models.Deal>> GetDeals(string currencyPairCode, int? lastNum, string userId,
+        public async Task<List<Deal>> GetDeals(string currencyPairCode, int? lastNum, string userId,
             DateTimeOffset? sinceDate = null, List<string> dealIds = null)
         {
             try
@@ -92,11 +87,11 @@ namespace MatchingEngine.Services
             catch (Exception ex)
             {
                 _logger.LogError("", ex);
-                return new List<MatchingEngine.Models.Deal>();
+                return new List<Deal>();
             }
         }
 
-        public MatchingEngine.Models.Deal GetDeal(string id)
+        public Deal GetDeal(string id)
         {
             try
             {
@@ -120,21 +115,36 @@ namespace MatchingEngine.Services
             }
         }
 
+        public DealResponse GetDealResponse(string id)
+        {
+            try
+            {
+                var deal = GetDeal(id);
+                var dealResponse = deal.GetDealResponse();
+                return dealResponse;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("", ex);
+                return null;
+            }
+        }
+
         #endregion GET-requests
 
-        public async Task<Guid> CreateOrder(AddOrderDto dto)
+        public async Task<Guid> CreateOrder(OrderCreateRequest request)
         {
-            var order = new MatchingEngine.Models.Order
+            var order = new Order
             {
-                Id = dto.Id,
-                IsBid = dto.IsBid,
-                Price = dto.Price,
-                Amount = dto.Amount,
-                CurrencyPairCode = dto.CurrencyPairCode,
-                DateCreated = dto.DateCreated,
-                UserId = dto.UserId,
-                Exchange = dto.Exchange,
-                FromInnerTradingBot = dto.FromInnerTradingBot,
+                Id = new Guid(request.ActionId),
+                IsBid = request.IsBid,
+                Price = request.Price,
+                Amount = request.Amount,
+                CurrencyPairCode = request.CurrencyPairCode,
+                DateCreated = request.DateCreated,
+                UserId = request.UserId,
+                Exchange = request.Exchange,
+                FromInnerTradingBot = request.FromInnerTradingBot,
             };
 
             if (!order.FromInnerTradingBot)

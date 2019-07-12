@@ -1,5 +1,5 @@
-using Stock.Trading.Models;
-using Stock.Trading.Service;
+using MatchingEngine.Models;
+using MatchingEngine.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,7 +11,7 @@ namespace Stock.Trading.Benchmark
         private static void TestDeals(int ordersCount = 100)
         {
             Console.WriteLine($"test {ordersCount} orders start");
-            List<MOrder> orders = new List<MOrder>();
+            List<Order> orders = new List<Order>();
             var matcher = new OrdersMatcher(null);
             int deals = 0;
 
@@ -20,31 +20,20 @@ namespace Stock.Trading.Benchmark
 
             for (int i = 0; i < ordersCount; i++)
             {
-                var newOrder = i < ordersCount / 2
-                    ? (MOrder)new MBid()
-                    {
-                        Created = DateTime.UtcNow,
-                        CurrencyPairId = "currency_test",
-                        Id = new Guid(),
-                        Status = MStatus.Active,
-                        Price = 1,
-                        UserId = "UserId",
-                        Volume = 0.01M
-                    }
-                    : new MAsk()
-                    {
-                        Created = DateTime.UtcNow,
-                        CurrencyPairId = "currency_test",
-                        Id = new Guid(),
-                        Status = MStatus.Active,
-                        Price = 1,
-                        UserId = "UserId",
-                        Volume = 0.01M
-                    };
-                var result = matcher.Match(orders, newOrder);
+                var newOrder = new Order()
+                {
+                    Id = new Guid(),
+                    IsBid = i < ordersCount / 2,
+                    Price = 1,
+                    Amount = 0.01M,
+                    CurrencyPairCode = "currency_test",
+                    DateCreated = DateTimeOffset.UtcNow,
+                    UserId = "UserId",
+                };
+                var (modifiedOrders, newDeals) = matcher.Match(orders, newOrder);
                 orders.Add(newOrder);
-                orders.RemoveAll(o => o.Status == MStatus.Completed);
-                deals += result.Deals.Count;
+                orders.RemoveAll(o => !o.IsActive);
+                deals += newDeals.Count;
             }
             watch.Stop();
             Console.WriteLine($"test {ordersCount} was orders done in {watch.ElapsedMilliseconds} ms. {deals} was created");

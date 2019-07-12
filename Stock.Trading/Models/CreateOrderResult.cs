@@ -1,6 +1,6 @@
 using System;
 
-namespace Stock.Trading.Responses
+namespace MatchingEngine.Models
 {
     public class CreateOrderResult
     {

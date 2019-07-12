@@ -1,15 +1,12 @@
 using AutoMapper;
+using MatchingEngine.Data;
 using MatchingEngine.Models;
+using MatchingEngine.Models.LiquidityImport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Stock.Trading.Data;
-using Stock.Trading.Entities;
-using Stock.Trading.Models;
-using Stock.Trading.Models.LiquidityImport;
-using Stock.Trading.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -229,8 +226,19 @@ namespace Stock.Trading.Tests.TestsV2
         {
             if (order.IsLocal)
             {
-                var dto = GetMapper().Map<Order, AddOrderDto>(order);
-                await tradingService.CreateOrder(dto);
+                var request = new OrderCreateRequest
+                {
+                    ActionId = order.Id.ToString(),
+                    IsBid = order.IsBid,
+                    Price = order.Price,
+                    Amount = order.Amount,
+                    CurrencyPairCode = order.CurrencyPairCode,
+                    DateCreated = order.DateCreated,
+                    UserId = order.UserId,
+                    Exchange = order.Exchange,
+                    FromInnerTradingBot = order.FromInnerTradingBot,
+                };
+                await tradingService.CreateOrder(request);
             }
             else
             {
@@ -242,9 +250,8 @@ namespace Stock.Trading.Tests.TestsV2
         {
             var mapperConfig = new MapperConfiguration(cfg =>
             {
-                cfg.CreateMap<Order, MatchingEngine.Models.Bid>();
-                cfg.CreateMap<Order, MatchingEngine.Models.Ask>();
-                cfg.CreateMap<Order, AddOrderDto>();
+                cfg.CreateMap<Order, Bid>();
+                cfg.CreateMap<Order, Ask>();
             });
             mapperConfig.AssertConfigurationIsValid();
             return mapperConfig.CreateMapper();

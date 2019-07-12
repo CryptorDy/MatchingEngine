@@ -3,7 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Stock.Trading.Services
+namespace MatchingEngine.Services
 {
     // Copyright (c) .NET Foundation. Licensed under the Apache License, Version 2.0.
     /// <summary>

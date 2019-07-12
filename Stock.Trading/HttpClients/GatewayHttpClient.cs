@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace Stock.Trading.HttpClients
+namespace MatchingEngine.HttpClients
 {
     public class GatewayHttpClient : HttpClientBase
     {

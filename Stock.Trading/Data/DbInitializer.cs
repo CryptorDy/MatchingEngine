@@ -1,10 +1,10 @@
 using MatchingEngine.Models;
 using Microsoft.EntityFrameworkCore;
-using Stock.Trading.Models.LiquidityImport;
-using System.Collections.Generic;
 using System.Linq;
+using Stock.Trading.Data.Entities;
+using MatchingEngine.Models.LiquidityImport;
 
-namespace Stock.Trading.Data
+namespace MatchingEngine.Data
 {
     public class DbInitializer : IDbInitializer
     {
@@ -35,12 +35,12 @@ namespace Stock.Trading.Data
                     IsBid = true,
                     Price = order.Price,
                     Amount = order.Volume,
-                    Fulfilled = order.OrderTypeCode == Data.Entities.OrderType.Completed.Code ? order.Volume : order.Fulfilled,
+                    Fulfilled = order.OrderTypeCode == OrderType.Completed.Code ? order.Volume : order.Fulfilled,
                     Blocked = 0,
                     CurrencyPairCode = order.CurrencyPairId,
                     DateCreated = order.OrderDateUtc,
                     UserId = order.UserId,
-                    IsCanceled = order.OrderTypeCode == Data.Entities.OrderType.Canceled.Code,
+                    IsCanceled = order.OrderTypeCode == OrderType.Canceled.Code,
                     Exchange = (Exchange)order.ExchangeId,
                     FromInnerTradingBot = order.FromInnerTradingBot,
                 });
@@ -51,15 +51,15 @@ namespace Stock.Trading.Data
                 _dbContext.AsksV2.Add(new Ask
                 {
                     Id = order.Id,
-                    IsBid = true,
+                    IsBid = false,
                     Price = order.Price,
                     Amount = order.Volume,
-                    Fulfilled = order.OrderTypeCode == Data.Entities.OrderType.Completed.Code ? order.Volume : order.Fulfilled,
+                    Fulfilled = order.OrderTypeCode == OrderType.Completed.Code ? order.Volume : order.Fulfilled,
                     Blocked = 0,
                     CurrencyPairCode = order.CurrencyPairId,
                     DateCreated = order.OrderDateUtc,
                     UserId = order.UserId,
-                    IsCanceled = order.OrderTypeCode == Data.Entities.OrderType.Canceled.Code,
+                    IsCanceled = order.OrderTypeCode == OrderType.Canceled.Code,
                     Exchange = (Exchange)order.ExchangeId,
                     FromInnerTradingBot = order.FromInnerTradingBot,
                 });

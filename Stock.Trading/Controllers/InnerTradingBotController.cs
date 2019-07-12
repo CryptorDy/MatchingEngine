@@ -1,13 +1,13 @@
+using MatchingEngine.Data;
+using MatchingEngine.Models.InnerTradingBot;
+using MatchingEngine.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Stock.Trading.Data;
-using Stock.Trading.Models.InnerTradingBot;
-using Stock.Trading.Service;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Stock.Trading.Controllers
+namespace MatchingEngine.Controllers
 {
     [Route("api/innertradingbot")]
     public class InnerTradingBotController

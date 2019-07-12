@@ -1,6 +1,4 @@
 using MatchingEngine.Models;
-using Stock.Trading.Models;
-using Stock.Trading.Models.LiquidityImport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +20,8 @@ namespace MatchingEngine.Services
             var newDeals = new List<Deal>();
 
             var poolOrders = pool.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode && o.IsBid != newOrder.IsBid
-                && o.IsActive && (newOrder.IsLocal || o.IsLocal) && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
+                && o.IsActive && o.AvailableAmount > 0
+                && (newOrder.IsLocal || o.IsLocal) && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
                 .ToList();
             if (newOrder.IsBid)
                 poolOrders = poolOrders.Where(o => o.Price <= newOrder.Price).OrderBy(o => o.Price).ToList();

@@ -1,8 +1,6 @@
+using MatchingEngine.HttpClients;
 using MatchingEngine.Models;
 using Microsoft.Extensions.Logging;
-using Stock.Trading.HttpClients;
-using Stock.Trading.Models;
-using Stock.Trading.Responses;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

@@ -3,22 +3,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Stock.Trading;
-using Stock.Trading.Data;
-using Stock.Trading.Data.Entities;
-using Stock.Trading.Entities;
-using Stock.Trading.Models;
-using Stock.Trading.Models.InnerTradingBot;
-using Stock.Trading.Models.LiquidityImport;
-using Stock.Trading.Responses;
-using Stock.Trading.Service;
-using Stock.Trading.Services;
+using MatchingEngine.Models.LiquidityImport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using MatchingEngine.Data;
+using MatchingEngine.Models.InnerTradingBot;
 
 namespace MatchingEngine.Services
 {
@@ -139,6 +132,7 @@ namespace MatchingEngine.Services
                         _logger.LogWarning($"CompletedOrder has incorrect state: {order}");
                 }
 
+                await SendOrdersToMarketData();
                 var dealGuids = newDeals.Select(md => md.DealId).ToList();
                 if (dealGuids.Count == 0) return;
                 var dbDeals = db.DealsV2.Include(d => d.Ask).Include(d => d.Bid)
@@ -147,11 +141,10 @@ namespace MatchingEngine.Services
                 foreach (var item in newDeals)
                 {
                     var dbDeal = dbDeals[item.DealId];
-                    var t1 = Task.Run(async () => { await SendOrdersToMarketData(); });
-                    var t2 = Task.Run(async () => { await SendDealToMarketData(dbDeal); });
-                    var t3 = Task.Run(async () => { await SendFeedToMarketData(dbDeal); });
-                    var t4 = Task.Run(async () => { await SendDealToDealEnding(dbDeal); });
-                    Task.WaitAll(t1, t2, t3, t4);
+                    var t1 = Task.Run(async () => { await SendDealToMarketData(dbDeal); });
+                    var t2 = Task.Run(async () => { await SendFeedToMarketData(dbDeal); });
+                    var t3 = Task.Run(async () => { await SendDealToDealEnding(dbDeal); });
+                    Task.WaitAll(t1, t2, t3);
                 }
             }
             catch (Exception ex)
@@ -163,7 +156,7 @@ namespace MatchingEngine.Services
         public async Task<SaveExternalOrderResult> UpdateExternalOrder(ExternalCreatedOrder createdOrder)
         {
             var modifiedOrders = new List<Order>();
-            var newDeals = new List<MatchingEngine.Models.Deal>();
+            var newDeals = new List<Deal>();
 
             using (var scope = _serviceScopeFactory.CreateScope())
             {
@@ -211,7 +204,7 @@ namespace MatchingEngine.Services
 
                     // Create deal
                     decimal dealPrice = bid.DateCreated > ask.DateCreated ? ask.Price : bid.Price;
-                    newDeals.Add(new MatchingEngine.Models.Deal(matchedLocalOrder, newImportedOrder,
+                    newDeals.Add(new Deal(matchedLocalOrder, newImportedOrder,
                         dealPrice, createdOrder.Fulfilled));
                 }
 
@@ -221,7 +214,7 @@ namespace MatchingEngine.Services
                 return new SaveExternalOrderResult
                 {
                     NewExternalOrderId = newDeals.Count > 0 ? newImportedOrder.ToString() : null,
-                    CreatedDealId = newDeals.FirstOrDefault().DealId.ToString() ?? null,
+                    CreatedDealId = newDeals.FirstOrDefault()?.DealId.ToString() ?? null,
                 };
             }
         }
@@ -230,7 +223,7 @@ namespace MatchingEngine.Services
         {
             try
             {
-                _marketDataHolder.SendOrders(null/* todo  _orders*/);
+                _marketDataHolder.SendOrders(_orders);
             }
             catch (Exception ex)
             {
@@ -238,7 +231,7 @@ namespace MatchingEngine.Services
             }
         }
 
-        private async Task SendDealToDealEnding(MatchingEngine.Models.Deal deal)
+        private async Task SendDealToDealEnding(Deal deal)
         {
             try
             {
@@ -250,7 +243,7 @@ namespace MatchingEngine.Services
             }
         }
 
-        private async Task SendFeedToMarketData(MatchingEngine.Models.Deal deal)
+        private async Task SendFeedToMarketData(Deal deal)
         {
             try
             {
@@ -269,24 +262,11 @@ namespace MatchingEngine.Services
             }
         }
 
-        private async Task SendDealToMarketData(MatchingEngine.Models.Deal deal)
+        private async Task SendDealToMarketData(Deal deal)
         {
             try
             {
-                var dealResponse = new DealResponse()
-                {
-                    DealId = deal.DealId,
-                    Price = deal.Price,
-                    Volume = deal.Volume,
-                    DealDateUtc = deal.DateCreated.DateTime,
-                    CurrencyPairId = deal.Ask.CurrencyPairCode,
-                    BidId = deal.Bid.Id,
-                    AskId = deal.Ask.Id,
-                    UserBidId = deal.Bid.UserId,
-                    UserAskId = deal.Ask.UserId,
-                    IsBuy = deal.Bid.DateCreated > deal.Ask.DateCreated
-                };
-                await _marketDataService.SaveNewDeal(dealResponse);
+                await _marketDataService.SaveNewDeal(deal.GetDealResponse());
             }
             catch (Exception ex)
             {
@@ -334,17 +314,17 @@ namespace MatchingEngine.Services
             await SendOrdersToMarketData();
         }
 
-        public async Task UpdateOrders(IEnumerable<Stock.Trading.Requests.AddRequestLiquidity> orders)
+        public async Task UpdateOrders(List<OrderCreateRequest> orders)
         {
             lock (_orders)
             {
                 foreach (var order in orders)
                 {
-                    var o = _orders.FirstOrDefault(_ => _.Id == Guid.Parse(order.TradingOrderId));
+                    var o = _orders.FirstOrDefault(_ => _.Id == Guid.Parse(order.ActionId));
                     if (o != null)
                     {
                         o.Amount = order.Amount;
-                        o.DateCreated = order.OrderDateUtc;
+                        o.DateCreated = order.DateCreated;
                     }
                 }
             }
