@@ -1,7 +1,7 @@
+using MatchingEngine.Models.LiquidityImport;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MatchingEngine.Models.LiquidityImport;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -1,7 +1,7 @@
-using MatchingEngine.Models;
-using Microsoft.Extensions.Logging;
 using MatchingEngine.HttpClients;
+using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 

@@ -1,10 +1,10 @@
+using MatchingEngine.Data;
+using MatchingEngine.Services;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using MatchingEngine.Data;
 using System;
 using System.Reflection;
-using MatchingEngine.Services;
 
 namespace MatchingEngine
 {

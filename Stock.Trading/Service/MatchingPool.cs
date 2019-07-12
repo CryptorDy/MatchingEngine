@@ -1,17 +1,17 @@
+using MatchingEngine.Data;
 using MatchingEngine.Models;
+using MatchingEngine.Models.InnerTradingBot;
+using MatchingEngine.Models.LiquidityImport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MatchingEngine.Models.LiquidityImport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using MatchingEngine.Data;
-using MatchingEngine.Models.InnerTradingBot;
 
 namespace MatchingEngine.Services
 {
