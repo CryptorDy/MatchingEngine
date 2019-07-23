@@ -142,9 +142,8 @@ namespace MatchingEngine.Services
                 {
                     var dbDeal = dbDeals[item.DealId];
                     var t1 = Task.Run(async () => { await SendDealToMarketData(dbDeal); });
-                    var t2 = Task.Run(async () => { await SendFeedToMarketData(dbDeal); });
-                    var t3 = Task.Run(async () => { await SendDealToDealEnding(dbDeal); });
-                    Task.WaitAll(t1, t2, t3);
+                    var t2 = Task.Run(async () => { await SendDealToDealEnding(dbDeal); });
+                    Task.WaitAll(t1, t2);
                 }
             }
             catch (Exception ex)
@@ -243,25 +242,6 @@ namespace MatchingEngine.Services
             }
         }
 
-        private async Task SendFeedToMarketData(Deal deal)
-        {
-            try
-            {
-                MarketDataFeed feed = new MarketDataFeed
-                {
-                    Amount = deal.Price,
-                    Volume = deal.Volume,
-                    Date = deal.DateCreated.DateTime,
-                    Currency = deal.Ask.CurrencyPairCode
-                };
-                await _marketDataService.PutData(feed);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending feed to marketdata");
-            }
-        }
-
         private async Task SendDealToMarketData(Deal deal)
         {
             try
@@ -281,7 +261,7 @@ namespace MatchingEngine.Services
             {
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
                 List<Order> modifiedOrders;
-                List<Models.Deal> newDeals;
+                List<Deal> newDeals;
 
                 lock (_orders) //no access to pool (for removing) while matching is performed
                 {
