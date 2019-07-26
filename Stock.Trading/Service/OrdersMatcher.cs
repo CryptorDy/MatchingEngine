@@ -14,14 +14,23 @@ namespace MatchingEngine.Services
             _liquidityImportService = liquidityImportService;
         }
 
+        private bool AreOpposite(Order order1, Order order2) => order1.IsBid != order2.IsBid;
+
+        private bool CanBeFilled(Order order) => order.IsActive && order.AvailableAmount > 0;
+
+        private bool NotBothImported(Order order1, Order order2) => order1.IsLocal || order2.IsLocal;
+
+        private bool HaveSameTradingBotFlag(Order order1, Order order2) => order1.FromInnerTradingBot == order2.FromInnerTradingBot;
+
         public (List<Order> modifiedOrders, List<Deal> newDeals) Match(IEnumerable<Order> pool, Order newOrder)
         {
             var modifiedOrders = new List<Order>();
             var newDeals = new List<Deal>();
 
-            var poolOrdersQuery = pool.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode && o.IsBid != newOrder.IsBid
-                && o.IsActive && o.AvailableAmount > 0
-                && (newOrder.IsLocal || o.IsLocal) && newOrder.FromInnerTradingBot == o.FromInnerTradingBot);
+            var poolOrdersQuery = pool.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode
+                && AreOpposite(o, newOrder) && CanBeFilled(o)
+                && NotBothImported(o, newOrder)
+                && HaveSameTradingBotFlag(o, newOrder));
             List<Order> poolOrders;
             if (newOrder.IsBid)
                 poolOrders = poolOrdersQuery.Where(o => o.Price <= newOrder.Price).OrderBy(o => o.Price).ToList();
