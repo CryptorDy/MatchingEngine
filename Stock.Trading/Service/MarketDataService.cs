@@ -27,10 +27,5 @@ namespace MatchingEngine.Services
         {
             var marketDataResponse = await _gatewayHttpClient.PostJsonAsync($"marketdata/orders/savedeal", deal);
         }
-
-        public async Task PutData(MarketDataFeed feed)
-        {
-            await _gatewayHttpClient.PostJsonAsync($"marketdata/putdata", feed);
-        }
     }
 }
