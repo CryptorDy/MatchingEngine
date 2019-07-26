@@ -19,14 +19,14 @@ namespace MatchingEngine.Services
             var modifiedOrders = new List<Order>();
             var newDeals = new List<Deal>();
 
-            var poolOrders = pool.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode && o.IsBid != newOrder.IsBid
+            var poolOrdersQuery = pool.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode && o.IsBid != newOrder.IsBid
                 && o.IsActive && o.AvailableAmount > 0
-                && (newOrder.IsLocal || o.IsLocal) && newOrder.FromInnerTradingBot == o.FromInnerTradingBot)
-                .ToList();
+                && (newOrder.IsLocal || o.IsLocal) && newOrder.FromInnerTradingBot == o.FromInnerTradingBot);
+            List<Order> poolOrders;
             if (newOrder.IsBid)
-                poolOrders = poolOrders.Where(o => o.Price <= newOrder.Price).OrderBy(o => o.Price).ToList();
+                poolOrders = poolOrdersQuery.Where(o => o.Price <= newOrder.Price).OrderBy(o => o.Price).ToList();
             else
-                poolOrders = poolOrders.Where(o => o.Price >= newOrder.Price).OrderByDescending(o => o.Price).ToList();
+                poolOrders = poolOrdersQuery.Where(o => o.Price >= newOrder.Price).OrderByDescending(o => o.Price).ToList();
 
             foreach (var poolOrder in poolOrders)
             {
