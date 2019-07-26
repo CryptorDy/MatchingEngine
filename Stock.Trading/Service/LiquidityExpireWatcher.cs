@@ -80,6 +80,7 @@ namespace MatchingEngine.Services
                         _logger.LogWarning($"Liquidity expired:{expiration.Exchange}-{expiration.CurrencyPairCode}");
                         _matchingPool.RemoveLiquidityOrderbook(expiration.Exchange, expiration.CurrencyPairCode);
                         _liquidityImportService.RemoveOrderbook(expiration.Exchange, expiration.CurrencyPairCode);
+                        expiration.IsExecuted = true;
                     }
                 }
                 CurrencyPairExpirations = CurrencyPairExpirations.Where(_ => !_.IsExecuted).ToList();
