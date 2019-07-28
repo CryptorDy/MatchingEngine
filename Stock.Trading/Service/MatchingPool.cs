@@ -103,7 +103,7 @@ namespace MatchingEngine.Services
                             continue;
 
                         // create if external or FromInnerBot and wasn't created yet
-                        if (dbOrder == null && (order.Exchange != Exchange.Local || order.FromInnerTradingBot))
+                        if (dbOrder == null && (!order.IsLocal || order.FromInnerTradingBot))
                         {
                             dbOrder = await context.AddOrder(order, false);
                         }
@@ -333,7 +333,7 @@ namespace MatchingEngine.Services
             lock (_orders)
             {
                 var minDate = DateTimeOffset.UtcNow.AddMinutes(-_settings.Value.ImportedOrdersExpirationMinutes);
-                int removedOrdersCount = _orders.RemoveAll(_ => _.Exchange != Exchange.Local && _.DateCreated < minDate);
+                int removedOrdersCount = _orders.RemoveAll(_ => !_.IsLocal && _.DateCreated < minDate);
                 if (removedOrdersCount > 0)
                     Console.WriteLine($"RemoveLiquidityOldOrders() expired {removedOrdersCount} orders");
             }
