@@ -20,7 +20,7 @@ namespace MatchingEngine.Services
 
         public List<Order> GetOrders()
         {
-            return _orders;
+            return new List<Order>(_orders); // copy list to prevent concurrency error
         }
 
         public void SendComplete()
