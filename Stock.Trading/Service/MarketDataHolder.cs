@@ -11,16 +11,19 @@ namespace MatchingEngine.Services
 
         public void SendOrders(List<Order> orders)
         {
-            _orders = orders;
             lock (Locker)
             {
+                _orders = orders;
                 _updateMarketData = true;
             }
         }
 
         public List<Order> GetOrders()
         {
-            return new List<Order>(_orders); // copy list to prevent concurrency error
+            lock (Locker)
+            {
+                return new List<Order>(_orders); // copy list to prevent concurrency error
+            }
         }
 
         public void SendComplete()
