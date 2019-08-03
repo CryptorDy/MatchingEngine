@@ -46,18 +46,18 @@ namespace MatchingEngine.Services
             }
         }
 
-        public void UpdateExpirationDate(int exchangeId, string currencyPairCode)
+        public void UpdateExpirationDate(Exchange exchange, string currencyPairCode)
         {
             DateTime newExpirationDate = DateTime.UtcNow.AddMinutes(_settings.Value.ImportedOrderbooksExpirationMinutes);
             lock (CurrencyPairExpirations)
             {
                 var expiration = CurrencyPairExpirations
-                    .FirstOrDefault(_ => (int)_.Exchange == exchangeId && _.CurrencyPairCode == currencyPairCode);
+                    .FirstOrDefault(_ => _.Exchange == exchange && _.CurrencyPairCode == currencyPairCode);
                 if (expiration == null)
                 {
                     CurrencyPairExpirations.Add(new CurrencyPairExpiration
                     {
-                        Exchange = (Exchange)exchangeId,
+                        Exchange = exchange,
                         CurrencyPairCode = currencyPairCode,
                         ExpirationDate = newExpirationDate
                     });

@@ -43,12 +43,12 @@ namespace Stock.Trading.Controllers
         /// <summary>
         /// Notify that liquidity import is working
         /// </summary>
-        /// <param name="orders"></param>
-        /// <returns></returns>
         [HttpGet("ping/{exchange}/{curPairCode}")]
         public async Task<IActionResult> Ping(Exchange exchange, string curPairCode)
         {
-            _liquidityExpireWatcher.UpdateExpirationDate((int)exchange, curPairCode);
+            if (exchange == Exchange.Local)
+                return BadRequest();
+            _liquidityExpireWatcher.UpdateExpirationDate(exchange, curPairCode);
             return Ok();
         }
 
@@ -68,9 +68,11 @@ namespace Stock.Trading.Controllers
             return Ok();
         }
 
-        [HttpDelete("orders/{exchangeId}/{currencyPairId}")]
+        [HttpDelete("orders/{exchange}/{currencyPairId}")]
         public async Task<IActionResult> DeleteOrders(Exchange exchange, string currencyPairId)
         {
+            if (exchange == Exchange.Local)
+                return BadRequest();
             _matchingPool.RemoveLiquidityOrderbook(exchange, currencyPairId);
             return Ok();
         }
