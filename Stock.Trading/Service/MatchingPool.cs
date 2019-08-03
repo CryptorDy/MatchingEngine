@@ -303,6 +303,8 @@ namespace MatchingEngine.Services
                     var o = _orders.FirstOrDefault(_ => _.Id == Guid.Parse(order.ActionId));
                     if (o != null)
                     {
+                        if (o.IsLocal)
+                            throw new ArgumentException("Local exchange changes are forbidden");
                         o.Amount = order.Amount;
                         o.DateCreated = order.DateCreated;
                     }
@@ -315,6 +317,9 @@ namespace MatchingEngine.Services
         {
             lock (_orders)
             {
+                var ordersToRemove = _orders.Where(_ => ids.Contains(_.Id));
+                if (ordersToRemove.Any(_ => _.IsLocal))
+                    throw new ArgumentException("Local exchange changes are forbidden");
                 _orders.RemoveAll(_ => ids.Contains(_.Id));
             }
             await SendOrdersToMarketData();
@@ -322,6 +327,8 @@ namespace MatchingEngine.Services
 
         public void RemoveLiquidityOrderbook(Exchange exchange, string currencyPairCode)
         {
+            if (exchange == Exchange.Local)
+                throw new ArgumentException("Local exchange changes are forbidden");
             lock (_orders)
             {
                 _orders.RemoveAll(_ => _.Exchange == exchange && _.CurrencyPairCode == currencyPairCode);
@@ -333,7 +340,7 @@ namespace MatchingEngine.Services
             lock (_orders)
             {
                 var minDate = DateTimeOffset.UtcNow.AddMinutes(-_settings.Value.ImportedOrdersExpirationMinutes);
-                int removedOrdersCount = _orders.RemoveAll(_ => !_.IsLocal && _.DateCreated < minDate);
+                int removedOrdersCount = _orders.RemoveAll(_ => !_.IsLocal && _.Blocked == 0 && _.DateCreated < minDate);
                 if (removedOrdersCount > 0)
                     Console.WriteLine($"RemoveLiquidityOldOrders() expired {removedOrdersCount} orders");
             }
