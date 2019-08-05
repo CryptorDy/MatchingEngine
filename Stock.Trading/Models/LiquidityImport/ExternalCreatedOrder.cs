@@ -8,8 +8,10 @@ namespace MatchingEngine.Models.LiquidityImport
 
         public decimal Amount { get; set; }
 
-        [Obsolete]
-        public decimal Price { get; set; }
+        /// <summary>
+        /// For finishing trade in MatchingEngine
+        /// </summary>
+        public decimal MatchingEngineDealPrice { get; set; }
 
         public string ExchangeOrderId { get; set; }
         public string TradingBidId { get; set; }

@@ -176,7 +176,8 @@ namespace MatchingEngine.Services
                 // Update matched orders
                 lock (_orders)
                 {
-                    matchedImportedOrder.Blocked = 0;
+                    if (matchedImportedOrder != null)
+                        matchedImportedOrder.Blocked = 0;
                     matchedLocalOrder.Blocked = 0;
                     matchedLocalOrder.Fulfilled += createdOrder.Fulfilled;
                     modifiedOrders.Add(matchedLocalOrder);
@@ -190,21 +191,20 @@ namespace MatchingEngine.Services
                     newImportedOrder = new Order()
                     {
                         Id = Guid.NewGuid(),
-                        IsBid = matchedImportedOrder.IsBid,
-                        CurrencyPairCode = matchedImportedOrder.CurrencyPairCode,
-                        DateCreated = matchedImportedOrder.DateCreated,
-                        Exchange = matchedImportedOrder.Exchange,
-                        Price = matchedImportedOrder.Price,
+                        IsBid = !createdOrder.IsBid,
+                        CurrencyPairCode = createdOrder.CurrencyPairCode,
+                        DateCreated = DateTimeOffset.UtcNow,
+                        Exchange = createdOrder.Exchange,
+                        Price = createdOrder.MatchingEngineDealPrice,
                         Amount = createdOrder.Fulfilled,
                         Fulfilled = createdOrder.Fulfilled,
-                        UserId = $"{matchedImportedOrder.Exchange}_matched"
+                        UserId = $"{createdOrder.Exchange}_matched"
                     };
                     modifiedOrders.Add(newImportedOrder);
 
                     // Create deal
-                    decimal dealPrice = bid.DateCreated > ask.DateCreated ? ask.Price : bid.Price;
                     newDeals.Add(new Deal(matchedLocalOrder, newImportedOrder,
-                        dealPrice, createdOrder.Fulfilled));
+                        createdOrder.MatchingEngineDealPrice, createdOrder.Fulfilled));
                 }
 
                 await UpdateDatabase(db, modifiedOrders, newDeals);
