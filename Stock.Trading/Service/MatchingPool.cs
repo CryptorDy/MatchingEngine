@@ -316,7 +316,11 @@ namespace MatchingEngine.Services
 
         public async Task RemoveOrders(IEnumerable<Guid> ids)
         {
-            _liquidityDeletedOrderIds.AddRange(ids);
+            lock (_liquidityDeletedOrderIds)
+            {
+                _liquidityDeletedOrderIds.AddRange(ids);
+            }
+
             lock (_orders)
             {
                 var ordersToRemove = _orders.Where(_ => ids.Contains(_.Id)).ToList();
@@ -325,6 +329,14 @@ namespace MatchingEngine.Services
                 _orders.RemoveAll(_ => ids.Contains(_.Id));
             }
             await SendOrdersToMarketData();
+        }
+
+        private bool IsInLiquidityDeletedOrderIds(Guid id)
+        {
+            lock (_liquidityDeletedOrderIds)
+            {
+                return _liquidityDeletedOrderIds.Contains(id);
+            }
         }
 
         public void RemoveLiquidityOrderbook(Exchange exchange, string currencyPairCode)
@@ -382,7 +394,7 @@ namespace MatchingEngine.Services
                         continue;
                     var newOrder = await _newOrdersBuffer.ReceiveAsync(cancellationToken);
 
-                    if (!newOrder.IsLocal && _liquidityDeletedOrderIds.Contains(newOrder.Id))
+                    if (!newOrder.IsLocal && IsInLiquidityDeletedOrderIds(newOrder.Id))
                         Console.WriteLine($"Skipped order processing (already deleted): {newOrder}");
                     else
                         await Process(newOrder);
