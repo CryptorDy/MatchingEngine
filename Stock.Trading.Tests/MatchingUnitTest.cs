@@ -191,6 +191,7 @@ namespace Stock.Trading.Tests.TestsV2
                     IsBid = bid.IsLocal,
                     TradingBidId = bid.Id.ToString(),
                     TradingAskId = ask.Id.ToString(),
+                    MatchingEngineDealPrice = bid.DateCreated > ask.DateCreated ? ask.Price : bid.Price,
                     Exchange = ask.Exchange,
                     CurrencyPairCode = ask.CurrencyPairCode,
                     Fulfilled = fulfilled,
