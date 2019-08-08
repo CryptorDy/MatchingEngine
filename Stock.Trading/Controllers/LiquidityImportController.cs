@@ -71,10 +71,18 @@ namespace Stock.Trading.Controllers
         [HttpDelete("orders/{exchange}/{currencyPairId}")]
         public async Task<IActionResult> DeleteOrders(Exchange exchange, string currencyPairId)
         {
-            if (exchange == Exchange.Local)
+            try
+            {
+                if (exchange == Exchange.Local)
+                    return BadRequest();
+                _matchingPool.RemoveLiquidityOrderbook(exchange, currencyPairId);
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "");
                 return BadRequest();
-            _matchingPool.RemoveLiquidityOrderbook(exchange, currencyPairId);
-            return Ok();
+            }
         }
 
         /// <summary>
@@ -85,8 +93,16 @@ namespace Stock.Trading.Controllers
         [HttpPost("orders/delete")]
         public async Task<IActionResult> DeleteOrders([FromBody]List<OrderCreateRequest> orders)
         {
-            await _matchingPool.RemoveOrders(orders.Select(_ => Guid.Parse(_.ActionId)).ToList());
-            return Ok();
+            try
+            {
+                await _matchingPool.RemoveOrders(orders.Select(_ => Guid.Parse(_.ActionId)).ToList());
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "");
+                return BadRequest();
+            }
         }
 
         /// <summary>
