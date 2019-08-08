@@ -2,6 +2,7 @@ using AutoMapper;
 using MatchingEngine.Data;
 using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
+using MatchingEngine.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -35,7 +36,7 @@ namespace Stock.Trading.Tests.TestsV2
         [Fact]
         public void EmptyDataReturnEmptyResult()
         {
-            var service = new MatchingEngine.Services.OrdersMatcher(null);
+            var service = new OrdersMatcher(null);
             var (modifiedOrders, newDeals) = service.Match(new List<Order>(), _cheapBid.Clone());
 
             Assert.Empty(modifiedOrders);
@@ -47,7 +48,7 @@ namespace Stock.Trading.Tests.TestsV2
         {
             var pool = new List<Order> { _cheapBid.Clone() };
 
-            var service = new MatchingEngine.Services.OrdersMatcher(null);
+            var service = new OrdersMatcher(null);
             var (modifiedOrders, newDeals) = service.Match(pool, _expensiveAsk.Clone());
 
             Assert.Empty(modifiedOrders);
@@ -69,7 +70,7 @@ namespace Stock.Trading.Tests.TestsV2
                 Order bid = ordersToMatch[0], ask = ordersToMatch[1];
                 var pool = new List<Order> { bid.Clone() };
 
-                var service = new MatchingEngine.Services.OrdersMatcher(null);
+                var service = new OrdersMatcher(null);
                 var (modifiedOrders, newDeals) = service.Match(pool, ask.Clone());
 
                 decimal expectedDealVolume = Math.Min(bid.AvailableAmount, ask.AvailableAmount);
@@ -94,7 +95,7 @@ namespace Stock.Trading.Tests.TestsV2
         {
             var pool = new List<Order> { _cheapAskWithFulfilled.Clone(), _cheapAskWithBlocked.Clone() };
 
-            var service = new MatchingEngine.Services.OrdersMatcher(null);
+            var service = new OrdersMatcher(null);
             var (modifiedOrders, newDeals) = service.Match(pool, _cheapBid.Clone());
 
             Assert.Equal(2, newDeals.Count);
@@ -114,12 +115,12 @@ namespace Stock.Trading.Tests.TestsV2
                 Id = Guid.NewGuid(),
                 Exchange = Exchange.Binance,
             };
-            var liquidityImportService = new Mock<MatchingEngine.Services.ILiquidityImportService>();
+            var liquidityImportService = new Mock<ILiquidityImportService>();
             int liquidityCallbackCounter = 0;
             liquidityImportService
                 .Setup(_ => _.CreateTrade(It.IsAny<Order>(), It.IsAny<Order>()))
                 .Callback<Order, Order>((resultBid, resultAsk) => { liquidityCallbackCounter++; });
-            var ordersMatcher = new MatchingEngine.Services.OrdersMatcher(liquidityImportService.Object);
+            var ordersMatcher = new OrdersMatcher(liquidityImportService.Object);
             var (modifiedOrders, newDeals) = ordersMatcher.Match(new List<Order> { bid.Clone() }, ask.Clone());
 
             Assert.Empty(newDeals);
@@ -129,6 +130,47 @@ namespace Stock.Trading.Tests.TestsV2
             Assert.Equal(0, modifiedOrders[0].AvailableAmount);
             Assert.True(modifiedOrders[1].Blocked > 0);
             Assert.Equal(0, modifiedOrders[1].AvailableAmount);
+        }
+
+        [Fact]
+        public async Task LiquidityDeletedOrdersDoNotGetProcessed()
+        {
+            async Task<int> TestProcessingWithDeletedIds(List<Order> poolOrders, List<Guid> deletedIds)
+            {
+                int liquidityCallbackCounter = 0;
+                using (var context = new TradingDbContext(GetDbOptions(), GetMapper()))
+                {
+                    var (matchingPool, tradingService) = GenerateServices(context, (resultBid, resultAsk) => { liquidityCallbackCounter++; });
+
+                    await matchingPool.RemoveOrders(deletedIds);
+                    foreach (var order in poolOrders)
+                        await AddOrder(order, tradingService, matchingPool);
+
+                    matchingPool.StartAsync(new CancellationToken());
+                    Thread.Sleep(100);
+                }
+                return liquidityCallbackCounter;
+            }
+
+            var bid = _cheapBid.Clone();
+            var ask = new Order(false, _currencyPairCode, 2.5m, bid.Amount)
+            {
+                Id = Guid.NewGuid(),
+                Exchange = Exchange.Binance,
+            };
+            var orders = new List<Order> { bid, ask };
+
+            // ask is skipped because it's in _liquidityDeletedOrderIds
+            int matchesWithDeletedAsk = await TestProcessingWithDeletedIds(orders, new List<Guid> { ask.Id });
+            Assert.Equal(0, matchesWithDeletedAsk);
+
+            // nothing should be skipped
+            int matchesWithNotDeletedAsk = await TestProcessingWithDeletedIds(orders, new List<Guid> { Guid.NewGuid() });
+            Assert.Equal(1, matchesWithNotDeletedAsk);
+
+            // bid is local, should not be skipped
+            int matchesWithNotDeletedBid = await TestProcessingWithDeletedIds(orders, new List<Guid> { bid.Id });
+            Assert.Equal(1, matchesWithNotDeletedBid);
         }
 
         [Fact]
@@ -146,31 +188,36 @@ namespace Stock.Trading.Tests.TestsV2
                 await SimulateExternalTrade(bid.Clone(), ask.Clone(), fulfilled);
         }
 
-        public async Task SimulateExternalTrade(Order bid, Order ask, decimal fulfilled)
+        private (MatchingPool, TradingService) GenerateServices(TradingDbContext context,
+            Action<Order, Order> liquidityImportServiceCallback)
         {
-            var liquidityImportService = new Mock<MatchingEngine.Services.ILiquidityImportService>();
-            int liquidityCallbackCounter = 0;
+            var liquidityImportService = new Mock<ILiquidityImportService>();
             liquidityImportService
                 .Setup(_ => _.CreateTrade(It.IsAny<Order>(), It.IsAny<Order>()))
-                .Callback<Order, Order>((resultBid, resultAsk) => { liquidityCallbackCounter++; });
+                .Callback<Order, Order>(liquidityImportServiceCallback);
 
-            var dbOptions = new DbContextOptionsBuilder<TradingDbContext>()
-                .UseInMemoryDatabase(databaseName: $"MemoryDb-{new Random().Next(9999)}").Options;
-            using (var context = new TradingDbContext(dbOptions, GetMapper()))
+            var serviceProvider = new Mock<IServiceProvider>();
+            serviceProvider.Setup(x => x.GetService(typeof(TradingDbContext))).Returns(context);
+            var serviceScope = new Mock<IServiceScope>();
+            serviceScope.Setup(x => x.ServiceProvider).Returns(serviceProvider.Object);
+            var serviceScopeFactory = new Mock<IServiceScopeFactory>();
+            serviceScopeFactory.Setup(x => x.CreateScope()).Returns(serviceScope.Object);
+
+            var ordersMatcher = new OrdersMatcher(liquidityImportService.Object);
+            var matchingPool = new MatchingPool(serviceScopeFactory.Object, ordersMatcher,
+                null, null, null, null, new Mock<ILogger<MatchingPool>>().Object);
+            var matchingPoolAccessor = new MatchingPoolAccessor(new List<IHostedService> { matchingPool });
+            var tradingService = new TradingService(context, matchingPoolAccessor,
+                new Mock<ILogger<TradingService>>().Object);
+            return (matchingPool, tradingService);
+        }
+
+        private async Task SimulateExternalTrade(Order bid, Order ask, decimal fulfilled)
+        {
+            int liquidityCallbackCounter = 0;
+            using (var context = new TradingDbContext(GetDbOptions(), GetMapper()))
             {
-                var serviceProvider = new Mock<IServiceProvider>();
-                serviceProvider.Setup(x => x.GetService(typeof(TradingDbContext))).Returns(context);
-                var serviceScope = new Mock<IServiceScope>();
-                serviceScope.Setup(x => x.ServiceProvider).Returns(serviceProvider.Object);
-                var serviceScopeFactory = new Mock<IServiceScopeFactory>();
-                serviceScopeFactory.Setup(x => x.CreateScope()).Returns(serviceScope.Object);
-
-                var ordersMatcher = new MatchingEngine.Services.OrdersMatcher(liquidityImportService.Object);
-                var matchingPool = new MatchingEngine.Services.MatchingPool(serviceScopeFactory.Object, ordersMatcher,
-                    null, null, null, null, new Mock<ILogger<MatchingEngine.Services.MatchingPool>>().Object);
-                var matchingPoolAccessor = new MatchingEngine.Services.MatchingPoolAccessor(new List<IHostedService> { matchingPool });
-                var tradingService = new MatchingEngine.Services.TradingService(context, matchingPoolAccessor,
-                    new Mock<ILogger<MatchingEngine.Services.TradingService>>().Object);
+                var (matchingPool, tradingService) = GenerateServices(context, (resultBid, resultAsk) => { liquidityCallbackCounter++; });
 
                 // starting match with imported order
                 await AddOrder(bid, tradingService, matchingPool);
@@ -222,8 +269,8 @@ namespace Stock.Trading.Tests.TestsV2
             }
         }
 
-        public async Task AddOrder(Order order, MatchingEngine.Services.TradingService tradingService,
-            MatchingEngine.Services.MatchingPool matchingPool)
+        private async Task AddOrder(Order order, TradingService tradingService,
+            MatchingPool matchingPool)
         {
             if (order.IsLocal)
             {
@@ -246,6 +293,9 @@ namespace Stock.Trading.Tests.TestsV2
                 matchingPool.AppendOrder(order.Clone());
             }
         }
+
+        private DbContextOptions<TradingDbContext> GetDbOptions() => new DbContextOptionsBuilder<TradingDbContext>()
+                .UseInMemoryDatabase(databaseName: $"MemoryDb-{new Random().Next(9999)}").Options;
 
         public IMapper GetMapper()
         {
