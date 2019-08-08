@@ -22,6 +22,7 @@ namespace MatchingEngine.Services
     {
         private readonly BufferBlock<Order> _newOrdersBuffer = new BufferBlock<Order>();
         private readonly List<Order> _orders = new List<Order>();
+        private readonly List<Guid> _liquidityDeletedOrderIds = new List<Guid>();
 
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly OrdersMatcher _ordersMatcher;
@@ -315,9 +316,10 @@ namespace MatchingEngine.Services
 
         public async Task RemoveOrders(IEnumerable<Guid> ids)
         {
+            _liquidityDeletedOrderIds.AddRange(ids);
             lock (_orders)
             {
-                var ordersToRemove = _orders.Where(_ => ids.Contains(_.Id));
+                var ordersToRemove = _orders.Where(_ => ids.Contains(_.Id)).ToList();
                 if (ordersToRemove.Any(_ => _.IsLocal))
                     throw new ArgumentException("Local exchange changes are forbidden");
                 _orders.RemoveAll(_ => ids.Contains(_.Id));
@@ -379,7 +381,11 @@ namespace MatchingEngine.Services
                     if (!await _newOrdersBuffer.OutputAvailableAsync(cancellationToken))
                         continue;
                     var newOrder = await _newOrdersBuffer.ReceiveAsync(cancellationToken);
-                    await Process(newOrder);
+
+                    if (!newOrder.IsLocal && _liquidityDeletedOrderIds.Contains(newOrder.Id))
+                        Console.WriteLine($"Skipped order processing (already deleted): {newOrder}");
+                    else
+                        await Process(newOrder);
                 }
                 catch (Exception ex)
                 {
