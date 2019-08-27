@@ -369,11 +369,15 @@ namespace MatchingEngine.Services
             await SendOrdersToMarketData();
         }
 
+        private long _orderbookIntersectionLogsCounter = 0;
+
         /// <summary>
         /// Log when bids are bigger than asks
         /// </summary>
         private void CheckOrderbookIntersection(Order newOrder)
         {
+            if (_orderbookIntersectionLogsCounter++ % 100 != 0) // only show 1 in 100 logs
+                return;
             var currencyPairOrders = _orders.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode);
             var biggestBid = currencyPairOrders.Where(o => o.IsBid).OrderByDescending(_ => _.Price).FirstOrDefault();
             var lowestAsk = currencyPairOrders.Where(o => !o.IsBid).OrderBy(_ => _.Price).FirstOrDefault();
