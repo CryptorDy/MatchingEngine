@@ -90,7 +90,8 @@ namespace MatchingEngine.Models
                 AskId = Ask.Id,
                 UserBidId = Bid.UserId,
                 UserAskId = Ask.UserId,
-                IsBuy = Bid.DateCreated > Ask.DateCreated
+                IsBuy = Bid.DateCreated > Ask.DateCreated,
+                FromInnerTradingBot = FromInnerTradingBot
             };
         }
     }
