@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Stock.Trading.Tests.TestsV2
+namespace Stock.Trading.Tests
 {
     public class MatchingUnitTest
     {
