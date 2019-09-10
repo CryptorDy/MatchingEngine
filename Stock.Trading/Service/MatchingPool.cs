@@ -65,8 +65,8 @@ namespace MatchingEngine.Services
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                var dbOrders = context.BidsV2.AsNoTracking().Where(a => a.IsActive).Cast<Order>()
-                    .Union(context.AsksV2.AsNoTracking().Where(a => a.IsActive))
+                var dbOrders = context.Bids.AsNoTracking().Where(a => a.IsActive).Cast<Order>()
+                    .Union(context.Asks.AsNoTracking().Where(a => a.IsActive))
                     .ToList();
                 foreach (var order in dbOrders.OrderBy(o => o.DateCreated))
                 {
@@ -119,7 +119,7 @@ namespace MatchingEngine.Services
 
             if (newDeals.Count > 0)
                 _logger.LogInformation($"Created {newDeals.Count} new deals");
-            context.DealsV2.AddRange(newDeals);
+            context.Deals.AddRange(newDeals);
             context.SaveChanges();
         }
 
@@ -137,7 +137,7 @@ namespace MatchingEngine.Services
                 await SendOrdersToMarketData();
                 var dealGuids = newDeals.Select(md => md.DealId).ToList();
                 if (dealGuids.Count == 0) return;
-                var dbDeals = db.DealsV2.Include(d => d.Ask).Include(d => d.Bid)
+                var dbDeals = db.Deals.Include(d => d.Ask).Include(d => d.Bid)
                     .Where(d => dealGuids.Contains(d.DealId))
                     .ToDictionary(d => d.DealId, d => d);
                 foreach (var item in newDeals)
@@ -169,8 +169,8 @@ namespace MatchingEngine.Services
                     bid = _orders.FirstOrDefault(x => x.Id == Guid.Parse(createdOrder.TradingBidId));
                     ask = _orders.FirstOrDefault(x => x.Id == Guid.Parse(createdOrder.TradingAskId));
                 }
-                if (bid == null) bid = await db.BidsV2.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingBidId));
-                if (ask == null) ask = await db.AsksV2.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingAskId));
+                if (bid == null) bid = await db.Bids.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingBidId));
+                if (ask == null) ask = await db.Asks.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingAskId));
                 // todo handle cases with null bid or ask
 
                 var (matchedLocalOrder, matchedImportedOrder) = createdOrder.IsBid ? (bid, ask) : (ask, bid);
