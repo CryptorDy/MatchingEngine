@@ -3,15 +3,17 @@ using System;
 using MatchingEngine.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Stock.Trading.Migrations
 {
     [DbContext(typeof(TradingDbContext))]
-    partial class TradingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20190910154825_RemoveOldEntities")]
+    partial class RemoveOldEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -50,7 +52,7 @@ namespace Stock.Trading.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Asks");
+                    b.ToTable("AsksV2");
                 });
 
             modelBuilder.Entity("MatchingEngine.Models.Bid", b =>
@@ -84,7 +86,7 @@ namespace Stock.Trading.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Bids");
+                    b.ToTable("BidsV2");
                 });
 
             modelBuilder.Entity("MatchingEngine.Models.Deal", b =>
@@ -110,7 +112,7 @@ namespace Stock.Trading.Migrations
 
                     b.HasIndex("BidId");
 
-                    b.ToTable("Deals");
+                    b.ToTable("DealsV2");
                 });
 
             modelBuilder.Entity("MatchingEngine.Models.Deal", b =>
