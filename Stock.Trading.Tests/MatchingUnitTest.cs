@@ -227,7 +227,7 @@ namespace Stock.Trading.Tests.TestsV2
                 Thread.Sleep(100);
 
                 // check correct blocked value, local order updated in db, call to liquidity
-                var savedBid = context.BidsV2.Single();
+                var savedBid = context.Bids.Single();
                 Assert.Equal(1, liquidityCallbackCounter);
                 Assert.True(savedBid.Blocked > 0);
                 Assert.Equal(0, savedBid.AvailableAmount);
@@ -245,9 +245,9 @@ namespace Stock.Trading.Tests.TestsV2
                 });
 
                 // check correct saved result
-                savedBid = context.BidsV2.Single();
-                var generatedAsk = context.AsksV2.SingleOrDefault();
-                var deal = context.DealsV2.SingleOrDefault();
+                savedBid = context.Bids.Single();
+                var generatedAsk = context.Asks.SingleOrDefault();
+                var deal = context.Deals.SingleOrDefault();
                 Assert.Equal(fulfilled, savedBid.Fulfilled);
                 if (fulfilled == 0)
                 {

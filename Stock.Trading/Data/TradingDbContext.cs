@@ -18,14 +18,9 @@ namespace MatchingEngine.Data
             _mapper = mapper;
         }
 
-        public DbSet<Stock.Trading.Entities.Bid> Bids { get; set; }
-        public DbSet<Stock.Trading.Entities.Ask> Asks { get; set; }
-        public DbSet<Stock.Trading.Entities.Deal> Deals { get; set; }
-        public DbSet<OrderType> OrderTypes { get; set; }
-
-        public virtual DbSet<Bid> BidsV2 { get; set; }
-        public virtual DbSet<Ask> AsksV2 { get; set; }
-        public virtual DbSet<Deal> DealsV2 { get; set; }
+        public virtual DbSet<Bid> Bids { get; set; }
+        public virtual DbSet<Ask> Asks { get; set; }
+        public virtual DbSet<Deal> Deals { get; set; }
 
         public async Task<Order> AddOrder(Order order, bool toSave)
         {
@@ -33,27 +28,36 @@ namespace MatchingEngine.Data
             if (order.IsBid)
             {
                 trackedOrder = _mapper.Map<Order, Bid>(order);
-                BidsV2.Add((Bid)trackedOrder);
+                Bids.Add((Bid)trackedOrder);
             }
             else
             {
                 trackedOrder = _mapper.Map<Order, Ask>(order);
-                AsksV2.Add((Ask)trackedOrder);
+                Asks.Add((Ask)trackedOrder);
             }
             if (toSave)
                 await SaveChangesAsync();
             return trackedOrder;
         }
 
+        public async Task UpdateOrder(Order order, bool toSave)
+        {
+            if (order.IsBid) Bids.Update((Bid)order);
+            else Asks.Update((Ask)order);
+
+            if (toSave)
+                await SaveChangesAsync();
+        }
+
         public async Task<List<Order>> GetOrders(bool isBid, string userId = null)
         {
             List<Order> dbOrders;
             if (isBid)
-                dbOrders = await BidsV2.Include(o => o.DealList)
+                dbOrders = await Bids.Include(o => o.DealList)
                     .Where(_ => _.IsBid == isBid && (string.IsNullOrEmpty(userId) || _.UserId == userId))
                     .Cast<Order>().ToListAsync();
             else
-                dbOrders = await AsksV2.Include(o => o.DealList)
+                dbOrders = await Asks.Include(o => o.DealList)
                     .Where(_ => _.IsBid == isBid && (string.IsNullOrEmpty(userId) || _.UserId == userId))
                     .Cast<Order>().ToListAsync();
 
@@ -72,9 +76,9 @@ namespace MatchingEngine.Data
         {
             var bidIds = orders.Where(_ => _.IsBid).Select(_ => _.Id).ToList();
             var askIds = orders.Where(_ => !_.IsBid).Select(_ => _.Id).ToList();
-            var dbOrders = await BidsV2.Where(_ => bidIds.Contains(_.Id))
+            var dbOrders = await Bids.Where(_ => bidIds.Contains(_.Id))
                 .Cast<Order>()
-                .Union(AsksV2.Where(_ => askIds.Contains(_.Id)))
+                .Union(Asks.Where(_ => askIds.Contains(_.Id)))
                 .ToListAsync();
             return dbOrders;
         }
@@ -83,9 +87,9 @@ namespace MatchingEngine.Data
         {
             Order order;
             if (isBid)
-                order = await BidsV2.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == id);
+                order = await Bids.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == id);
             else
-                order = await AsksV2.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == id);
+                order = await Asks.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == id);
 
             foreach (var deal in order.DealList)
             {

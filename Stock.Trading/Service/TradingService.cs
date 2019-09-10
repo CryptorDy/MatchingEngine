@@ -64,7 +64,7 @@ namespace MatchingEngine.Services
         {
             try
             {
-                var deals = await _context.DealsV2
+                var deals = await _context.Deals
                     .Include(m => m.Ask)
                     .Include(m => m.Bid)
                     .Where(_ => (!sinceDate.HasValue || _.DateCreated > sinceDate)
@@ -95,7 +95,7 @@ namespace MatchingEngine.Services
         {
             try
             {
-                var deal = _context.DealsV2
+                var deal = _context.Deals
                     .Include(d => d.Ask)
                     .Include(d => d.Bid)
                     .FirstOrDefault(o => o.DealId == Guid.Parse(id));
