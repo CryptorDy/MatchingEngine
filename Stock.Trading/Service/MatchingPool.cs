@@ -113,6 +113,7 @@ namespace MatchingEngine.Services
                     }
                     dbOrder.Fulfilled = order.Fulfilled;
                     dbOrder.Blocked = order.Blocked;
+                    await context.UpdateOrder(dbOrder, false);
                 }
             }
 

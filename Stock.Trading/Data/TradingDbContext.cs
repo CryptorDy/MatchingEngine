@@ -45,6 +45,15 @@ namespace MatchingEngine.Data
             return trackedOrder;
         }
 
+        public async Task UpdateOrder(Order order, bool toSave)
+        {
+            if (order.IsBid) BidsV2.Update((Bid)order);
+            else AsksV2.Update((Ask)order);
+
+            if (toSave)
+                await SaveChangesAsync();
+        }
+
         public async Task<List<Order>> GetOrders(bool isBid, string userId = null)
         {
             List<Order> dbOrders;
