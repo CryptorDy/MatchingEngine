@@ -14,9 +14,14 @@ namespace MatchingEngine.Models
         {
             var (bid, ask) = order1.IsBid ? (order1, order2) : (order2, order1);
             if (!bid.IsBid)
+            {
                 throw new Exception($"No bids passed to Deal(): {order1}, {order2}");
+            }
+
             if (ask.IsBid)
+            {
                 throw new Exception($"No asks passed to Deal(): {order1}, {order2}");
+            }
 
             DateCreated = DateTimeOffset.UtcNow;
             BidId = bid.Id;

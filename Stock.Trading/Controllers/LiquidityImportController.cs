@@ -47,7 +47,10 @@ namespace Stock.Trading.Controllers
         public async Task<IActionResult> Ping(Exchange exchange, string curPairCode)
         {
             if (exchange == Exchange.Local)
+            {
                 return BadRequest();
+            }
+
             _liquidityExpireWatcher.UpdateExpirationDate(exchange, curPairCode);
             return Ok();
         }
@@ -74,7 +77,10 @@ namespace Stock.Trading.Controllers
             try
             {
                 if (exchange == Exchange.Local)
+                {
                     return BadRequest();
+                }
+
                 _matchingPool.RemoveLiquidityOrderbook(exchange, currencyPairId);
                 return Ok();
             }

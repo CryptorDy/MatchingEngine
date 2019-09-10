@@ -35,32 +35,45 @@ namespace MatchingEngine.Data
                 Asks.Add((Ask)trackedOrder);
             }
             if (toSave)
+            {
                 await SaveChangesAsync();
+            }
+
             return trackedOrder;
         }
 
         public async Task UpdateOrder(Order order, bool toSave)
         {
             if (order.IsBid)
+            {
                 Bids.Update((Bid)order);
+            }
             else
+            {
                 Asks.Update((Ask)order);
+            }
 
             if (toSave)
+            {
                 await SaveChangesAsync();
+            }
         }
 
         public async Task<List<Order>> GetOrders(bool isBid, string userId = null)
         {
             List<Order> dbOrders;
             if (isBid)
+            {
                 dbOrders = await Bids.Include(o => o.DealList)
                     .Where(_ => _.IsBid == isBid && (string.IsNullOrEmpty(userId) || _.UserId == userId))
                     .Cast<Order>().ToListAsync();
+            }
             else
+            {
                 dbOrders = await Asks.Include(o => o.DealList)
                     .Where(_ => _.IsBid == isBid && (string.IsNullOrEmpty(userId) || _.UserId == userId))
                     .Cast<Order>().ToListAsync();
+            }
 
             foreach (var order in dbOrders)  // remove circular dependency to prevent json error
             {
@@ -88,9 +101,13 @@ namespace MatchingEngine.Data
         {
             Order order;
             if (isBid)
+            {
                 order = await Bids.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == id);
+            }
             else
+            {
                 order = await Asks.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == id);
+            }
 
             foreach (var deal in order.DealList)
             {

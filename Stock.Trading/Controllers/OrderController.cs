@@ -48,7 +48,9 @@ namespace MatchingEngine.Controllers
         public async Task<IActionResult> Post([FromBody]OrderCreateRequest request)
         {
             if (!ModelState.IsValid)
+            {
                 return BadRequest(ModelState);
+            }
 
             var newOrderId = await _service.CreateOrder(request);
             return Ok(new CreateOrderResult { Id = newOrderId });
@@ -66,7 +68,10 @@ namespace MatchingEngine.Controllers
         {
             int res = await _service.DeleteOrder(isBid, id, userId);
             if (res != 0)
+            {
                 return Ok();
+            }
+
             return NotFound();
         }
     }

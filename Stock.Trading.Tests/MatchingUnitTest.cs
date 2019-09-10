@@ -144,7 +144,9 @@ namespace Stock.Trading.Tests.TestsV2
 
                     await matchingPool.RemoveOrders(deletedIds);
                     foreach (var order in poolOrders)
+                    {
                         await AddOrder(order, tradingService, matchingPool);
+                    }
 
                     matchingPool.StartAsync(new CancellationToken());
                     Thread.Sleep(100);
@@ -185,7 +187,9 @@ namespace Stock.Trading.Tests.TestsV2
             };
 
             foreach (decimal fulfilled in new List<decimal> { 0, 2, totalAmount })
+            {
                 await SimulateExternalTrade(bid.Clone(), ask.Clone(), fulfilled);
+            }
         }
 
         private (MatchingPool, TradingService) GenerateServices(TradingDbContext context,

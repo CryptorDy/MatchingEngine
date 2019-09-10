@@ -78,9 +78,14 @@ namespace MatchingEngine.Services
                 foreach (var deal in deals) // remove circular dependency to prevent json error
                 {
                     if (deal.Bid != null)
+                    {
                         deal.Bid.DealList = null;
+                    }
+
                     if (deal.Ask != null)
+                    {
                         deal.Ask.DealList = null;
+                    }
                 }
                 return deals;
             }
@@ -102,9 +107,14 @@ namespace MatchingEngine.Services
                 if (deal != null)
                 {
                     if (deal.Ask != null)
+                    {
                         deal.Ask.DealList = null;
+                    }
+
                     if (deal.Bid != null)
+                    {
                         deal.Bid.DealList = null;
+                    }
                 }
                 return deal;
             }
@@ -148,7 +158,10 @@ namespace MatchingEngine.Services
             };
 
             if (!order.FromInnerTradingBot)
+            {
                 await _context.AddOrder(order, true);
+            }
+
             _matchingPool.AppendOrder(order);
 
             return order.Id;
