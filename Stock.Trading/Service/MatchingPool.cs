@@ -136,7 +136,8 @@ namespace MatchingEngine.Services
 
                 await SendOrdersToMarketData();
                 var dealGuids = newDeals.Select(md => md.DealId).ToList();
-                if (dealGuids.Count == 0) return;
+                if (dealGuids.Count == 0)
+                    return;
                 var dbDeals = db.Deals.Include(d => d.Ask).Include(d => d.Bid)
                     .Where(d => dealGuids.Contains(d.DealId))
                     .ToDictionary(d => d.DealId, d => d);
@@ -169,8 +170,10 @@ namespace MatchingEngine.Services
                     bid = _orders.FirstOrDefault(x => x.Id == Guid.Parse(createdOrder.TradingBidId));
                     ask = _orders.FirstOrDefault(x => x.Id == Guid.Parse(createdOrder.TradingAskId));
                 }
-                if (bid == null) bid = await db.Bids.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingBidId));
-                if (ask == null) ask = await db.Asks.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingAskId));
+                if (bid == null)
+                    bid = await db.Bids.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingBidId));
+                if (ask == null)
+                    ask = await db.Asks.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingAskId));
                 // todo handle cases with null bid or ask
 
                 var (matchedLocalOrder, matchedImportedOrder) = createdOrder.IsBid ? (bid, ask) : (ask, bid);

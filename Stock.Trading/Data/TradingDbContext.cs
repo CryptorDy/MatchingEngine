@@ -1,7 +1,6 @@
 using AutoMapper;
 using MatchingEngine.Models;
 using Microsoft.EntityFrameworkCore;
-using Stock.Trading.Data.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,8 +41,10 @@ namespace MatchingEngine.Data
 
         public async Task UpdateOrder(Order order, bool toSave)
         {
-            if (order.IsBid) Bids.Update((Bid)order);
-            else Asks.Update((Ask)order);
+            if (order.IsBid)
+                Bids.Update((Bid)order);
+            else
+                Asks.Update((Ask)order);
 
             if (toSave)
                 await SaveChangesAsync();

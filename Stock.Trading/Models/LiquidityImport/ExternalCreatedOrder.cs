@@ -1,5 +1,3 @@
-using System;
-
 namespace MatchingEngine.Models.LiquidityImport
 {
     public class ExternalCreatedOrder
