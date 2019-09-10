@@ -18,11 +18,6 @@ namespace MatchingEngine.Data
             _mapper = mapper;
         }
 
-        public DbSet<Stock.Trading.Entities.Bid> Bids { get; set; }
-        public DbSet<Stock.Trading.Entities.Ask> Asks { get; set; }
-        public DbSet<Stock.Trading.Entities.Deal> Deals { get; set; }
-        public DbSet<OrderType> OrderTypes { get; set; }
-
         public virtual DbSet<Bid> BidsV2 { get; set; }
         public virtual DbSet<Ask> AsksV2 { get; set; }
         public virtual DbSet<Deal> DealsV2 { get; set; }
