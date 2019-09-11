@@ -108,7 +108,7 @@ namespace MatchingEngine.Services
                         // create if external or FromInnerBot and wasn't created yet
                         if (dbOrder == null && (!order.IsLocal || order.FromInnerTradingBot))
                         {
-                            dbOrder = await context.AddOrder(order, false);
+                            dbOrder = await context.AddOrder(order, true);
                         }
                         if (dbOrder == null)
                         {
