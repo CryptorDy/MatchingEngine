@@ -1,6 +1,9 @@
 using MatchingEngine.Models;
+using MatchingEngine.Models.LiquidityImport;
 using MatchingEngine.Services;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -50,6 +53,16 @@ namespace MatchingEngine.Controllers
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
+            }
+
+            if (request.Exchange == Exchange.Local)
+            {
+                Console.WriteLine($"order created : {DateTime.UtcNow.ToLongTimeString()}" + JsonConvert.SerializeObject(request,
+                    Formatting.Indented,
+                    new JsonSerializerSettings
+                    {
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                    }));
             }
 
             var newOrderId = await _service.CreateOrder(request);
