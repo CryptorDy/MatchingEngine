@@ -57,12 +57,6 @@ namespace MatchingEngine.Controllers
 
             if (request.Exchange == Exchange.Local)
             {
-                Console.WriteLine($"order created : {DateTime.UtcNow.ToLongTimeString()}" + JsonConvert.SerializeObject(request,
-                    Formatting.Indented,
-                    new JsonSerializerSettings
-                    {
-                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-                    }));
             }
 
             var newOrderId = await _service.CreateOrder(request);
