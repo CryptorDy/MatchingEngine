@@ -108,7 +108,7 @@ namespace MatchingEngine.Services
                         // create if external or FromInnerBot and wasn't created yet
                         if (dbOrder == null && (!order.IsLocal || order.FromInnerTradingBot))
                         {
-                            dbOrder = await context.AddOrder(order, false);
+                            dbOrder = await context.AddOrder(order, true);
                         }
                         if (dbOrder == null)
                         {
@@ -401,7 +401,7 @@ namespace MatchingEngine.Services
         {
             lock (_orders)
             {
-                _orders.RemoveAll(_ => _.FromInnerTradingBot && _.DateCreated < DateTimeOffset.UtcNow.AddSeconds(-7));
+                _orders.RemoveAll(_ => _.FromInnerTradingBot && _.DateCreated < DateTimeOffset.UtcNow.AddSeconds(-50));
             }
             await SendOrdersToMarketData();
         }
