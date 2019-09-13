@@ -3,6 +3,7 @@ using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MatchingEngine.Services
@@ -36,6 +37,8 @@ namespace MatchingEngine.Services
             catch (Exception e)
             {
                 _logger.LogError(e, "");
+                Thread.Sleep(1000); // wait to finish Match and update DB
+                //_matchingPool.UpdateExternalOrder()
             }
         }
 

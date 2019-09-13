@@ -79,7 +79,7 @@ namespace MatchingEngine.Services
         {
             // todo use imported orders prices ?
             var orders = _orders
-                .Where(_ => _.IsActive && _.CurrencyPairCode == currencyPairCode && !_.FromInnerTradingBot).ToList();
+                .Where(_ => _.IsActive && _.CurrencyPairCode == currencyPairCode && _.ClientType != ClientType.DealsBot).ToList();
             return new CurrencyPairPrices
             {
                 CurrencyPair = currencyPairCode,
@@ -106,7 +106,7 @@ namespace MatchingEngine.Services
                         }
 
                         // create if external or FromInnerBot and wasn't created yet
-                        if (dbOrder == null && (!order.IsLocal || order.FromInnerTradingBot))
+                        if (dbOrder == null && (!order.IsLocal || order.ClientType == ClientType.DealsBot))
                         {
                             dbOrder = await context.AddOrder(order, true);
                         }
@@ -401,7 +401,7 @@ namespace MatchingEngine.Services
         {
             lock (_orders)
             {
-                _orders.RemoveAll(_ => _.FromInnerTradingBot && _.DateCreated < DateTimeOffset.UtcNow.AddSeconds(-50));
+                _orders.RemoveAll(_ => _.ClientType == ClientType.DealsBot && _.DateCreated < DateTimeOffset.UtcNow.AddSeconds(-50));
             }
             await SendOrdersToMarketData();
         }

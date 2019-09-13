@@ -286,9 +286,9 @@ namespace Stock.Trading.Tests
                     Amount = order.Amount,
                     CurrencyPairCode = order.CurrencyPairCode,
                     DateCreated = order.DateCreated,
+                    ClientType = order.ClientType,
                     UserId = order.UserId,
                     Exchange = order.Exchange,
-                    FromInnerTradingBot = order.FromInnerTradingBot,
                 };
                 await tradingService.CreateOrder(request);
             }

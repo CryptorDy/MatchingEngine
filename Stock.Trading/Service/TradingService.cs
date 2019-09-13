@@ -152,12 +152,12 @@ namespace MatchingEngine.Services
                 Amount = request.Amount,
                 CurrencyPairCode = request.CurrencyPairCode,
                 DateCreated = request.DateCreated,
+                ClientType = request.ClientType,
                 UserId = request.UserId,
                 Exchange = request.Exchange,
-                FromInnerTradingBot = request.FromInnerTradingBot,
             };
 
-            if (!order.FromInnerTradingBot)
+            if (order.ClientType != ClientType.DealsBot)
             {
                 await _context.AddOrder(order, true);
             }

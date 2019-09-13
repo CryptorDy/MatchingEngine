@@ -28,7 +28,7 @@ namespace MatchingEngine.Models
             AskId = ask.Id;
             Price = price;
             Volume = volume;
-            FromInnerTradingBot = bid.FromInnerTradingBot;
+            FromInnerTradingBot = bid.ClientType == ClientType.DealsBot;
         }
 
         /// <summary>

@@ -20,7 +20,12 @@ namespace MatchingEngine.Services
 
         private bool NotBothImported(Order order1, Order order2) => order1.IsLocal || order2.IsLocal;
 
-        private bool HaveSameTradingBotFlag(Order order1, Order order2) => order1.FromInnerTradingBot == order2.FromInnerTradingBot;
+        private bool HaveSameTradingBotFlag(Order order1, Order order2)
+        {
+            bool isOrder1FromDealsBot = order1.ClientType == ClientType.DealsBot;
+            bool isOrder2FromDealsBot = order2.ClientType == ClientType.DealsBot;
+            return isOrder1FromDealsBot == isOrder2FromDealsBot;
+        }
 
         public (List<Order> modifiedOrders, List<Deal> newDeals) Match(IEnumerable<Order> pool, Order newOrder)
         {
