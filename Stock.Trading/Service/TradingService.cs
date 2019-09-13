@@ -64,7 +64,7 @@ namespace MatchingEngine.Services
         {
             try
             {
-                var deals = await _context.DealsV2
+                var deals = await _context.Deals
                     .Include(m => m.Ask)
                     .Include(m => m.Bid)
                     .Where(_ => (!sinceDate.HasValue || _.DateCreated > sinceDate)
@@ -78,9 +78,14 @@ namespace MatchingEngine.Services
                 foreach (var deal in deals) // remove circular dependency to prevent json error
                 {
                     if (deal.Bid != null)
+                    {
                         deal.Bid.DealList = null;
+                    }
+
                     if (deal.Ask != null)
+                    {
                         deal.Ask.DealList = null;
+                    }
                 }
                 return deals;
             }
@@ -95,16 +100,21 @@ namespace MatchingEngine.Services
         {
             try
             {
-                var deal = _context.DealsV2
+                var deal = _context.Deals
                     .Include(d => d.Ask)
                     .Include(d => d.Bid)
                     .FirstOrDefault(o => o.DealId == Guid.Parse(id));
                 if (deal != null)
                 {
                     if (deal.Ask != null)
+                    {
                         deal.Ask.DealList = null;
+                    }
+
                     if (deal.Bid != null)
+                    {
                         deal.Bid.DealList = null;
+                    }
                 }
                 return deal;
             }
@@ -148,7 +158,10 @@ namespace MatchingEngine.Services
             };
 
             if (!order.FromInnerTradingBot)
+            {
                 await _context.AddOrder(order, true);
+            }
+
             _matchingPool.AppendOrder(order);
 
             return order.Id;

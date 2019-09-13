@@ -144,7 +144,9 @@ namespace Stock.Trading.Tests
 
                     await matchingPool.RemoveOrders(deletedIds);
                     foreach (var order in poolOrders)
+                    {
                         await AddOrder(order, tradingService, matchingPool);
+                    }
 
                     matchingPool.StartAsync(new CancellationToken());
                     Thread.Sleep(100);
@@ -185,7 +187,9 @@ namespace Stock.Trading.Tests
             };
 
             foreach (decimal fulfilled in new List<decimal> { 0, 2, totalAmount })
+            {
                 await SimulateExternalTrade(bid.Clone(), ask.Clone(), fulfilled);
+            }
         }
 
         private (MatchingPool, TradingService) GenerateServices(TradingDbContext context,
@@ -227,7 +231,7 @@ namespace Stock.Trading.Tests
                 Thread.Sleep(100);
 
                 // check correct blocked value, local order updated in db, call to liquidity
-                var savedBid = context.BidsV2.Single();
+                var savedBid = context.Bids.Single();
                 Assert.Equal(1, liquidityCallbackCounter);
                 Assert.True(savedBid.Blocked > 0);
                 Assert.Equal(0, savedBid.AvailableAmount);
@@ -245,9 +249,9 @@ namespace Stock.Trading.Tests
                 });
 
                 // check correct saved result
-                savedBid = context.BidsV2.Single();
-                var generatedAsk = context.AsksV2.SingleOrDefault();
-                var deal = context.DealsV2.SingleOrDefault();
+                savedBid = context.Bids.Single();
+                var generatedAsk = context.Asks.SingleOrDefault();
+                var deal = context.Deals.SingleOrDefault();
                 Assert.Equal(fulfilled, savedBid.Fulfilled);
                 if (fulfilled == 0)
                 {

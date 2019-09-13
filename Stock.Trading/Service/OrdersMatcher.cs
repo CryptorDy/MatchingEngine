@@ -33,9 +33,13 @@ namespace MatchingEngine.Services
                 && HaveSameTradingBotFlag(o, newOrder));
             List<Order> poolOrders;
             if (newOrder.IsBid)
+            {
                 poolOrders = poolOrdersQuery.Where(o => o.Price <= newOrder.Price).OrderBy(o => o.Price).ToList();
+            }
             else
+            {
                 poolOrders = poolOrdersQuery.Where(o => o.Price >= newOrder.Price).OrderByDescending(o => o.Price).ToList();
+            }
 
             foreach (var poolOrder in poolOrders)
             {
@@ -46,7 +50,10 @@ namespace MatchingEngine.Services
                 if (isExternalTrade)
                 {
                     if (bid.Blocked != 0 || ask.Blocked != 0)
+                    {
                         Console.WriteLine($"Incorrect blocked state: {bid}, {ask}");
+                    }
+
                     _liquidityImportService.CreateTrade(bid, ask);
                     // liquidity will try to fill all amount of local order
                     newOrder.Blocked = newOrder.AvailableAmount;
@@ -62,11 +69,16 @@ namespace MatchingEngine.Services
 
                 modifiedOrders.Add(poolOrder);
                 if (newOrder.AvailableAmount <= 0)
+                {
                     break; // if new order is completely fulfilled/blocked, there's no reason to iterate further
+                }
             }
 
             if (modifiedOrders.Count > 0)
+            {
                 modifiedOrders.Add(newOrder);
+            }
+
             return (modifiedOrders, newDeals);
         }
     }

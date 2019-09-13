@@ -11,26 +11,6 @@ end_of_line = lf
 indent_size = 4
 indent_style = space
 
-[*.js]
-indent_style = space
-indent_size = 2
-
-[*.jsx]
-indent_style = space
-indent_size = 2
-
-[*.ts]
-indent_style = space
-indent_size = 2
-
-[*.html]
-indent_style = space
-indent_size = 2
-
-[*.cshtml]
-indent_style = space
-indent_size = 2
-
-[*.css]
-indent_style = space
-indent_size = 2
+# Code-block preferences
+csharp_prefer_braces = true:error
+csharp_prefer_simple_using_statement = true:suggestion

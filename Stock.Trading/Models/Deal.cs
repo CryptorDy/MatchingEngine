@@ -13,8 +13,15 @@ namespace MatchingEngine.Models
         public Deal(Order order1, Order order2, decimal price, decimal volume)
         {
             var (bid, ask) = order1.IsBid ? (order1, order2) : (order2, order1);
-            if (!bid.IsBid) throw new Exception($"No bids passed to Deal(): {order1}, {order2}");
-            if (ask.IsBid) throw new Exception($"No asks passed to Deal(): {order1}, {order2}");
+            if (!bid.IsBid)
+            {
+                throw new Exception($"No bids passed to Deal(): {order1}, {order2}");
+            }
+
+            if (ask.IsBid)
+            {
+                throw new Exception($"No asks passed to Deal(): {order1}, {order2}");
+            }
 
             DateCreated = DateTimeOffset.UtcNow;
             BidId = bid.Id;
@@ -90,7 +97,8 @@ namespace MatchingEngine.Models
                 AskId = Ask.Id,
                 UserBidId = Bid.UserId,
                 UserAskId = Ask.UserId,
-                IsBuy = Bid.DateCreated > Ask.DateCreated
+                IsBuy = Bid.DateCreated > Ask.DateCreated,
+                FromInnerTradingBot = FromInnerTradingBot
             };
         }
     }
