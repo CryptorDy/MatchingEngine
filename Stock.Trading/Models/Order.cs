@@ -50,12 +50,12 @@ namespace MatchingEngine.Models
 
         public DateTimeOffset DateCreated { get; set; }
 
+        public ClientType ClientType { get; set; }
+
         [Required]
         public string UserId { get; set; }
 
         public bool IsCanceled { get; set; }
-
-        public ClientType ClientType { get; set; }
 
         /// <summary>
         /// Original order exchange

@@ -15,8 +15,8 @@ namespace MatchingEngine.Models
         public decimal Amount { get; set; }
         public decimal Price { get; set; }
         public DateTimeOffset DateCreated { get; set; }
-        public string UserId { get; set; }
         public ClientType ClientType { get; set; }
+        public string UserId { get; set; }
 
         // Optional fields:
 
