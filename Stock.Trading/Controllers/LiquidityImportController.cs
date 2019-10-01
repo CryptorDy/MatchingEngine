@@ -40,6 +40,21 @@ namespace Stock.Trading.Controllers
             return result;
         }
 
+        [HttpPost("orders-update")]
+        public async Task SaveLiquidityImportUpdate([FromBody]ImportUpdateDto dto)
+        {
+            // check that there is no local orders
+            var localOrders = dto.OrdersToAdd.Union(dto.OrdersToUpdate).Union(dto.OrdersToDelete)
+                .Where(_ => _.Exchange == Exchange.Local).ToList();
+            if (localOrders.Count > 0)
+            {
+                Console.WriteLine($"SaveLiquidityImportUpdate() has local orders: \n{string.Join("\n", localOrders.Select(_ => _.GetOrder()))}");
+                throw new Exception($"SaveLiquidityImportUpdate() has local orders");
+            }
+
+            await _matchingPool.SaveLiquidityImportUpdate(dto);
+        }
+
         /// <summary>
         /// Notify that liquidity import is working
         /// </summary>
@@ -55,21 +70,6 @@ namespace Stock.Trading.Controllers
             return Ok();
         }
 
-        [HttpPut("orders/update")]
-        public async Task<IActionResult> UpdateOrders([FromBody]List<OrderCreateRequest> orders)
-        {
-            try
-            {
-                await _matchingPool.UpdateOrders(orders);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-
-            return Ok();
-        }
 
         [HttpDelete("orders/{exchange}/{currencyPairId}")]
         public async Task<IActionResult> DeleteOrders(Exchange exchange, string currencyPairId)
@@ -91,37 +91,5 @@ namespace Stock.Trading.Controllers
             }
         }
 
-        /// <summary>
-        /// Delete previously imported orders
-        /// </summary>
-        /// <param name="orders"></param>
-        /// <returns></returns>
-        [HttpPost("orders/delete")]
-        public async Task<IActionResult> DeleteOrders([FromBody]List<OrderCreateRequest> orders)
-        {
-            try
-            {
-                await _matchingPool.RemoveOrders(orders.Select(_ => Guid.Parse(_.ActionId)).ToList());
-                return Ok();
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "");
-                return BadRequest();
-            }
-        }
-
-        /// <summary>
-        /// Add imported orders
-        /// </summary>
-        /// <param name="orders"></param>
-        /// <returns></returns>
-        [HttpPost("orders/add")]
-        public async Task<IActionResult> AddOrders([FromBody]List<OrderCreateRequest> orderRequests)
-        {
-            var orders = orderRequests.Select(_ => _.GetOrder()).ToList();
-            orders.ForEach(_ => _matchingPool.AppendOrder(_));
-            return Ok();
-        }
     }
 }

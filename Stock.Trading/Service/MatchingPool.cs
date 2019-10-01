@@ -321,18 +321,22 @@ namespace MatchingEngine.Services
             await SendOrdersToMarketData();
         }
 
-        public async Task UpdateOrders(List<OrderCreateRequest> orders)
+        public async Task SaveLiquidityImportUpdate(ImportUpdateDto dto)
         {
+            // delete
+            await RemoveOrders(dto.OrdersToDelete.Select(_ => Guid.Parse(_.ActionId)).ToList());
+
+            // update
             lock (_orders)
             {
-                foreach (var order in orders)
+                foreach (var order in dto.OrdersToUpdate)
                 {
                     var o = _orders.FirstOrDefault(_ => _.Id == Guid.Parse(order.ActionId));
                     if (o != null)
                     {
                         if (o.IsLocal)
                         {
-                            throw new ArgumentException("Local exchange changes are forbidden");
+                            throw new ArgumentException($"Local exchange changes are forbidden. {o}");
                         }
 
                         o.Amount = order.Amount;
@@ -340,6 +344,11 @@ namespace MatchingEngine.Services
                     }
                 }
             }
+
+            // add
+            var ordersToAdd = dto.OrdersToAdd.Select(_ => _.GetOrder()).ToList();
+            ordersToAdd.ForEach(_ => AppendOrder(_));
+
             await SendOrdersToMarketData();
         }
 
