@@ -6,14 +6,6 @@ namespace Stock.Trading.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "FromInnerTradingBot",
-                table: "Bids");
-
-            migrationBuilder.DropColumn(
-                name: "FromInnerTradingBot",
-                table: "Asks");
-
             migrationBuilder.AddColumn<int>(
                 name: "ClientType",
                 table: "Bids",
@@ -36,18 +28,6 @@ namespace Stock.Trading.Migrations
             migrationBuilder.DropColumn(
                 name: "ClientType",
                 table: "Asks");
-
-            migrationBuilder.AddColumn<bool>(
-                name: "FromInnerTradingBot",
-                table: "Bids",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "FromInnerTradingBot",
-                table: "Asks",
-                nullable: false,
-                defaultValue: false);
         }
     }
 }

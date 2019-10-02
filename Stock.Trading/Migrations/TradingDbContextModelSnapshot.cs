@@ -37,6 +37,8 @@ namespace Stock.Trading.Migrations
 
                     b.Property<int>("Exchange");
 
+                    b.Property<bool>("FromInnerTradingBot");
+
                     b.Property<decimal>("Fulfilled");
 
                     b.Property<bool>("IsBid");
@@ -70,6 +72,8 @@ namespace Stock.Trading.Migrations
                     b.Property<DateTimeOffset>("DateCreated");
 
                     b.Property<int>("Exchange");
+
+                    b.Property<bool>("FromInnerTradingBot");
 
                     b.Property<decimal>("Fulfilled");
 

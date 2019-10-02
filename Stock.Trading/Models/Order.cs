@@ -52,6 +52,9 @@ namespace MatchingEngine.Models
 
         public ClientType ClientType { get; set; }
 
+        [Obsolete] // left for initiating ClientType
+        public bool FromInnerTradingBot { get; set; } = false;
+
         [Required]
         public string UserId { get; set; }
 

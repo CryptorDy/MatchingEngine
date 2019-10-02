@@ -10,7 +10,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Stock.Trading.Migrations
 {
     [DbContext(typeof(TradingDbContext))]
-    [Migration("20190923185641_AddOrderClientType")]
+    [Migration("20191001215209_AddOrderClientType")]
     partial class AddOrderClientType
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -38,6 +38,8 @@ namespace Stock.Trading.Migrations
                     b.Property<DateTimeOffset>("DateCreated");
 
                     b.Property<int>("Exchange");
+
+                    b.Property<bool>("FromInnerTradingBot");
 
                     b.Property<decimal>("Fulfilled");
 
@@ -72,6 +74,8 @@ namespace Stock.Trading.Migrations
                     b.Property<DateTimeOffset>("DateCreated");
 
                     b.Property<int>("Exchange");
+
+                    b.Property<bool>("FromInnerTradingBot");
 
                     b.Property<decimal>("Fulfilled");
 
