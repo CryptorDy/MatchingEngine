@@ -1,6 +1,5 @@
 using MatchingEngine.Data;
 using MatchingEngine.Models;
-using MatchingEngine.Models.InnerTradingBot;
 using MatchingEngine.Models.LiquidityImport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -73,19 +72,6 @@ namespace MatchingEngine.Services
                     _newOrdersBuffer.Post(order);
                 }
             }
-        }
-
-        public CurrencyPairPrices GetCurrencyPairPrices(string currencyPairCode)
-        {
-            // todo use imported orders prices ?
-            var orders = _orders
-                .Where(_ => _.IsActive && _.CurrencyPairCode == currencyPairCode && _.ClientType != ClientType.DealsBot).ToList();
-            return new CurrencyPairPrices
-            {
-                CurrencyPair = currencyPairCode,
-                BidMax = orders.Where(_ => _.IsBid).Select(_ => _.Price).DefaultIfEmpty().Max(),
-                AskMin = orders.Where(_ => !_.IsBid).Select(_ => _.Price).DefaultIfEmpty().Min(),
-            };
         }
 
         private async Task UpdateDatabase(TradingDbContext context, List<Order> modifiedOrders, List<Models.Deal> newDeals)
