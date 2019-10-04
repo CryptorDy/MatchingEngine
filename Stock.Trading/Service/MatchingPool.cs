@@ -245,7 +245,7 @@ namespace MatchingEngine.Services
         {
             try
             {
-                await _dealEndingService.SendDeal(deal.DealId);
+                await _dealEndingService.SendDeal(deal);
             }
             catch (Exception ex)
             {
