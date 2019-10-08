@@ -97,14 +97,14 @@ namespace MatchingEngine.Data
             return dbOrders;
         }
 
-        public async Task<Order> GetOrder(bool isBid, Guid id)
+        public async Task<Order> GetOrder(bool? isBid, Guid id)
         {
-            Order order;
-            if (isBid)
+            Order order = null;
+            if (isBid == null || isBid == true)
             {
                 order = await Bids.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == id);
             }
-            else
+            if (isBid == false || (isBid == null && order == null))
             {
                 order = await Asks.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == id);
             }

@@ -35,7 +35,7 @@ namespace MatchingEngine.Controllers
         /// <param name="id">order id</param>
         /// <returns>Ask</returns>
         [HttpGet("{isBid}/{id}")]
-        public async Task<Order> GetOrder(bool isBid, string id)
+        public async Task<Order> GetOrder(bool? isBid, string id)
         {
             var order = await _service.GetOrder(isBid, id);
             return order;
