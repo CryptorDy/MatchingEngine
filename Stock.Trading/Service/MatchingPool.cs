@@ -142,6 +142,7 @@ namespace MatchingEngine.Services
                 foreach (var item in newDeals)
                 {
                     var dbDeal = dbDeals[item.DealId];
+                    dbDeal.RemoveCircularDependency();
                     var t1 = Task.Run(async () => { await SendDealToMarketData(dbDeal); });
                     var t2 = Task.Run(async () => { await SendDealToDealEnding(dbDeal); });
                     Task.WaitAll(t1, t2);

@@ -101,5 +101,20 @@ namespace MatchingEngine.Models
                 FromInnerTradingBot = FromInnerTradingBot
             };
         }
+
+        /// <summary>
+        /// Fix for serialization
+        /// </summary>
+        public void RemoveCircularDependency()
+        {
+            if (Bid != null)
+            {
+                Bid.DealList = null;
+            }
+            if (Ask != null)
+            {
+                Ask.DealList = null;
+            }
+        }
     }
 }

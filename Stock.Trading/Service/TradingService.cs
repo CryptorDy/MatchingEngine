@@ -40,7 +40,7 @@ namespace MatchingEngine.Services
             }
         }
 
-        public async Task<Order> GetOrder(bool isBid, string id)
+        public async Task<Order> GetOrder(bool? isBid, string id)
         {
             try
             {
@@ -75,17 +75,9 @@ namespace MatchingEngine.Services
                     .Take(lastNum ?? int.MaxValue)
                     .ToListAsync();
 
-                foreach (var deal in deals) // remove circular dependency to prevent json error
+                foreach (var deal in deals)
                 {
-                    if (deal.Bid != null)
-                    {
-                        deal.Bid.DealList = null;
-                    }
-
-                    if (deal.Ask != null)
-                    {
-                        deal.Ask.DealList = null;
-                    }
+                    deal.RemoveCircularDependency();
                 }
                 return deals;
             }
@@ -106,15 +98,7 @@ namespace MatchingEngine.Services
                     .FirstOrDefault(o => o.DealId == Guid.Parse(id));
                 if (deal != null)
                 {
-                    if (deal.Ask != null)
-                    {
-                        deal.Ask.DealList = null;
-                    }
-
-                    if (deal.Bid != null)
-                    {
-                        deal.Bid.DealList = null;
-                    }
+                    deal.RemoveCircularDependency();
                 }
                 return deal;
             }
