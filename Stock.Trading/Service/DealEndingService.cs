@@ -1,4 +1,5 @@
 using MatchingEngine.HttpClients;
+using MatchingEngine.Models;
 using System;
 using System.Threading.Tasks;
 
@@ -13,9 +14,9 @@ namespace MatchingEngine.Services
             _gatewayHttpClient = gatewayHttpClient;
         }
 
-        public async Task SendDeal(Guid dealId)
+        public async Task SendDeal(Deal deal)
         {
-            await _gatewayHttpClient.PostJsonAsync($"dealending/deal/{dealId}", null);
+            await _gatewayHttpClient.PostJsonAsync($"dealending/deal", deal);
         }
     }
 }

@@ -14,8 +14,9 @@ namespace MatchingEngine.Models
         public string CurrencyPairCode { get; set; }
         public decimal Amount { get; set; }
         public decimal Price { get; set; }
-        public string UserId { get; set; }
         public DateTimeOffset DateCreated { get; set; }
+        public ClientType ClientType { get; set; }
+        public string UserId { get; set; }
 
         // Optional fields:
 
@@ -23,11 +24,6 @@ namespace MatchingEngine.Models
         /// Original order exchange, only comes from LiquidtyImport
         /// </summary>
         public Exchange Exchange { get; set; } = Exchange.Local;
-
-        /// <summary>
-        /// Is created by inner trading bot
-        /// </summary>
-        public bool FromInnerTradingBot { get; set; } = false;
 
         public Order GetOrder()
         {
@@ -40,8 +36,8 @@ namespace MatchingEngine.Models
                 CurrencyPairCode = CurrencyPairCode,
                 DateCreated = DateCreated,
                 UserId = UserId,
+                ClientType = ClientType,
                 Exchange = Exchange,
-                FromInnerTradingBot = FromInnerTradingBot
             };
         }
     }

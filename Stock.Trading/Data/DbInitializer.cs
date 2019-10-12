@@ -1,4 +1,8 @@
+using MatchingEngine.Models;
+using MatchingEngine.Models.LiquidityImport;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace MatchingEngine.Data
 {
@@ -14,6 +18,48 @@ namespace MatchingEngine.Data
         public void Seed()
         {
             _dbContext.Database.Migrate();
+            SetClientTypes().Wait();
+        }
+
+        public async Task SetClientTypes()
+        {
+            var bids = await _dbContext.Bids.ToListAsync();
+            if (bids.Any(_ => _.ClientType != ClientType.User))
+            {
+                return;
+            }
+            var asks = await _dbContext.Asks.ToListAsync();
+            foreach (var order in asks)
+            {
+                if (order.FromInnerTradingBot)
+                {
+                    order.ClientType = ClientType.DealsBot;
+                }
+                else if (order.Exchange != Exchange.Local)
+                {
+                    order.ClientType = ClientType.LiquidityBot;
+                }
+                else
+                {
+                    order.ClientType = ClientType.User;
+                }
+            }
+            foreach (var order in bids)
+            {
+                if (order.FromInnerTradingBot)
+                {
+                    order.ClientType = ClientType.DealsBot;
+                }
+                else if (order.Exchange != Exchange.Local)
+                {
+                    order.ClientType = ClientType.LiquidityBot;
+                }
+                else
+                {
+                    order.ClientType = ClientType.User;
+                }
+            }
+            await _dbContext.SaveChangesAsync();
         }
 
         public void Init()

@@ -28,7 +28,7 @@ namespace MatchingEngine.Models
             AskId = ask.Id;
             Price = price;
             Volume = volume;
-            FromInnerTradingBot = bid.FromInnerTradingBot;
+            FromInnerTradingBot = bid.ClientType == ClientType.DealsBot;
         }
 
         /// <summary>
@@ -100,6 +100,21 @@ namespace MatchingEngine.Models
                 IsBuy = Bid.DateCreated > Ask.DateCreated,
                 FromInnerTradingBot = FromInnerTradingBot
             };
+        }
+
+        /// <summary>
+        /// Fix for serialization
+        /// </summary>
+        public void RemoveCircularDependency()
+        {
+            if (Bid != null)
+            {
+                Bid.DealList = null;
+            }
+            if (Ask != null)
+            {
+                Ask.DealList = null;
+            }
         }
     }
 }

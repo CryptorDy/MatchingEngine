@@ -50,6 +50,11 @@ namespace MatchingEngine.Models
 
         public DateTimeOffset DateCreated { get; set; }
 
+        public ClientType ClientType { get; set; }
+
+        [Obsolete] // left for initiating ClientType
+        public bool FromInnerTradingBot { get; set; } = false;
+
         [Required]
         public string UserId { get; set; }
 
@@ -60,12 +65,6 @@ namespace MatchingEngine.Models
         /// </summary>
         public Exchange Exchange { get; set; } = Exchange.Local;
 
-        /// <summary>
-        /// Is created by inner trading bot
-        /// </summary>
-        [Required]
-        public bool FromInnerTradingBot { get; set; } = false;
-
         public virtual List<Deal> DealList { get; set; }
 
         public decimal AvailableAmount => (Amount - Fulfilled - Blocked);
@@ -75,9 +74,8 @@ namespace MatchingEngine.Models
         public bool IsLocal => Exchange == Exchange.Local;
 
         public override string ToString() => $"##{(IsBid ? "Bid" : "Ask")} {Id} {CurrencyPairCode} created:{DateCreated} " +
-            $"{(IsCanceled ? "canceled" : IsActive ? "active" : "completed")} {Exchange} " +
-            $"{(FromInnerTradingBot ? "FromInnerTradingBot" : "")} Available:{AvailableAmount} " +
-            $"filled:{Fulfilled}+{Blocked}/{Amount} for price:{Price}, user:{UserId} ##";
+            $"{(IsCanceled ? "canceled" : IsActive ? "active" : "completed")} {ClientType} {Exchange} " +
+            $"Available:{AvailableAmount} filled:{Fulfilled}+{Blocked}/{Amount} for price:{Price}, user:{UserId} ##";
 
         public Order Clone() => (Order)MemberwiseClone();
     }

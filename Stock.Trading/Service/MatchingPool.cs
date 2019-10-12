@@ -1,6 +1,5 @@
 using MatchingEngine.Data;
 using MatchingEngine.Models;
-using MatchingEngine.Models.InnerTradingBot;
 using MatchingEngine.Models.LiquidityImport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,19 +74,6 @@ namespace MatchingEngine.Services
             }
         }
 
-        public CurrencyPairPrices GetCurrencyPairPrices(string currencyPairCode)
-        {
-            // todo use imported orders prices ?
-            var orders = _orders
-                .Where(_ => _.IsActive && _.CurrencyPairCode == currencyPairCode && !_.FromInnerTradingBot).ToList();
-            return new CurrencyPairPrices
-            {
-                CurrencyPair = currencyPairCode,
-                BidMax = orders.Where(_ => _.IsBid).Select(_ => _.Price).DefaultIfEmpty().Max(),
-                AskMin = orders.Where(_ => !_.IsBid).Select(_ => _.Price).DefaultIfEmpty().Min(),
-            };
-        }
-
         private async Task UpdateDatabase(TradingDbContext context, List<Order> modifiedOrders, List<Models.Deal> newDeals)
         {
             if (modifiedOrders.Count > 0)
@@ -106,7 +92,7 @@ namespace MatchingEngine.Services
                         }
 
                         // create if external or FromInnerBot and wasn't created yet
-                        if (dbOrder == null && (!order.IsLocal || order.FromInnerTradingBot))
+                        if (dbOrder == null && (!order.IsLocal || order.ClientType == ClientType.DealsBot))
                         {
                             dbOrder = await context.AddOrder(order, true);
                         }
@@ -156,6 +142,7 @@ namespace MatchingEngine.Services
                 foreach (var item in newDeals)
                 {
                     var dbDeal = dbDeals[item.DealId];
+                    dbDeal.RemoveCircularDependency();
                     var t1 = Task.Run(async () => { await SendDealToMarketData(dbDeal); });
                     var t2 = Task.Run(async () => { await SendDealToDealEnding(dbDeal); });
                     Task.WaitAll(t1, t2);
@@ -259,7 +246,7 @@ namespace MatchingEngine.Services
         {
             try
             {
-                await _dealEndingService.SendDeal(deal.DealId);
+                await _dealEndingService.SendDeal(deal);
             }
             catch (Exception ex)
             {
@@ -410,7 +397,7 @@ namespace MatchingEngine.Services
         {
             lock (_orders)
             {
-                _orders.RemoveAll(_ => _.FromInnerTradingBot && _.DateCreated < DateTimeOffset.UtcNow.AddSeconds(-50));
+                _orders.RemoveAll(_ => _.ClientType == ClientType.DealsBot && _.DateCreated < DateTimeOffset.UtcNow.AddSeconds(-50));
             }
             await SendOrdersToMarketData();
         }
