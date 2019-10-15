@@ -55,10 +55,6 @@ namespace MatchingEngine.Controllers
                 return BadRequest(ModelState);
             }
 
-            if (request.Exchange == Exchange.Local)
-            {
-            }
-
             var newOrderId = await _service.CreateOrder(request);
             return Ok(new CreateOrderResult { Id = newOrderId });
         }
