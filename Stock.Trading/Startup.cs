@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.PlatformAbstractions;
+using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Swagger;
 using System.IO;
 
@@ -78,8 +79,12 @@ namespace MatchingEngine
             // lowercase routing
             services.AddRouting(options => options.LowercaseUrls = true);
             services.AddMvc()
-            .AddFluentValidation(fvc =>
-                fvc.RegisterValidatorsFromAssemblyContaining<Startup>());
+                .AddJsonOptions(options =>
+                {
+                    options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                })
+                .AddFluentValidation(fvc =>
+                    fvc.RegisterValidatorsFromAssemblyContaining<Startup>());
 
             var basePath = PlatformServices.Default.Application.ApplicationBasePath;
 
