@@ -116,7 +116,7 @@ namespace MatchingEngine.Services
             context.SaveChanges();
         }
 
-        private async Task ReportData(TradingDbContext db, List<Order> modifiedOrders, List<Models.Deal> newDeals)
+        private async Task ReportData(TradingDbContext context, List<Order> modifiedOrders, List<Models.Deal> newDeals)
         {
             try
             {
@@ -136,16 +136,14 @@ namespace MatchingEngine.Services
                     return;
                 }
 
-                var dbDeals = db.Deals.Include(d => d.Ask).Include(d => d.Bid)
+                var dbDeals = context.Deals.Include(d => d.Ask).Include(d => d.Bid)
                     .Where(d => dealGuids.Contains(d.DealId))
                     .ToDictionary(d => d.DealId, d => d);
                 foreach (var item in newDeals)
                 {
                     var dbDeal = dbDeals[item.DealId];
                     dbDeal.RemoveCircularDependency();
-                    var t1 = Task.Run(async () => { await SendDealToMarketData(dbDeal); });
-                    var t2 = Task.Run(async () => { await SendDealToDealEnding(dbDeal); });
-                    Task.WaitAll(t1, t2);
+                    await SendDealToMarketData(dbDeal);
                 }
             }
             catch (Exception ex)
@@ -239,18 +237,6 @@ namespace MatchingEngine.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while sending orders to marketdata");
-            }
-        }
-
-        private async Task SendDealToDealEnding(Deal deal)
-        {
-            try
-            {
-                await _dealEndingService.SendDeal(deal);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error while sending deal to DealEnding");
             }
         }
 

@@ -44,12 +44,13 @@ namespace MatchingEngine
                 options.UseNpgsql(Configuration["ConnectionStrings:DefaultConnection"]));
 
             services.AddTransient<MarketDataService>();
-            services.AddTransient<DealEndingService>();
+            services.AddTransient<IDealEndingService, DealEndingService>();
             services.AddTransient<TradingService>();
 
             services.AddScoped<IDbInitializer, DbInitializer>();
 
             services.AddSingleton<IHostedService, MatchingPool>();
+            services.AddSingleton<IHostedService, DealEndingSender>();
             services.AddSingleton<IHostedService, MarketDataSender>();
             services.AddSingleton<IHostedService, LiquidityExpireWatcher>();
             services.AddSingleton<IHostedService, InnerBotExpireWatcher>();
