@@ -27,7 +27,6 @@ namespace MatchingEngine.Services
         private readonly OrdersMatcher _ordersMatcher;
         private readonly MarketDataService _marketDataService;
         private readonly MarketDataHolder _marketDataHolder;
-        private readonly DealEndingService _dealEndingService;
         private readonly IOptions<AppSettings> _settings;
         private readonly ILogger _logger;
 
@@ -35,7 +34,6 @@ namespace MatchingEngine.Services
         /// DI constructor
         /// </summary>
         /// <param name="marketDataService"></param>
-        /// <param name="dealEndingService"></param>
         /// <param name="logger"></param>
         /// <param name="ordersMatcher"></param>
         /// <param name="serviceScopeFactory"></param>
@@ -44,7 +42,6 @@ namespace MatchingEngine.Services
             OrdersMatcher ordersMatcher,
             MarketDataService marketDataService,
             MarketDataHolder marketDataHolder,
-            DealEndingService dealEndingService,
             IOptions<AppSettings> settings,
             ILogger<MatchingPool> logger)
         {
@@ -52,7 +49,6 @@ namespace MatchingEngine.Services
             _ordersMatcher = ordersMatcher;
             _marketDataService = marketDataService;
             _marketDataHolder = marketDataHolder;
-            _dealEndingService = dealEndingService;
             _settings = settings;
             _logger = logger;
 
