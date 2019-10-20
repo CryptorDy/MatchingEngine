@@ -56,7 +56,7 @@ namespace MatchingEngine.Models
         public decimal Price { get; set; }
 
         /// <summary>
-        /// Is processed by DealEnding and Depository
+        /// Is processed by DealEnding
         /// </summary>
         [Required]
         public bool IsProcessed { get; set; } = false;
