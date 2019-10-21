@@ -23,6 +23,7 @@ namespace MatchingEngine.Services
         private readonly List<Order> _orders = new List<Order>();
         private readonly List<Guid> _liquidityDeletedOrderIds = new List<Guid>();
 
+        private DealEndingSender _dealEndingSender;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly OrdersMatcher _ordersMatcher;
         private readonly MarketDataService _marketDataService;
@@ -53,6 +54,11 @@ namespace MatchingEngine.Services
             _logger = logger;
 
             LoadOrders();
+        }
+
+        public void SetDealEndingSender(DealEndingSender dealEndingSender)
+        {
+            _dealEndingSender = dealEndingSender;
         }
 
         private void LoadOrders()
@@ -141,6 +147,7 @@ namespace MatchingEngine.Services
                     dbDeal.RemoveCircularDependency();
                     await SendDealToMarketData(dbDeal);
                 }
+                _dealEndingSender.SendDeals();
             }
             catch (Exception ex)
             {

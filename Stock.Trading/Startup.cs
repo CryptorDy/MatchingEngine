@@ -60,9 +60,7 @@ namespace MatchingEngine
             services.AddSingleton<IConfigurationRoot>(Configuration);
             services.AddSingleton<GatewayHttpClient>();
             services.AddSingleton<OrdersMatcher>();
-            services.AddTransient<MarketDataSenderAccessor>();
-            services.AddTransient<MatchingPoolAccessor>();
-            services.AddTransient<LiquidityExpireWatcherAccessor>();
+            services.AddTransient<SingletonsAccessor>();
             services.AddTransient<ILiquidityImportService, LiquidityImportService>();
 
             services.Configure<AppSettings>(Configuration);

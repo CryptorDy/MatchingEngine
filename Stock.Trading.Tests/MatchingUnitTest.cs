@@ -210,8 +210,8 @@ namespace Stock.Trading.Tests
             var ordersMatcher = new OrdersMatcher(liquidityImportService.Object);
             var matchingPool = new MatchingPool(serviceScopeFactory.Object, ordersMatcher,
                 null, null, null, new Mock<ILogger<MatchingPool>>().Object);
-            var matchingPoolAccessor = new MatchingPoolAccessor(new List<IHostedService> { matchingPool });
-            var tradingService = new TradingService(context, matchingPoolAccessor,
+            var singletonsAccessor = new SingletonsAccessor(new List<IHostedService> { matchingPool });
+            var tradingService = new TradingService(context, singletonsAccessor,
                 new Mock<ILogger<TradingService>>().Object);
             return (matchingPool, tradingService);
         }

@@ -29,37 +29,42 @@ namespace MatchingEngine.Services
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                Thread.Sleep(10 * 1000);
-                try
+                await SendDeals();
+                Thread.Sleep(10 * 60 * 1000); // every 10 minutes
+            }
+        }
+
+        public async Task SendDeals()
+        {
+            try
+            {
+                using (var scope = _scopeFactory.CreateScope())
                 {
-                    using (var scope = _scopeFactory.CreateScope())
+                    var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+                    var dealEndingService = scope.ServiceProvider.GetRequiredService<IDealEndingService>();
+
+                    var unprocessedDeals = await context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
+                        .Where(_ => !_.IsSentToDealEnding && !_.FromInnerTradingBot)
+                        .Take(_batchSize).ToListAsync();
+
+                    foreach (var deal in unprocessedDeals)
                     {
-                        var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                        var dealEndingService = scope.ServiceProvider.GetRequiredService<IDealEndingService>();
-
-                        var unprocessedDeals = await context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
-                            .Where(_ => !_.IsSentToDealEnding && !_.FromInnerTradingBot)
-                            .Take(_batchSize).ToListAsync();
-
-                        foreach (var deal in unprocessedDeals)
+                        try
                         {
-                            try
-                            {
-                                await dealEndingService.SendDeal(deal);
-                                deal.IsSentToDealEnding = true;
-                                await context.SaveChangesAsync();
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, $"Error sending to DealEnding: {deal}");
-                            }
+                            await dealEndingService.SendDeal(deal);
+                            deal.IsSentToDealEnding = true;
+                            await context.SaveChangesAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"Error sending to DealEnding: {deal}");
                         }
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "");
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "");
             }
         }
     }

@@ -30,11 +30,11 @@ namespace MatchingEngine
                 }
             }
 
-            var matchingPool = host.Services.GetService<MatchingPoolAccessor>().MatchingPool;
-            var liquidityExpireWatcher = host.Services.GetService<LiquidityExpireWatcherAccessor>().LiquidityExpireWatcher;
-            liquidityExpireWatcher.SetMatchingPool(matchingPool);
-            var innerBotExpireWatcher = host.Services.GetService<LiquidityExpireWatcherAccessor>().InnerBotExpireWatcher;
-            innerBotExpireWatcher.SetMatchingPool(matchingPool);
+            var singletonsAccessor = host.Services.GetService<SingletonsAccessor>();
+            var matchingPool = singletonsAccessor.MatchingPool;
+            singletonsAccessor.LiquidityExpireWatcher.SetMatchingPool(matchingPool);
+            singletonsAccessor.InnerBotExpireWatcher.SetMatchingPool(matchingPool);
+            matchingPool.SetDealEndingSender(singletonsAccessor.DealEndingSender);
 
             Console.WriteLine($"Version: {Assembly.GetExecutingAssembly().GetName().Version}");
             host.Run();

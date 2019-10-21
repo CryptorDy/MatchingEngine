@@ -16,11 +16,11 @@ namespace MatchingEngine.Services
         private readonly ILogger _logger;
 
         public TradingService(TradingDbContext context,
-            MatchingPoolAccessor matchingPoolAccessor,
+            SingletonsAccessor singletonsAccessor,
             ILogger<TradingService> logger)
         {
             _context = context;
-            _matchingPool = matchingPoolAccessor.MatchingPool;
+            _matchingPool = singletonsAccessor.MatchingPool;
             _logger = logger;
         }
 
