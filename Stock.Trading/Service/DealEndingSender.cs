@@ -38,7 +38,7 @@ namespace MatchingEngine.Services
                         var dealEndingService = scope.ServiceProvider.GetRequiredService<IDealEndingService>();
 
                         var unprocessedDeals = await context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
-                            .Where(_ => !_.IsProcessed && !_.FromInnerTradingBot)
+                            .Where(_ => !_.IsSentToDealEnding && !_.FromInnerTradingBot)
                             .Take(_batchSize).ToListAsync();
 
                         foreach (var deal in unprocessedDeals)
@@ -46,7 +46,7 @@ namespace MatchingEngine.Services
                             try
                             {
                                 await dealEndingService.SendDeal(deal);
-                                deal.IsProcessed = true;
+                                deal.IsSentToDealEnding = true;
                                 await context.SaveChangesAsync();
                             }
                             catch (Exception ex)

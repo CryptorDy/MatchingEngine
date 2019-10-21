@@ -1,13 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Stock.Trading.Migrations
 {
-    public partial class AddDealIsProcessed : Migration
+    public partial class AddDealIsSentToDealEnding : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<bool>(
-                name: "IsProcessed",
+                name: "IsSentToDealEnding",
                 table: "Deals",
                 nullable: false,
                 defaultValue: false);
@@ -16,7 +16,7 @@ namespace Stock.Trading.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "IsProcessed",
+                name: "IsSentToDealEnding",
                 table: "Deals");
         }
     }

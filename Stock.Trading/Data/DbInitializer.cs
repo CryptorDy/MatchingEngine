@@ -19,7 +19,7 @@ namespace MatchingEngine.Data
         {
             _dbContext.Database.Migrate();
             SetClientTypes().Wait();
-            SetDealIsProcessed().Wait();
+            SetDealIsSentToDealEnding().Wait();
         }
 
         public async Task SetClientTypes()
@@ -63,10 +63,10 @@ namespace MatchingEngine.Data
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task SetDealIsProcessed()
+        public async Task SetDealIsSentToDealEnding()
         {
-            var deals = await _dbContext.Deals.Where(_ => _.FromInnerTradingBot && !_.IsProcessed).ToListAsync();
-            deals.ForEach(_ => _.IsProcessed = true);
+            var deals = await _dbContext.Deals.Where(_ => _.FromInnerTradingBot && !_.IsSentToDealEnding).ToListAsync();
+            deals.ForEach(_ => _.IsSentToDealEnding = true);
             await _dbContext.SaveChangesAsync();
         }
 
