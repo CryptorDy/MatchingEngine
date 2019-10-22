@@ -157,6 +157,7 @@ namespace MatchingEngine.Services
 
         public async Task<SaveExternalOrderResult> UpdateExternalOrder(ExternalCreatedOrder createdOrder)
         {
+            createdOrder.Fulfilled = Math.Round(createdOrder.Fulfilled, Order.MaxDigits);
             var modifiedOrders = new List<Order>();
             var newDeals = new List<Deal>();
 
