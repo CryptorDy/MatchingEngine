@@ -39,7 +39,7 @@ namespace MatchingEngine.HttpClients
 
         public async Task<HttpResponseMessage> PostJsonAsync(string url, object obj)
         {
-            string json = JsonConvert.SerializeObject(obj);
+            string json = JsonConvert.SerializeObject(obj, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore});
 
             var response = await PostAsync(url, new StringContent(json, Encoding.UTF8, "application/json"));
 

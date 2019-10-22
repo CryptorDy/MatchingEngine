@@ -5,7 +5,12 @@ using System.Threading.Tasks;
 
 namespace MatchingEngine.Services
 {
-    public class DealEndingService
+    public interface IDealEndingService
+    {
+        Task SendDeal(Deal deal);
+    }
+
+    public class DealEndingService : IDealEndingService
     {
         private readonly GatewayHttpClient _gatewayHttpClient;
 

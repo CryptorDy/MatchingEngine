@@ -23,11 +23,11 @@ namespace MatchingEngine.Services
         private readonly List<Order> _orders = new List<Order>();
         private readonly List<Guid> _liquidityDeletedOrderIds = new List<Guid>();
 
+        private DealEndingSender _dealEndingSender;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly OrdersMatcher _ordersMatcher;
         private readonly MarketDataService _marketDataService;
         private readonly MarketDataHolder _marketDataHolder;
-        private readonly DealEndingService _dealEndingService;
         private readonly IOptions<AppSettings> _settings;
         private readonly ILogger _logger;
 
@@ -35,7 +35,6 @@ namespace MatchingEngine.Services
         /// DI constructor
         /// </summary>
         /// <param name="marketDataService"></param>
-        /// <param name="dealEndingService"></param>
         /// <param name="logger"></param>
         /// <param name="ordersMatcher"></param>
         /// <param name="serviceScopeFactory"></param>
@@ -44,7 +43,6 @@ namespace MatchingEngine.Services
             OrdersMatcher ordersMatcher,
             MarketDataService marketDataService,
             MarketDataHolder marketDataHolder,
-            DealEndingService dealEndingService,
             IOptions<AppSettings> settings,
             ILogger<MatchingPool> logger)
         {
@@ -52,11 +50,15 @@ namespace MatchingEngine.Services
             _ordersMatcher = ordersMatcher;
             _marketDataService = marketDataService;
             _marketDataHolder = marketDataHolder;
-            _dealEndingService = dealEndingService;
             _settings = settings;
             _logger = logger;
 
             LoadOrders();
+        }
+
+        public void SetDealEndingSender(DealEndingSender dealEndingSender)
+        {
+            _dealEndingSender = dealEndingSender;
         }
 
         private void LoadOrders()
@@ -116,7 +118,7 @@ namespace MatchingEngine.Services
             context.SaveChanges();
         }
 
-        private async Task ReportData(TradingDbContext db, List<Order> modifiedOrders, List<Models.Deal> newDeals)
+        private async Task ReportData(TradingDbContext context, List<Order> modifiedOrders, List<Models.Deal> newDeals)
         {
             try
             {
@@ -136,17 +138,16 @@ namespace MatchingEngine.Services
                     return;
                 }
 
-                var dbDeals = db.Deals.Include(d => d.Ask).Include(d => d.Bid)
+                var dbDeals = context.Deals.Include(d => d.Ask).Include(d => d.Bid)
                     .Where(d => dealGuids.Contains(d.DealId))
                     .ToDictionary(d => d.DealId, d => d);
                 foreach (var item in newDeals)
                 {
                     var dbDeal = dbDeals[item.DealId];
                     dbDeal.RemoveCircularDependency();
-                    var t1 = Task.Run(async () => { await SendDealToMarketData(dbDeal); });
-                    var t2 = Task.Run(async () => { await SendDealToDealEnding(dbDeal); });
-                    Task.WaitAll(t1, t2);
+                    await SendDealToMarketData(dbDeal);
                 }
+                _dealEndingSender.SendDeals();
             }
             catch (Exception ex)
             {
@@ -156,6 +157,7 @@ namespace MatchingEngine.Services
 
         public async Task<SaveExternalOrderResult> UpdateExternalOrder(ExternalCreatedOrder createdOrder)
         {
+            createdOrder.Fulfilled = Math.Round(createdOrder.Fulfilled, Order.MaxDigits);
             var modifiedOrders = new List<Order>();
             var newDeals = new List<Deal>();
 
@@ -210,6 +212,7 @@ namespace MatchingEngine.Services
                         Price = createdOrder.MatchingEngineDealPrice,
                         Amount = createdOrder.Fulfilled,
                         Fulfilled = createdOrder.Fulfilled,
+                        ClientType = ClientType.LiquidityBot,
                         UserId = $"{createdOrder.Exchange}_matched"
                     };
                     modifiedOrders.Add(newImportedOrder);
@@ -239,18 +242,6 @@ namespace MatchingEngine.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while sending orders to marketdata");
-            }
-        }
-
-        private async Task SendDealToDealEnding(Deal deal)
-        {
-            try
-            {
-                await _dealEndingService.SendDeal(deal);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error while sending deal to DealEnding");
             }
         }
 

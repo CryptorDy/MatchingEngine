@@ -22,13 +22,13 @@ namespace Stock.Trading.Controllers
 
         public LiquidityImportController(TradingDbContext context,
             TradingService tradingService,
-            MatchingPoolAccessor matchingPoolAccessor,
-            LiquidityExpireWatcherAccessor liquidityExpireWatcherAccessor,
+            SingletonsAccessor singletonsAccessor,
+            SingletonsAccessor liquidityExpireWatcherAccessor,
             ILogger<LiquidityImportController> logger)
         {
             _context = context;
             _tradingService = tradingService;
-            _matchingPool = matchingPoolAccessor.MatchingPool;
+            _matchingPool = singletonsAccessor.MatchingPool;
             _liquidityExpireWatcher = liquidityExpireWatcherAccessor.LiquidityExpireWatcher;
             _logger = logger;
         }
@@ -70,7 +70,6 @@ namespace Stock.Trading.Controllers
             return Ok();
         }
 
-
         [HttpDelete("orders/{exchange}/{currencyPairId}")]
         public async Task<IActionResult> DeleteOrders(Exchange exchange, string currencyPairId)
         {
@@ -90,6 +89,5 @@ namespace Stock.Trading.Controllers
                 return BadRequest();
             }
         }
-
     }
 }

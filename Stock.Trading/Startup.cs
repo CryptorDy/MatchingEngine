@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.PlatformAbstractions;
+using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Swagger;
 using System.IO;
 
@@ -44,12 +45,13 @@ namespace MatchingEngine
                 options.UseNpgsql(Configuration["ConnectionStrings:DefaultConnection"]));
 
             services.AddTransient<MarketDataService>();
-            services.AddTransient<DealEndingService>();
+            services.AddTransient<IDealEndingService, DealEndingService>();
             services.AddTransient<TradingService>();
 
             services.AddScoped<IDbInitializer, DbInitializer>();
 
             services.AddSingleton<IHostedService, MatchingPool>();
+            services.AddSingleton<IHostedService, DealEndingSender>();
             services.AddSingleton<IHostedService, MarketDataSender>();
             services.AddSingleton<IHostedService, LiquidityExpireWatcher>();
             services.AddSingleton<IHostedService, InnerBotExpireWatcher>();
@@ -58,9 +60,7 @@ namespace MatchingEngine
             services.AddSingleton<IConfigurationRoot>(Configuration);
             services.AddSingleton<GatewayHttpClient>();
             services.AddSingleton<OrdersMatcher>();
-            services.AddTransient<MarketDataSenderAccessor>();
-            services.AddTransient<MatchingPoolAccessor>();
-            services.AddTransient<LiquidityExpireWatcherAccessor>();
+            services.AddTransient<SingletonsAccessor>();
             services.AddTransient<ILiquidityImportService, LiquidityImportService>();
 
             services.Configure<AppSettings>(Configuration);
@@ -77,8 +77,12 @@ namespace MatchingEngine
             // lowercase routing
             services.AddRouting(options => options.LowercaseUrls = true);
             services.AddMvc()
-            .AddFluentValidation(fvc =>
-                fvc.RegisterValidatorsFromAssemblyContaining<Startup>());
+                .AddJsonOptions(options =>
+                {
+                    options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                })
+                .AddFluentValidation(fvc =>
+                    fvc.RegisterValidatorsFromAssemblyContaining<Startup>());
 
             var basePath = PlatformServices.Default.Application.ApplicationBasePath;
 

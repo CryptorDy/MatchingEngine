@@ -16,11 +16,11 @@ namespace MatchingEngine.Services
         private readonly ILogger _logger;
 
         public TradingService(TradingDbContext context,
-            MatchingPoolAccessor matchingPoolAccessor,
+            SingletonsAccessor singletonsAccessor,
             ILogger<TradingService> logger)
         {
             _context = context;
-            _matchingPool = matchingPoolAccessor.MatchingPool;
+            _matchingPool = singletonsAccessor.MatchingPool;
             _logger = logger;
         }
 
@@ -128,6 +128,8 @@ namespace MatchingEngine.Services
 
         public async Task<Guid> CreateOrder(OrderCreateRequest request)
         {
+            request.Price = Math.Round(request.Price, Order.MaxDigits);
+            request.Amount = Math.Round(request.Amount, Order.MaxDigits);
             var order = new Order
             {
                 Id = new Guid(request.ActionId),

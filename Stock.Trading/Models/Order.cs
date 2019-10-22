@@ -73,10 +73,12 @@ namespace MatchingEngine.Models
 
         public bool IsLocal => Exchange == Exchange.Local;
 
-        public override string ToString() => $"##{(IsBid ? "Bid" : "Ask")} {Id} {CurrencyPairCode} created:{DateCreated} " +
+        public override string ToString() => $"{(IsBid ? "Bid" : "Ask")}({Id} {CurrencyPairCode} created:{DateCreated} " +
             $"{(IsCanceled ? "canceled" : IsActive ? "active" : "completed")} {ClientType} {Exchange} " +
-            $"Available:{AvailableAmount} filled:{Fulfilled}+{Blocked}/{Amount} for price:{Price}, user:{UserId} ##";
+            $"Available:{AvailableAmount} filled:{Fulfilled}+{Blocked}/{Amount} for price:{Price}, user:{UserId})";
 
         public Order Clone() => (Order)MemberwiseClone();
+
+        public const int MaxDigits = 8;
     }
 }

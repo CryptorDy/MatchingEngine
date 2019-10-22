@@ -29,6 +29,7 @@ namespace MatchingEngine.Models
             Price = price;
             Volume = volume;
             FromInnerTradingBot = bid.ClientType == ClientType.DealsBot;
+            IsSentToDealEnding = FromInnerTradingBot; // all deals except deals-bot deals have to be processed
         }
 
         /// <summary>
@@ -53,6 +54,12 @@ namespace MatchingEngine.Models
         /// </summary>
         [Required]
         public decimal Price { get; set; }
+
+        /// <summary>
+        /// Is processed by DealEnding
+        /// </summary>
+        [Required]
+        public bool IsSentToDealEnding { get; set; } = false;
 
         /// <summary>
         /// Is created by inner trading bot
@@ -116,5 +123,8 @@ namespace MatchingEngine.Models
                 Ask.DealList = null;
             }
         }
+
+        public override string ToString() => $"Deal({DealId}, {DateCreated}, Volume:{Volume}, {(IsSentToDealEnding ? "" : "Not processed")}, " +
+            $"\n{Bid?.ToString() ?? BidId.ToString()} ,\n{Ask?.ToString() ?? AskId.ToString()} )";
     }
 }
