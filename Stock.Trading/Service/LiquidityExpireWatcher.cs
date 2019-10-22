@@ -41,7 +41,8 @@ namespace MatchingEngine.Services
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                CheckExpirationDates();
+                await CheckExpirationDates().ConfigureAwait(false);
+
                 await Task.Delay(1 * 60 * 1000);
             }
         }
