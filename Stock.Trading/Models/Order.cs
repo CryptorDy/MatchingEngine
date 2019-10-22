@@ -78,5 +78,7 @@ namespace MatchingEngine.Models
             $"Available:{AvailableAmount} filled:{Fulfilled}+{Blocked}/{Amount} for price:{Price}, user:{UserId})";
 
         public Order Clone() => (Order)MemberwiseClone();
+
+        public const int MaxDigits = 8;
     }
 }
