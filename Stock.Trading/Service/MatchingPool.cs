@@ -212,6 +212,7 @@ namespace MatchingEngine.Services
                         Price = createdOrder.MatchingEngineDealPrice,
                         Amount = createdOrder.Fulfilled,
                         Fulfilled = createdOrder.Fulfilled,
+                        ClientType = ClientType.LiquidityBot,
                         UserId = $"{createdOrder.Exchange}_matched"
                     };
                     modifiedOrders.Add(newImportedOrder);
