@@ -19,6 +19,7 @@ namespace MatchingEngine.Data
         {
             _dbContext.Database.Migrate();
             SetClientTypes().Wait();
+            SetDealIsFromInnerTradingBot().Wait();
             SetDealIsSentToDealEnding().Wait();
         }
 
@@ -60,6 +61,19 @@ namespace MatchingEngine.Data
                     order.ClientType = ClientType.User;
                 }
             }
+            await _dbContext.SaveChangesAsync();
+        }
+
+        public async Task SetDealIsFromInnerTradingBot()
+        {
+            var deals = await _dbContext.Deals.Where(_ => !_.FromInnerTradingBot).Include(_ => _.Bid).Include(_ => _.Ask).ToListAsync();
+            deals.ForEach(_ =>
+            {
+                if (_.Bid.ClientType == ClientType.DealsBot || _.Ask.ClientType == ClientType.DealsBot)
+                {
+                    _.FromInnerTradingBot = true;
+                }
+            });
             await _dbContext.SaveChangesAsync();
         }
 
