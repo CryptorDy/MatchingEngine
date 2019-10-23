@@ -33,7 +33,11 @@ namespace MatchingEngine.Data
             var asks = await _dbContext.Asks.ToListAsync();
             foreach (var order in asks)
             {
-                if (order.FromInnerTradingBot || order.UserId == "d87a8ab6-fe5b-4f26-b8ef-22518b24a13b" || order.UserId == "DealsBot")
+                if (order.UserId == "AffiliateBot")
+                {
+                    order.ClientType = ClientType.AffiliateBot;
+                }
+                else if (order.FromInnerTradingBot || order.UserId == "d87a8ab6-fe5b-4f26-b8ef-22518b24a13b" || order.UserId == "DealsBot")
                 {
                     order.FromInnerTradingBot = true;
                     order.ClientType = ClientType.DealsBot;
@@ -49,7 +53,11 @@ namespace MatchingEngine.Data
             }
             foreach (var order in bids)
             {
-                if (order.FromInnerTradingBot || order.UserId == "d87a8ab6-fe5b-4f26-b8ef-22518b24a13b" || order.UserId == "DealsBot")
+                if (order.UserId == "AffiliateBot")
+                {
+                    order.ClientType = ClientType.AffiliateBot;
+                }
+                else if (order.FromInnerTradingBot || order.UserId == "d87a8ab6-fe5b-4f26-b8ef-22518b24a13b" || order.UserId == "DealsBot")
                 {
                     order.FromInnerTradingBot = true;
                     order.ClientType = ClientType.DealsBot;

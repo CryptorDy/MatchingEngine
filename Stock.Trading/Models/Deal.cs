@@ -29,7 +29,7 @@ namespace MatchingEngine.Models
             Price = price;
             Volume = volume;
             FromInnerTradingBot = bid.ClientType == ClientType.DealsBot;
-            IsSentToDealEnding = FromInnerTradingBot; // all deals except deals-bot deals have to be processed
+            IsSentToDealEnding = FromInnerTradingBot ? true : false; // all deals except deals-bot deals have to be processed
         }
 
         /// <summary>
