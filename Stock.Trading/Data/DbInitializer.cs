@@ -28,7 +28,7 @@ namespace MatchingEngine.Data
             var bids = await _dbContext.Bids.ToListAsync();
             if (bids.Any(_ => _.ClientType != ClientType.User))
             {
-                //return;
+                return;
             }
             var asks = await _dbContext.Asks.ToListAsync();
             foreach (var order in asks)
