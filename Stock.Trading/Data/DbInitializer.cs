@@ -33,8 +33,9 @@ namespace MatchingEngine.Data
             var asks = await _dbContext.Asks.ToListAsync();
             foreach (var order in asks)
             {
-                if (order.FromInnerTradingBot)
+                if (order.FromInnerTradingBot || order.UserId == "d87a8ab6-fe5b-4f26-b8ef-22518b24a13b" || order.UserId == "DealsBot")
                 {
+                    order.FromInnerTradingBot = true;
                     order.ClientType = ClientType.DealsBot;
                 }
                 else if (order.Exchange != Exchange.Local)
@@ -48,8 +49,9 @@ namespace MatchingEngine.Data
             }
             foreach (var order in bids)
             {
-                if (order.FromInnerTradingBot)
+                if (order.FromInnerTradingBot || order.UserId == "d87a8ab6-fe5b-4f26-b8ef-22518b24a13b" || order.UserId == "DealsBot")
                 {
+                    order.FromInnerTradingBot = true;
                     order.ClientType = ClientType.DealsBot;
                 }
                 else if (order.Exchange != Exchange.Local)
