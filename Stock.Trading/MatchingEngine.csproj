@@ -3,7 +3,7 @@
   <PropertyGroup Condition="$(Configuration) == 'Debug'">
   </PropertyGroup>
   <PropertyGroup>
-    <Version>1.0.268</Version>
+    <Version>1.0.270</Version>
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>

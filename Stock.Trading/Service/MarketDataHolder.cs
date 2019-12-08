@@ -8,8 +8,8 @@ namespace MatchingEngine.Services
 {
     public class MarketDataHolder
     {
-        private ConcurrentQueue<bool> _updateMarketData;
-        private ConcurrentQueue<Order> _orders;
+        private ConcurrentQueue<bool> _updateMarketData = new ConcurrentQueue<bool>();
+        private ConcurrentQueue<Order> _orders = new ConcurrentQueue<Order>();
 
         public void SendOrders(List<Order> orders)
         {
