@@ -6,19 +6,16 @@ using System.Threading.Tasks;
 
 namespace MatchingEngine.Services
 {
-    public class InnerBotExpireWatcher : Services.BackgroundService
+    public class InnerBotExpireWatcher : BackgroundService
     {
-        private readonly IServiceScopeFactory _scopeFactory;
         private MatchingPool _matchingPool;
         private readonly IOptions<AppSettings> _settings;
         private readonly ILogger _logger;
 
         public InnerBotExpireWatcher(
-            IServiceScopeFactory scopeFactory,
             IOptions<AppSettings> settings,
             ILogger<LiquidityExpireWatcher> logger)
         {
-            _scopeFactory = scopeFactory;
             _settings = settings;
             _logger = logger;
         }

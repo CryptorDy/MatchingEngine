@@ -1,45 +1,35 @@
 using MatchingEngine.Models;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace MatchingEngine.Services
 {
     public class MarketDataHolder
     {
-        private static readonly object Locker = new object();
-        private bool _updateMarketData;
-        private List<Order> _orders;
+        private ConcurrentQueue<bool> _updateMarketData = new ConcurrentQueue<bool>();
+        private ConcurrentQueue<Order> _orders = new ConcurrentQueue<Order>();
 
         public void SendOrders(List<Order> orders)
         {
-            lock (Locker)
-            {
-                _orders = orders;
-                _updateMarketData = true;
-            }
+            _orders = new ConcurrentQueue<Order>(orders);
+            _updateMarketData.Enqueue(true);
         }
 
         public List<Order> GetOrders()
         {
-            lock (Locker)
-            {
-                return new List<Order>(_orders); // copy list to prevent concurrency error
-            }
+            return new List<Order>(_orders); // copy list to prevent concurrency error
         }
 
         public void SendComplete()
         {
-            lock (Locker)
-            {
-                _updateMarketData = false;
-            }
+            while (_updateMarketData.TryDequeue(out _)) { } // Dequeue all
         }
 
         public bool RefreshMarketData()
         {
-            lock (Locker)
-            {
-                return _updateMarketData;
-            }
+            return _updateMarketData.Count > 0;
         }
     }
 }

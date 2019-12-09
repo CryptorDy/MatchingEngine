@@ -14,20 +14,15 @@ namespace Stock.Trading.Controllers
     [Route("api/liquidityimport")]
     public class LiquidityImportController : Controller
     {
-        private readonly TradingDbContext _context;
-        private readonly TradingService _tradingService;
         private readonly MatchingPool _matchingPool;
         private readonly LiquidityExpireWatcher _liquidityExpireWatcher;
         private readonly ILogger _logger;
 
-        public LiquidityImportController(TradingDbContext context,
-            TradingService tradingService,
+        public LiquidityImportController(
             SingletonsAccessor singletonsAccessor,
             SingletonsAccessor liquidityExpireWatcherAccessor,
             ILogger<LiquidityImportController> logger)
         {
-            _context = context;
-            _tradingService = tradingService;
             _matchingPool = singletonsAccessor.MatchingPool;
             _liquidityExpireWatcher = liquidityExpireWatcherAccessor.LiquidityExpireWatcher;
             _logger = logger;
