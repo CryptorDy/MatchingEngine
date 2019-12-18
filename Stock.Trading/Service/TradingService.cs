@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace MatchingEngine.Services
@@ -40,17 +41,16 @@ namespace MatchingEngine.Services
             }
         }
 
-        public async Task<Order> GetOrder(bool? isBid, string id)
+        public async Task<Order> GetOrder(bool? isBid, Guid id)
         {
             try
             {
-                var result = await _context.GetOrder(isBid, Guid.Parse(id));
-                foreach (var deal in result.DealList)
+                var order = _matchingPool.GetPoolOrder(id);
+                if (order == null)
                 {
-                    deal.Ask = null;
-                    deal.Bid = null;
+                    order = await _context.GetOrder(isBid, id);
                 }
-                return result;
+                return order;
             }
             catch (Exception ex)
             {
@@ -153,25 +153,46 @@ namespace MatchingEngine.Services
             return order.Id;
         }
 
-        public async Task<int> DeleteOrder(bool isBid, string id, string userId)
+        public async Task<CancelOrderResponse> DeleteOrder(bool isBid, Guid id, string userId)
         {
             try
             {
-                int result = 0;
-                var order = await _context.GetOrder(isBid, Guid.Parse(id));
-
-                if (order != null && order.UserId == userId)
+                Console.WriteLine($"DeleteOrder() start. id:{id} userId:{userId}");
+                var order = await GetOrder(isBid, id);
+                if (order == null)
                 {
-                    order.IsCanceled = true;
-                    result = await _context.SaveChangesAsync();
+                    Console.WriteLine("DeleteOrder() Not found.");
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
                 }
-                await _matchingPool.RemoveOrder(Guid.Parse(id));
-                return result;
+                Console.WriteLine($"DeleteOrder() {order}");
+                if (order.UserId != userId)
+                {
+                    Console.WriteLine($"DeleteOrder() wrong userId");
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
+                }
+                if (order.Blocked > 0)
+                {
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked };
+                }
+                if (order.IsCanceled)
+                {
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyCanceled };
+                }
+                if (order.Fulfilled >= order.Amount)
+                {
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled };
+                }
+
+                order = await _context.GetOrder(isBid, id);
+                order.IsCanceled = true;
+                await _context.UpdateOrder(order, true);
+                await _matchingPool.RemoveOrder(id);
+                return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = order };
             }
             catch (Exception ex)
             {
                 _logger.LogError("Delete order error", ex);
-                return 0;
+                return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
             }
         }
     }
