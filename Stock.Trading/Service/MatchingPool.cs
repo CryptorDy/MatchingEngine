@@ -76,6 +76,11 @@ namespace MatchingEngine.Services
             }
         }
 
+        public Order GetPoolOrder(Guid id)
+        {
+            return _orders.FirstOrDefault(_ => _.Id == id);
+        }
+
         private async Task UpdateDatabase(TradingDbContext context, List<Order> modifiedOrders, List<Models.Deal> newDeals)
         {
             if (modifiedOrders.Count > 0)
