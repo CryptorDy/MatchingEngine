@@ -36,7 +36,7 @@ namespace MatchingEngine.Controllers
         /// <param name="isBid"></param>
         /// <returns>Ask</returns>
         [HttpGet("{id}")]
-        public async Task<Order> GetOrder(string id, bool? isBid = null)
+        public async Task<Order> GetOrder(Guid id, bool? isBid = null)
         {
             var order = await _service.GetOrder(isBid, id);
             return order;
@@ -68,15 +68,10 @@ namespace MatchingEngine.Controllers
         /// <param name="userId">User id</param>
         /// <returns></returns>
         [HttpDelete("{isBid}/{id}")]
-        public async Task<IActionResult> Delete(bool isBid, string id, string userId)
+        public async Task<CancelOrderResponse> Delete(bool isBid, Guid id, string userId)
         {
-            int res = await _service.DeleteOrder(isBid, id, userId);
-            if (res != 0)
-            {
-                return Ok();
-            }
-
-            return NotFound();
+            var response = await _service.DeleteOrder(isBid, id, userId);
+            return response;
         }
     }
 }
