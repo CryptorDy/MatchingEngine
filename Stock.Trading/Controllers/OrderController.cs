@@ -33,6 +33,7 @@ namespace MatchingEngine.Controllers
         /// Get order by id
         /// </summary>
         /// <param name="id">order id</param>
+        /// <param name="isBid"></param>
         /// <returns>Ask</returns>
         [HttpGet("{id}")]
         public async Task<Order> GetOrder(string id, bool? isBid = null)
