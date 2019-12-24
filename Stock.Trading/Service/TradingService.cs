@@ -60,7 +60,7 @@ namespace MatchingEngine.Services
         }
 
         public async Task<List<Deal>> GetDeals(string currencyPairCode, int? lastNum, string userId,
-            DateTimeOffset? sinceDate = null, List<string> dealIds = null)
+            DateTimeOffset? sinceDate = null, DateTimeOffset? toDate = null, List<string> dealIds = null)
         {
             try
             {
@@ -68,6 +68,7 @@ namespace MatchingEngine.Services
                     .Include(m => m.Ask)
                     .Include(m => m.Bid)
                     .Where(_ => (!sinceDate.HasValue || _.DateCreated > sinceDate)
+                        && (!toDate.HasValue || _.DateCreated < toDate)
                         && (string.IsNullOrWhiteSpace(currencyPairCode) || (_.Bid != null && _.Bid.CurrencyPairCode == currencyPairCode))
                         && (string.IsNullOrWhiteSpace(userId) || (_.Bid != null && _.Bid.UserId == userId) || (_.Ask != null && _.Ask.UserId == userId))
                         && (dealIds == null || dealIds.Count == 0 || dealIds.Contains(_.DealId.ToString())))
