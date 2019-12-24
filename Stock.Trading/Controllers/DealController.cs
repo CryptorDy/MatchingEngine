@@ -41,7 +41,12 @@ namespace Stock.Trading.Controllers
         /// <summary>
         /// Get all deals
         /// </summary>
+        /// <param name="currencyPairId"></param>
         /// <param name="count">Count</param>
+        /// <param name="userId"></param>
+        /// <param name="sinceDate"></param>
+        /// <param name="toDate"></param>
+        /// <param name="dealIds"></param>
         /// <returns>Deals list</returns>
         [HttpGet("deals")]
         public async Task<List<Deal>> GetDeals(string currencyPairId = null, int? count = null, string userId = null,
