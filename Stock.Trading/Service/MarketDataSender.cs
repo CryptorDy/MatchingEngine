@@ -34,7 +34,7 @@ namespace MatchingEngine.Services
                     if (_marketDataHolder.RefreshMarketData())
                     {
                         var orders = _marketDataHolder.GetOrders();
-                        RemoveOrderbookIntersections(orders);
+                        RemoveLiquidityOrderIntersections(orders);
                         await _marketDataService.SendOrders(orders);
                         _marketDataHolder.SendComplete();
                     }
@@ -50,30 +50,32 @@ namespace MatchingEngine.Services
             }
         }
 
-        private void RemoveOrderbookIntersections(List<Order> orders)
+        private void RemoveLiquidityOrderIntersections(List<Order> orders)
         {
             var currencyPairs = orders.Select(_ => _.CurrencyPairCode).Distinct().ToList();
             foreach(string currencyPair in currencyPairs)
             {
-                decimal maxBidPrice = orders.Where(_ => _.CurrencyPairCode == currencyPair && _.IsBid).Select(_ => _.Price).DefaultIfEmpty().Max();
+                decimal maxBidPrice = orders.Where(_ => _.CurrencyPairCode == currencyPair && _.IsBid)
+                    .Select(_ => _.Price).DefaultIfEmpty().Max();
                 if (maxBidPrice > 0)
                 {
-                    int deletedAsks = orders.RemoveAll(_ => _.CurrencyPairCode == currencyPair && !_.IsBid
+                    int deleted = orders.RemoveAll(_ => _.CurrencyPairCode == currencyPair && !_.IsBid
                         && _.ClientType == ClientType.LiquidityBot && _.Price <= maxBidPrice);
-                    if (deletedAsks > 0)
+                    if (deleted > 0)
                     {
-                        Console.WriteLine($"RemoveOrderbookIntersections() removed {deletedAsks} {currencyPair} asks");
+                        Console.WriteLine($"RemoveOrderbookIntersections() removed {deleted} {currencyPair} asks");
                     }
                 }
 
-                decimal minAskPrice = orders.Where(_ => _.CurrencyPairCode == currencyPair && !_.IsBid).Select(_ => _.Price).DefaultIfEmpty().Min();
+                decimal minAskPrice = orders.Where(_ => _.CurrencyPairCode == currencyPair && !_.IsBid)
+                    .Select(_ => _.Price).DefaultIfEmpty().Min();
                 if (minAskPrice > 0)
                 {
-                    int deletedBids = orders.RemoveAll(_ => _.CurrencyPairCode == currencyPair && _.IsBid
+                    int deleted = orders.RemoveAll(_ => _.CurrencyPairCode == currencyPair && _.IsBid
                         && _.ClientType == ClientType.LiquidityBot && _.Price >= minAskPrice);
-                    if (deletedBids > 0)
+                    if (deleted > 0)
                     {
-                        Console.WriteLine($"RemoveOrderbookIntersections() removed {deletedBids} {currencyPair} bids");
+                        Console.WriteLine($"RemoveOrderbookIntersections() removed {deleted} {currencyPair} bids");
                     }
                 }
             }
