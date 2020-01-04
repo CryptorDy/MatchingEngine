@@ -27,20 +27,6 @@ namespace MatchingEngine.Services
 
         #region GET-requests
 
-        public async Task<List<Order>> GetOrders(bool isBid, string userId = null)
-        {
-            try
-            {
-                var result = await _context.GetOrders(isBid, userId);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("", ex);
-                return new List<Order>();
-            }
-        }
-
         public async Task<Order> GetOrder(bool? isBid, Guid id)
         {
             try

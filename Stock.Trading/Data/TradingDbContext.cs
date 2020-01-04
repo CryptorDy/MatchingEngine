@@ -59,21 +59,14 @@ namespace MatchingEngine.Data
             }
         }
 
-        public async Task<List<Order>> GetOrders(bool isBid, string userId = null)
+        public async Task<List<Order>> GetOrders(bool? isBid = null, string userId = null, bool onlyActive = false)
         {
             List<Order> dbOrders;
-            if (isBid)
-            {
                 dbOrders = await Bids.Include(o => o.DealList)
-                    .Where(_ => _.IsBid == isBid && (string.IsNullOrEmpty(userId) || _.UserId == userId))
+                    .Where(_ => (!isBid.HasValue && _.IsBid == isBid.Value)
+                        && (string.IsNullOrEmpty(userId) || _.UserId == userId)
+                        && (!onlyActive || _.IsActive))
                     .Cast<Order>().ToListAsync();
-            }
-            else
-            {
-                dbOrders = await Asks.Include(o => o.DealList)
-                    .Where(_ => _.IsBid == isBid && (string.IsNullOrEmpty(userId) || _.UserId == userId))
-                    .Cast<Order>().ToListAsync();
-            }
 
             foreach (var order in dbOrders)  // remove circular dependency to prevent json error
             {

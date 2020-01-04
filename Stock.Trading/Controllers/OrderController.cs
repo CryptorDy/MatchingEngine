@@ -1,3 +1,4 @@
+using MatchingEngine.Data;
 using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
 using MatchingEngine.Services;
@@ -12,10 +13,13 @@ namespace MatchingEngine.Controllers
     [Route("api/[controller]")]
     public class OrderController : Controller
     {
+        private readonly TradingDbContext _context;
         private readonly TradingService _service;
 
-        public OrderController(TradingService service)
+        public OrderController(TradingDbContext context,
+            TradingService service)
         {
+            _context = context;
             _service = service;
         }
 
@@ -25,7 +29,17 @@ namespace MatchingEngine.Controllers
         [HttpGet("orders/{isBid}/{userId?}")]
         public async Task<List<Order>> GetOrders(bool isBid, string userId = null)
         {
-            var result = await _service.GetOrders(isBid, userId);
+            var result = await _context.GetOrders(isBid, userId);
+            return result;
+        }
+
+        /// <summary>
+        /// Get orders list
+        /// </summary>
+        [HttpGet("active-orders")]
+        public async Task<List<Order>> GetActiveOrders()
+        {
+            var result = await _context.GetOrders(onlyActive: true);
             return result;
         }
 
