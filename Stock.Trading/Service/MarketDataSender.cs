@@ -55,7 +55,7 @@ namespace MatchingEngine.Services
             var currencyPairs = orders.Select(_ => _.CurrencyPairCode).Distinct().ToList();
             foreach(string currencyPair in currencyPairs)
             {
-                decimal maxBidPrice = orders.Where(_ => _.CurrencyPairCode == currencyPair && _.IsBid)
+                decimal maxBidPrice = orders.Where(_ => _.CurrencyPairCode == currencyPair && _.IsBid && _.ClientType == ClientType.LiquidityBot)
                     .Select(_ => _.Price).DefaultIfEmpty().Max();
                 if (maxBidPrice > 0)
                 {
@@ -67,7 +67,7 @@ namespace MatchingEngine.Services
                     }
                 }
 
-                decimal minAskPrice = orders.Where(_ => _.CurrencyPairCode == currencyPair && !_.IsBid)
+                decimal minAskPrice = orders.Where(_ => _.CurrencyPairCode == currencyPair && !_.IsBid && _.ClientType == ClientType.LiquidityBot)
                     .Select(_ => _.Price).DefaultIfEmpty().Min();
                 if (minAskPrice > 0)
                 {
