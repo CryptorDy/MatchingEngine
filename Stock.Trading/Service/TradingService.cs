@@ -13,14 +13,17 @@ namespace MatchingEngine.Services
     public class TradingService
     {
         private readonly TradingDbContext _context;
+        private readonly ICurrenciesService _currenciesService;
         private readonly MatchingPool _matchingPool;
         private readonly ILogger _logger;
 
         public TradingService(TradingDbContext context,
+            ICurrenciesService currenciesService,
             SingletonsAccessor singletonsAccessor,
             ILogger<TradingService> logger)
         {
             _context = context;
+            _currenciesService = currenciesService;
             _matchingPool = singletonsAccessor.MatchingPool;
             _logger = logger;
         }
@@ -121,8 +124,8 @@ namespace MatchingEngine.Services
 
         public async Task<Guid> CreateOrder(OrderCreateRequest request)
         {
-            request.Price = Math.Round(request.Price, Order.MaxDigits);
-            request.Amount = Math.Round(request.Amount, Order.MaxDigits);
+            request.Price = Math.Round(request.Price, _currenciesService.GetPriceDigits(request.CurrencyPairCode));
+            request.Amount = Math.Round(request.Amount, _currenciesService.GetAmountDigits(request.CurrencyPairCode));
             var order = new Order
             {
                 Id = new Guid(request.ActionId),
