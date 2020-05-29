@@ -12,6 +12,7 @@ namespace MatchingEngine
     {
         public static void Main(string[] args)
         {
+            Console.WriteLine($"Version: {Assembly.GetExecutingAssembly().GetName().Version}");
             IWebHost host = BuildWebHost(args);
 
             using (var scope = host.Services.CreateScope())
@@ -29,14 +30,13 @@ namespace MatchingEngine
                     dbInitializer.Seed();
                 }
             }
-
+            host.Services.GetRequiredService<ICurrenciesService>().LoadData().Wait(); // load currencies and currency pairs
             var singletonsAccessor = host.Services.GetService<SingletonsAccessor>();
             var matchingPool = singletonsAccessor.MatchingPool;
             singletonsAccessor.LiquidityExpireWatcher.SetMatchingPool(matchingPool);
             singletonsAccessor.InnerBotExpireWatcher.SetMatchingPool(matchingPool);
             matchingPool.SetDealEndingSender(singletonsAccessor.DealEndingSender);
 
-            Console.WriteLine($"Version: {Assembly.GetExecutingAssembly().GetName().Version}");
             host.Run();
         }
 

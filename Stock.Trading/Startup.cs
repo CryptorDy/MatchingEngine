@@ -56,9 +56,6 @@ namespace MatchingEngine
             services.AddScoped<IDbInitializer, DbInitializer>();
 
             services.AddSingleton<ICurrenciesService, CurrenciesService>();
-            services.BuildServiceProvider().GetRequiredService<ICurrenciesService>()
-                .LoadData().Wait(); // load currencies and currency pairs
-
             services.AddSingleton<IHostedService, MatchingPool>();
             services.AddSingleton<IHostedService, DealEndingSender>();
             services.AddSingleton<IHostedService, MarketDataSender>();
