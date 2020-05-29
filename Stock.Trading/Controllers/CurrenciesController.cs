@@ -1,8 +1,5 @@
+using MatchingEngine.Services;
 using Microsoft.AspNetCore.Mvc;
-using Stock.Brokerage.Models.Halting;
-using Stock.Brokerage.Services;
-using Stock.Brokerage.Services.Halting;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace MatchingEngine.Controllers
