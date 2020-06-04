@@ -25,6 +25,7 @@ namespace MatchingEngine.Services
 
         private DealEndingSender _dealEndingSender;
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly ICurrenciesService _currenciesService;
         private readonly OrdersMatcher _ordersMatcher;
         private readonly MarketDataService _marketDataService;
         private readonly MarketDataHolder _marketDataHolder;
@@ -40,6 +41,7 @@ namespace MatchingEngine.Services
         /// <param name="serviceScopeFactory"></param>
         public MatchingPool(
             IServiceScopeFactory serviceScopeFactory,
+            ICurrenciesService currenciesService,
             OrdersMatcher ordersMatcher,
             MarketDataService marketDataService,
             MarketDataHolder marketDataHolder,
@@ -47,6 +49,7 @@ namespace MatchingEngine.Services
             ILogger<MatchingPool> logger)
         {
             _serviceScopeFactory = serviceScopeFactory;
+            _currenciesService = currenciesService;
             _ordersMatcher = ordersMatcher;
             _marketDataService = marketDataService;
             _marketDataHolder = marketDataHolder;
@@ -162,7 +165,7 @@ namespace MatchingEngine.Services
 
         public async Task<SaveExternalOrderResult> UpdateExternalOrder(ExternalCreatedOrder createdOrder)
         {
-            createdOrder.Fulfilled = Math.Round(createdOrder.Fulfilled, Order.MaxDigits);
+            createdOrder.Fulfilled = Math.Round(createdOrder.Fulfilled, _currenciesService.GetAmountDigits(createdOrder.CurrencyPairCode));
             var modifiedOrders = new List<Order>();
             var newDeals = new List<Deal>();
 

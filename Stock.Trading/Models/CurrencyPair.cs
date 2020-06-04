@@ -32,15 +32,14 @@ namespace MatchingEngine.Models
 
         public virtual Currency CurrencyTo { get; set; }
 
-        private CurrencyPair(string code, string currencyFromId, string currencyToId)
-        {
-            Code = code;
-            CurrencyFromId = currencyFromId;
-            CurrencyToId = currencyToId;
-        }
+        /// <summary>
+        /// How many decimal digits should price have after rounding
+        /// </summary>
+        public int DigitsPrice { get; set; }
 
-        public CurrencyPair()
-        {
-        }
+        /// <summary>
+        /// How many decimal digits should Order/Deal amount have after rounding
+        /// </summary>
+        public int DigitsAmount { get; set; }
     }
 }

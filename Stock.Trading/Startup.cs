@@ -41,6 +41,11 @@ namespace MatchingEngine
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddSingleton<GatewayHttpClient>();
+            services.AddSingleton<IConfigurationRoot>(Configuration);
+            services.Configure<AppSettings>(Configuration);
+            services.Configure<AppSettings>(settings => settings.ConnectionString = Configuration.GetSection("ConnectionStrings:DefaultConnection").Value);
+
             services.AddDbContext<TradingDbContext>(options =>
                 options.UseNpgsql(Configuration["ConnectionStrings:DefaultConnection"]));
 
@@ -50,6 +55,7 @@ namespace MatchingEngine
 
             services.AddScoped<IDbInitializer, DbInitializer>();
 
+            services.AddSingleton<ICurrenciesService, CurrenciesService>();
             services.AddSingleton<IHostedService, MatchingPool>();
             services.AddSingleton<IHostedService, DealEndingSender>();
             services.AddSingleton<IHostedService, MarketDataSender>();
@@ -57,14 +63,9 @@ namespace MatchingEngine
             services.AddSingleton<IHostedService, InnerBotExpireWatcher>();
             services.AddSingleton<MarketDataHolder>();
 
-            services.AddSingleton<IConfigurationRoot>(Configuration);
-            services.AddSingleton<GatewayHttpClient>();
             services.AddSingleton<OrdersMatcher>();
             services.AddTransient<SingletonsAccessor>();
             services.AddTransient<ILiquidityImportService, LiquidityImportService>();
-
-            services.Configure<AppSettings>(Configuration);
-            services.Configure<AppSettings>(settings => settings.ConnectionString = Configuration.GetSection("ConnectionStrings:DefaultConnection").Value);
 
             var mapperConfig = new MapperConfiguration(cfg =>
             {
