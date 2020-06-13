@@ -207,20 +207,11 @@ namespace Stock.Trading.Tests
             var serviceScopeFactory = new Mock<IServiceScopeFactory>();
             serviceScopeFactory.Setup(x => x.CreateScope()).Returns(serviceScope.Object);
 
-            var currenciesService = new Mock<ICurrenciesService>();
-            currenciesService.Setup(_ => _.GetCurrencies()).Returns(new List<Currency> {
-                new Currency { Code = "BTC", Digits = 8 },
-                new Currency { Code = "ETH", Digits = 8 },
-            });
-            currenciesService.Setup(_ => _.GetCurrencyPairs()).Returns(new List<CurrencyPair> {
-                new CurrencyPair { Code = "ETH_BTC", CurrencyToId = "ETH", CurrencyFromId = "BTC", DigitsAmount = 8, DigitsPrice = 8 },
-            });
-
             var ordersMatcher = new OrdersMatcher(liquidityImportService.Object);
-            var matchingPool = new MatchingPool(serviceScopeFactory.Object, currenciesService.Object, ordersMatcher,
+            var matchingPool = new MatchingPool(serviceScopeFactory.Object, GetCurrenciesServiceMock(), ordersMatcher,
                 null, null, null, new Mock<ILogger<MatchingPool>>().Object);
             var singletonsAccessor = new SingletonsAccessor(new List<IHostedService> { matchingPool });
-            var tradingService = new TradingService(context, currenciesService.Object, singletonsAccessor,
+            var tradingService = new TradingService(context, GetCurrenciesServiceMock(), singletonsAccessor,
                 new Mock<ILogger<TradingService>>().Object);
             return (matchingPool, tradingService);
         }
@@ -305,6 +296,19 @@ namespace Stock.Trading.Tests
             {
                 matchingPool.AppendOrder(order.Clone());
             }
+        }
+
+        private ICurrenciesService GetCurrenciesServiceMock()
+        {
+            const int digits = 8;
+            var currenciesService = new TestCurrenciesService();
+            currenciesService.SetValues(new List<Currency> {
+                new Currency { Code = "BTC", Digits = digits },
+                new Currency { Code = "ETH", Digits = digits },
+            }, new List<CurrencyPair> {
+                new CurrencyPair { Code = "ETH_BTC", CurrencyToId = "ETH", CurrencyFromId = "BTC", DigitsAmount = digits, DigitsPrice = digits },
+            });
+            return currenciesService;
         }
 
         private DbContextOptions<TradingDbContext> GetDbOptions() => new DbContextOptionsBuilder<TradingDbContext>()
