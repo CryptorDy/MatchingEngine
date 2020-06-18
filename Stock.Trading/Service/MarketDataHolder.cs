@@ -13,7 +13,7 @@ namespace MatchingEngine.Services
 
         public void SendOrders(List<Order> orders)
         {
-            var o = _orders.FirstOrDefault(_ => _.CurrencyPairCode == "XSP_BTC");
+            var o = orders.FirstOrDefault(_ => _.CurrencyPairCode == "XSP_BTC");
             if (o != null) Console.WriteLine($"AddOrder {o.CurrencyPairCode} {o.Id} {DateTime.Now.ToString("hh:mm:ss.fff")} SendOrders");
             _orders = new ConcurrentQueue<Order>(orders);
             _updateMarketData.Enqueue(true);

@@ -33,10 +33,17 @@ namespace MatchingEngine.Services
                 {
                     if (_marketDataHolder.RefreshMarketData())
                     {
+                        var date1 = DateTime.Now;
                         var orders = _marketDataHolder.GetOrders();
+                        var date2 = DateTime.Now;
                         RemoveLiquidityOrderIntersections(orders);
+                        var date3 = DateTime.Now;
                         await _marketDataService.SendOrders(orders);
+                        var date4 = DateTime.Now;
                         _marketDataHolder.SendComplete();
+                        var date5 = DateTime.Now;
+
+                        Console.WriteLine($"MarketDataSender: {date1.ToString("hh:mm:ss.fff")} | {date2.ToString("hh:mm:ss.fff")} | {date3.ToString("hh:mm:ss.fff")} | {date4.ToString("hh:mm:ss.fff")} | {date5.ToString("hh:mm:ss.fff")} ");
                     }
                     else
                     {
