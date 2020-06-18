@@ -43,7 +43,7 @@ namespace MatchingEngine.Services
                         _marketDataHolder.SendComplete();
                         var date5 = DateTime.Now;
 
-                        Console.WriteLine($"MarketDataSender: {date1.ToString("hh:mm:ss.fff")} | {date2.ToString("hh:mm:ss.fff")} | {date3.ToString("hh:mm:ss.fff")} | {date4.ToString("hh:mm:ss.fff")} | {date5.ToString("hh:mm:ss.fff")} ");
+                        Console.WriteLine($"MarketDataSender orders:{orders.Count} : {date1.ToString("hh:mm:ss.fff")} | {date2.ToString("hh:mm:ss.fff")} | {date3.ToString("hh:mm:ss.fff")} | {date4.ToString("hh:mm:ss.fff")} | {date5.ToString("hh:mm:ss.fff")} ");
                     }
                     else
                     {
