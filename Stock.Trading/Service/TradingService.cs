@@ -145,7 +145,6 @@ namespace MatchingEngine.Services
             }
 
             _matchingPool.AppendOrder(order);
-            if (request.CurrencyPairCode == "XSP_BTC") Console.WriteLine($"AddOrder {request.CurrencyPairCode} {request.ActionId} {DateTime.Now.ToString("hh:mm:ss.fff")} Appended");
 
             return order.Id;
         }
