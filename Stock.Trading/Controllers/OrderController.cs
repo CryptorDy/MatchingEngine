@@ -70,6 +70,7 @@ namespace MatchingEngine.Controllers
                 return BadRequest(ModelState);
             }
 
+            if (request.CurrencyPairCode == "XSP_BTC") Console.WriteLine($"AddOrder {request.CurrencyPairCode} {request.ActionId} {DateTime.Now.ToString("hh:mm:ss.fff")} init");
             var newOrderId = await _service.CreateOrder(request);
             return Ok(new CreateOrderResult { Id = newOrderId });
         }

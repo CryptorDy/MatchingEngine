@@ -267,6 +267,7 @@ namespace MatchingEngine.Services
 
         private async Task Process(Order newOrder)
         {
+            if (newOrder.CurrencyPairCode == "XSP_BTC") Console.WriteLine($"AddOrder {newOrder.CurrencyPairCode} {newOrder.Id} {DateTime.Now.ToString("hh:mm:ss.fff")} Process");
             _logger.LogInformation("Detected new order, Matching process started");
             using (var scope = _serviceScopeFactory.CreateScope())
             {
@@ -285,7 +286,9 @@ namespace MatchingEngine.Services
                     CheckOrderbookIntersection(newOrder);
                 }
                 await UpdateDatabase(context, modifiedOrders, newDeals);
+                if (newOrder.CurrencyPairCode == "XSP_BTC") Console.WriteLine($"AddOrder {newOrder.CurrencyPairCode} {newOrder.Id} {DateTime.Now.ToString("hh:mm:ss.fff")} UpdatedDatabase");
                 await ReportData(context, modifiedOrders, newDeals);
+                if (newOrder.CurrencyPairCode == "XSP_BTC") Console.WriteLine($"AddOrder {newOrder.CurrencyPairCode} {newOrder.Id} {DateTime.Now.ToString("hh:mm:ss.fff")} ReportedData");
             }
         }
 
