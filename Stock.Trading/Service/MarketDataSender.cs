@@ -43,7 +43,7 @@ namespace MatchingEngine.Services
                         _marketDataHolder.SendComplete();
                         var date5 = DateTime.Now;
 
-                        Console.WriteLine($"MarketDataSender orders:{orders.Count} : {date1.ToString("hh:mm:ss.fff")} | {date2.ToString("hh:mm:ss.fff")} | {date3.ToString("hh:mm:ss.fff")} | {date4.ToString("hh:mm:ss.fff")} | {date5.ToString("hh:mm:ss.fff")} ");
+                        //Console.WriteLine($"MarketDataSender orders:{orders.Count} : {date1.ToString("hh:mm:ss.fff")} | {date2.ToString("hh:mm:ss.fff")} | {date3.ToString("hh:mm:ss.fff")} | {date4.ToString("hh:mm:ss.fff")} | {date5.ToString("hh:mm:ss.fff")} ");
                     }
                     else
                     {
@@ -60,7 +60,7 @@ namespace MatchingEngine.Services
         private void RemoveLiquidityOrderIntersections(List<Order> orders)
         {
             var currencyPairs = orders.Select(_ => _.CurrencyPairCode).Distinct().ToList();
-            foreach(string currencyPair in currencyPairs)
+            foreach (string currencyPair in currencyPairs)
             {
                 decimal maxBidPrice = orders.Where(_ => _.CurrencyPairCode == currencyPair && _.IsBid && _.ClientType == ClientType.LiquidityBot)
                     .Select(_ => _.Price).DefaultIfEmpty().Max();
