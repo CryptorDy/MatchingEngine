@@ -23,6 +23,7 @@ namespace MatchingEngine.Models
                 throw new Exception($"No asks passed to Deal(): {order1}, {order2}");
             }
 
+            DealId = Guid.NewGuid();
             DateCreated = DateTimeOffset.UtcNow;
             BidId = bid.Id;
             AskId = ask.Id;

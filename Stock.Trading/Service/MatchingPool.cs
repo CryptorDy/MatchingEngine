@@ -105,15 +105,37 @@ namespace MatchingEngine.Services
                         if (dbOrder == null && (!order.IsLocal || order.ClientType == ClientType.DealsBot))
                         {
                             dbOrder = await context.AddOrder(order, true);
+                            continue;
                         }
                         if (dbOrder == null)
                         {
                             throw new Exception($"Couldn't find in DB: {order}");
                         }
                     }
+                    OrderEventType eventType;
+                    if (order.Fulfilled > dbOrder.Fulfilled)
+                    {
+                        eventType = OrderEventType.Fulfill;
+                    }
+                    else if (order.Blocked > 0 && dbOrder.Blocked == 0)
+                    {
+                        eventType = OrderEventType.Block;
+                    }
+                    else if (order.Blocked == 0 && dbOrder.Blocked > 0)
+                    {
+                        eventType = OrderEventType.Unblock;
+                    }
+                    else
+                    {
+                        _logger.LogError($"Unknown OrderEventType. \n dbOrder:{dbOrder} \n order:{order}");
+                        eventType = OrderEventType.Fulfill;
+                    }
+                    string orderDealIds = string.Join(',',
+                        newDeals.Where(_ => _.BidId == order.Id || _.AskId == order.Id).Select(_ => _.DealId));
+
                     dbOrder.Fulfilled = order.Fulfilled;
                     dbOrder.Blocked = order.Blocked;
-                    await context.UpdateOrder(dbOrder, false);
+                    await context.UpdateOrder(dbOrder, false, eventType, orderDealIds);
                 }
             }
 
