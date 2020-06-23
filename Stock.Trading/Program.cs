@@ -43,7 +43,7 @@ namespace MatchingEngine
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
-                .UseUrls("http://localhost:6101/")
+                .UseUrls("http://0.0.0.0:6101/")
                 .Build();
     }
 }
