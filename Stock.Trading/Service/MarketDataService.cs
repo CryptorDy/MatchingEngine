@@ -1,11 +1,8 @@
 using MatchingEngine.HttpClients;
 using MatchingEngine.Models;
-using MatchingEngine.Models.LiquidityImport;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace MatchingEngine.Services
@@ -29,7 +26,7 @@ namespace MatchingEngine.Services
                 await _gatewayHttpClient.PostJsonAsync($"marketdata/orders/order-events", events);
                 return true;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.LogError(e, "");
                 return false;

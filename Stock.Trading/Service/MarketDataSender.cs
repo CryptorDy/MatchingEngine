@@ -45,7 +45,8 @@ namespace MatchingEngine.Services
                         RemoveLiquidityOrderIntersections(orders);
                         await _marketDataService.SendActiveOrders(orders);
                         await SendDbOrderEvents();
-                        _marketDataHolder.SendComplete();}
+                        _marketDataHolder.SendComplete();
+                    }
                     else
                     {
                         Thread.Sleep(100);

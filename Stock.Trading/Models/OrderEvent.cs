@@ -1,10 +1,6 @@
 using MatchingEngine.Models.LiquidityImport;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MatchingEngine.Models
 {
@@ -78,7 +74,7 @@ namespace MatchingEngine.Models
 
         public bool IsLocal => Exchange == Exchange.Local;
 
-        #endregion
+        #endregion order copy fields
 
         public override string ToString() => $"Event {EventType} {EventId} for {(IsBid ? "Bid" : "Ask")}({Id} {CurrencyPairCode})";
 
