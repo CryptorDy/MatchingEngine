@@ -13,24 +13,31 @@ namespace MatchingEngine.Services
     public class MarketDataService
     {
         private readonly GatewayHttpClient _gatewayHttpClient;
+        private readonly ILogger _logger;
 
         public MarketDataService(GatewayHttpClient gatewayHttpClient,
             ILogger<MarketDataService> logger)
         {
             _gatewayHttpClient = gatewayHttpClient;
+            _logger = logger;
         }
 
-        public async Task SendOrders(List<Order> orders)
+        public async Task<bool> SaveOrdersFromEvents(List<OrderEvent> events)
         {
-            //var localOrders = orders.Where(o => o.Exchange == Exchange.Local).ToList();
+            try
+            {
+                await _gatewayHttpClient.PostJsonAsync($"marketdata/orders/order-events", events);
+                return true;
+            }
+            catch(Exception e)
+            {
+                _logger.LogError(e, "");
+                return false;
+            }
+        }
 
-            //Console.WriteLine($"orders sended to MD : {DateTime.UtcNow.ToLongTimeString()}" + JsonConvert.SerializeObject(localOrders,
-            //        Formatting.Indented,
-            //        new JsonSerializerSettings
-            //        {
-            //            ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            //        }));
-
+        public async Task SendActiveOrders(List<Order> orders)
+        {
             var marketDataResponse = await _gatewayHttpClient.PostJsonAsync($"marketdata/orders/orders", orders);
         }
 
