@@ -41,11 +41,12 @@ namespace MatchingEngine.Services
                 {
                     if (_marketDataHolder.RefreshMarketData())
                     {
+                        _marketDataHolder.ClearFlags();
+
                         var orders = _marketDataHolder.GetOrders();
                         RemoveLiquidityOrderIntersections(orders);
                         await _marketDataService.SendActiveOrders(orders);
                         await SendDbOrderEvents();
-                        _marketDataHolder.SendComplete();
                     }
                     else
                     {
@@ -72,8 +73,8 @@ namespace MatchingEngine.Services
                 }
 
                 // select last unsent event for each order to create/update order in MarketData
-                var eventsForSend = newEvents.OrderByDescending(_ => _.EventDate)
-                    .GroupBy(_ => _.Id).Select(g => g.First()).ToList();
+                var eventsForSend = newEvents
+                    .GroupBy(_ => _.Id).Select(g => g.OrderByDescending(_ => _.EventDate).First()).ToList();
                 bool isSuccess = await _marketDataService.SaveOrdersFromEvents(eventsForSend);
                 if (!isSuccess)
                 {

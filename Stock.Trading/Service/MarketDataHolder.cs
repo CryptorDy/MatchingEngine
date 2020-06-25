@@ -20,7 +20,7 @@ namespace MatchingEngine.Services
             return new List<Order>(_orders); // copy list to prevent concurrency error
         }
 
-        public void SendComplete()
+        public void ClearFlags()
         {
             while (_updateMarketData.TryDequeue(out _)) { } // Dequeue all
         }

@@ -140,7 +140,7 @@ namespace MatchingEngine.Services
 
             if (order.ClientType != ClientType.DealsBot)
             {
-                await _context.AddOrder(order, true);
+                await _context.AddOrder(order, true, OrderEventType.Create);
             }
 
             _matchingPool.AppendOrder(order);

@@ -35,7 +35,7 @@ namespace MatchingEngine.Data
 
         #region Order setters
 
-        public async Task<Order> AddOrder(Order order, bool toSave)
+        public async Task<Order> AddOrder(Order order, bool toSave, OrderEventType eventType)
         {
             Order trackedOrder;
             if (order.IsBid)
@@ -49,7 +49,7 @@ namespace MatchingEngine.Data
                 Asks.Add((Ask)trackedOrder);
             }
 
-            OrderEvents.Add(OrderEvent.Create(_mapper, trackedOrder, OrderEventType.Create));
+            OrderEvents.Add(OrderEvent.Create(_mapper, trackedOrder, eventType));
 
             if (toSave)
             {
@@ -143,6 +143,6 @@ namespace MatchingEngine.Data
             return order;
         }
 
-        #endregion
+        #endregion Order getters
     }
 }
