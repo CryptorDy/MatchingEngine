@@ -1,8 +1,6 @@
 using MatchingEngine.Models;
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace MatchingEngine.Services
 {
@@ -22,7 +20,7 @@ namespace MatchingEngine.Services
             return new List<Order>(_orders); // copy list to prevent concurrency error
         }
 
-        public void SendComplete()
+        public void ClearFlags()
         {
             while (_updateMarketData.TryDequeue(out _)) { } // Dequeue all
         }

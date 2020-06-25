@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 
 namespace MatchingEngine.Services
@@ -141,7 +140,7 @@ namespace MatchingEngine.Services
 
             if (order.ClientType != ClientType.DealsBot)
             {
-                await _context.AddOrder(order, true);
+                await _context.AddOrder(order, true, OrderEventType.Create);
             }
 
             _matchingPool.AppendOrder(order);
@@ -181,7 +180,7 @@ namespace MatchingEngine.Services
 
                 order = await _context.GetOrder(isBid, id);
                 order.IsCanceled = true;
-                await _context.UpdateOrder(order, true);
+                await _context.UpdateOrder(order, true, OrderEventType.Cancel);
                 await _matchingPool.RemoveOrder(id);
                 return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = order };
             }

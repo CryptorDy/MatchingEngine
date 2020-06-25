@@ -3,15 +3,17 @@ using System;
 using MatchingEngine.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Stock.Trading.Migrations
 {
     [DbContext(typeof(TradingDbContext))]
-    partial class TradingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20200622104756_RemoveOrderFromInnerTradingBot")]
+    partial class RemoveOrderFromInnerTradingBot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -113,53 +115,6 @@ namespace Stock.Trading.Migrations
                     b.HasIndex("BidId");
 
                     b.ToTable("Deals");
-                });
-
-            modelBuilder.Entity("MatchingEngine.Models.OrderEvent", b =>
-                {
-                    b.Property<Guid>("EventId")
-                        .ValueGeneratedOnAdd();
-
-                    b.Property<decimal>("Amount");
-
-                    b.Property<decimal>("Blocked");
-
-                    b.Property<int>("ClientType");
-
-                    b.Property<string>("CurrencyPairCode")
-                        .IsRequired();
-
-                    b.Property<DateTimeOffset>("DateCreated");
-
-                    b.Property<DateTimeOffset>("EventDate")
-                        .ValueGeneratedOnAdd()
-                        .HasDefaultValueSql("current_timestamp");
-
-                    b.Property<string>("EventDealIds");
-
-                    b.Property<string>("EventType")
-                        .IsRequired();
-
-                    b.Property<int>("Exchange");
-
-                    b.Property<decimal>("Fulfilled");
-
-                    b.Property<Guid>("Id");
-
-                    b.Property<bool>("IsBid");
-
-                    b.Property<bool>("IsCanceled");
-
-                    b.Property<bool>("IsSavedInMarketData");
-
-                    b.Property<decimal>("Price");
-
-                    b.Property<string>("UserId")
-                        .IsRequired();
-
-                    b.HasKey("EventId");
-
-                    b.ToTable("OrderEvents");
                 });
 
             modelBuilder.Entity("MatchingEngine.Models.Deal", b =>

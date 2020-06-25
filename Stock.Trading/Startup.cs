@@ -67,10 +67,11 @@ namespace MatchingEngine
             services.AddTransient<SingletonsAccessor>();
             services.AddTransient<ILiquidityImportService, LiquidityImportService>();
 
-            var mapperConfig = new MapperConfiguration(cfg =>
+            var mapperConfig = new MapperConfiguration(c =>
             {
-                cfg.CreateMap<Order, Bid>();
-                cfg.CreateMap<Order, Ask>();
+                c.CreateMap<Order, Bid>();
+                c.CreateMap<Order, Ask>();
+                c.CreateMap<Order, OrderEvent>(MemberList.None);
             });
             mapperConfig.AssertConfigurationIsValid();
             services.AddSingleton(mapperConfig.CreateMapper());

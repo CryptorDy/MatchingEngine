@@ -93,6 +93,7 @@ namespace MatchingEngine.Services
 
                 foreach (var order in modifiedOrders)
                 {
+                    OrderEventType eventType;
                     if (!dbOrdersDict.TryGetValue(order.Id, out var dbOrder))
                     {
                         // only save copy of imported order (after external trade), not the initial imported order
@@ -104,16 +105,39 @@ namespace MatchingEngine.Services
                         // create if external or FromInnerBot and wasn't created yet
                         if (dbOrder == null && (!order.IsLocal || order.ClientType == ClientType.DealsBot))
                         {
-                            dbOrder = await context.AddOrder(order, true);
+                            eventType = OrderEventType.Create;
+                            dbOrder = await context.AddOrder(order, true, eventType);
+                            continue;
                         }
                         if (dbOrder == null)
                         {
                             throw new Exception($"Couldn't find in DB: {order}");
                         }
                     }
+
+                    if (order.Fulfilled > dbOrder.Fulfilled)
+                    {
+                        eventType = OrderEventType.Fulfill;
+                    }
+                    else if (order.Blocked > 0 && dbOrder.Blocked == 0)
+                    {
+                        eventType = OrderEventType.Block;
+                    }
+                    else if (order.Blocked == 0 && dbOrder.Blocked > 0)
+                    {
+                        eventType = OrderEventType.Unblock;
+                    }
+                    else
+                    {
+                        _logger.LogError($"Unknown OrderEventType. \n dbOrder:{dbOrder} \n order:{order}");
+                        eventType = OrderEventType.Fulfill;
+                    }
+                    string orderDealIds = string.Join(',',
+                        newDeals.Where(_ => _.BidId == order.Id || _.AskId == order.Id).Select(_ => _.DealId));
+
                     dbOrder.Fulfilled = order.Fulfilled;
                     dbOrder.Blocked = order.Blocked;
-                    await context.UpdateOrder(dbOrder, false);
+                    await context.UpdateOrder(dbOrder, false, eventType, orderDealIds);
                 }
             }
 

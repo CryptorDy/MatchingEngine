@@ -1,5 +1,8 @@
+using MatchingEngine.Data;
 using MatchingEngine.HttpClients;
 using MatchingEngine.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -11,18 +14,23 @@ namespace MatchingEngine.Services
 {
     public class MarketDataSender : BackgroundService
     {
-        private readonly ILogger _logger;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly GatewayHttpClient _gatewayHttpClient;
         private readonly MarketDataService _marketDataService;
         private readonly MarketDataHolder _marketDataHolder;
-        private readonly GatewayHttpClient _gatewayHttpClient;
+        private readonly ILogger _logger;
 
-        public MarketDataSender(ILogger<MarketDataSender> logger,
-             MarketDataService marketDataService, MarketDataHolder marketDataHolder, GatewayHttpClient gatewayHttpClient)
+        public MarketDataSender(IServiceScopeFactory serviceScopeFactory,
+            GatewayHttpClient gatewayHttpClient,
+            MarketDataService marketDataService,
+            MarketDataHolder marketDataHolder,
+            ILogger<MarketDataSender> logger)
         {
-            _logger = logger;
+            _serviceScopeFactory = serviceScopeFactory;
+            _gatewayHttpClient = gatewayHttpClient;
             _marketDataService = marketDataService;
             _marketDataHolder = marketDataHolder;
-            _gatewayHttpClient = gatewayHttpClient;
+            _logger = logger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -33,17 +41,12 @@ namespace MatchingEngine.Services
                 {
                     if (_marketDataHolder.RefreshMarketData())
                     {
-                        var date1 = DateTime.Now;
-                        var orders = _marketDataHolder.GetOrders();
-                        var date2 = DateTime.Now;
-                        RemoveLiquidityOrderIntersections(orders);
-                        var date3 = DateTime.Now;
-                        await _marketDataService.SendOrders(orders);
-                        var date4 = DateTime.Now;
-                        _marketDataHolder.SendComplete();
-                        var date5 = DateTime.Now;
+                        _marketDataHolder.ClearFlags();
 
-                        //Console.WriteLine($"MarketDataSender orders:{orders.Count} : {date1.ToString("hh:mm:ss.fff")} | {date2.ToString("hh:mm:ss.fff")} | {date3.ToString("hh:mm:ss.fff")} | {date4.ToString("hh:mm:ss.fff")} | {date5.ToString("hh:mm:ss.fff")} ");
+                        var orders = _marketDataHolder.GetOrders();
+                        RemoveLiquidityOrderIntersections(orders);
+                        await _marketDataService.SendActiveOrders(orders);
+                        await SendDbOrderEvents();
                     }
                     else
                     {
@@ -54,6 +57,35 @@ namespace MatchingEngine.Services
                 {
                     _logger.LogError(ex, "Send market data error");
                 }
+            }
+        }
+
+        private async Task SendDbOrderEvents()
+        {
+            using (var scope = _serviceScopeFactory.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+
+                var newEvents = await context.OrderEvents.Where(_ => !_.IsSavedInMarketData).ToListAsync();
+                if (newEvents.Count == 0)
+                {
+                    return;
+                }
+
+                // select last unsent event for each order to create/update order in MarketData
+                var eventsForSend = newEvents
+                    .GroupBy(_ => _.Id).Select(g => g.OrderByDescending(_ => _.EventDate).First()).ToList();
+                bool isSuccess = await _marketDataService.SaveOrdersFromEvents(eventsForSend);
+                if (!isSuccess)
+                {
+                    return;
+                }
+
+                foreach (var newEvent in newEvents)
+                {
+                    newEvent.IsSavedInMarketData = true;
+                }
+                await context.SaveChangesAsync();
             }
         }
 

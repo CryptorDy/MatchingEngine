@@ -1,29 +1,35 @@
 using MatchingEngine.Models.LiquidityImport;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace MatchingEngine.Models
 {
-    public class Bid : Order { }
-
-    public class Ask : Order { }
-
-    public class Order
+    public enum OrderEventType
     {
-        public Order()
-        {
-        }
+        Create, Cancel, Fulfill, Block, Unblock
+    }
 
-        public Order(bool isBid, string currencyPairCode, decimal price, decimal amount)
-        {
-            IsBid = isBid;
-            CurrencyPairCode = currencyPairCode;
-            Price = price;
-            Amount = amount;
-        }
-
+    public class OrderEvent
+    {
         [Key]
+        public Guid EventId { get; set; }
+
+        public DateTimeOffset EventDate { get; set; }
+
+        public OrderEventType EventType { get; set; }
+
+        /// <summary>
+        /// Related deals that were created with this event
+        /// </summary>
+        public string EventDealIds { get; set; }
+
+        /// <summary>
+        /// Is saved in MarketData DB
+        /// </summary>
+        public bool IsSavedInMarketData { get; set; }
+
+        #region order copy fields
+
         public Guid Id { get; set; }
 
         public bool IsBid { get; set; }
@@ -62,18 +68,23 @@ namespace MatchingEngine.Models
         /// </summary>
         public Exchange Exchange { get; set; } = Exchange.Local;
 
-        public virtual List<Deal> DealList { get; set; }
-
         public decimal AvailableAmount => (Amount - Fulfilled - Blocked);
 
         public bool IsActive => !IsCanceled && Fulfilled < Amount;
 
         public bool IsLocal => Exchange == Exchange.Local;
 
-        public override string ToString() => $"{(IsBid ? "Bid" : "Ask")}({Id} {CurrencyPairCode} created:{DateCreated} " +
-            $"{(IsCanceled ? "canceled" : IsActive ? "active" : "completed")} {ClientType} {Exchange} " +
-            $"Available:{AvailableAmount} filled:{Fulfilled}+{Blocked}/{Amount} for price:{Price}, user:{UserId})";
+        #endregion order copy fields
 
-        public Order Clone() => (Order)MemberwiseClone();
+        public override string ToString() => $"Event {EventType} {EventId} for {(IsBid ? "Bid" : "Ask")}({Id} {CurrencyPairCode})";
+
+        public static OrderEvent Create(AutoMapper.IMapper mapper, Order order, OrderEventType type, string dealIds = null)
+        {
+            var orderEvent = mapper.Map<Order, OrderEvent>(order);
+            orderEvent.EventType = type;
+            orderEvent.IsSavedInMarketData = false;
+            orderEvent.EventDealIds = string.IsNullOrWhiteSpace(dealIds) ? null : dealIds;
+            return orderEvent;
+        }
     }
 }
