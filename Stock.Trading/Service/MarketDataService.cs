@@ -35,7 +35,7 @@ namespace MatchingEngine.Services
 
         public async Task SendActiveOrders(List<Order> orders)
         {
-            var marketDataResponse = await _gatewayHttpClient.PostJsonAsync($"marketdata/orders/orders", orders);
+            var marketDataResponse = await _gatewayHttpClient.PostJsonAsync($"marketdata/orders", orders);
         }
 
         public async Task SaveNewDeal(DealResponse deal)
