@@ -1,6 +1,7 @@
 using AutoMapper;
 using FluentValidation.AspNetCore;
 using MatchingEngine.Data;
+using MatchingEngine.Helpers;
 using MatchingEngine.HttpClients;
 using MatchingEngine.Models;
 using MatchingEngine.Services;
@@ -67,14 +68,7 @@ namespace MatchingEngine
             services.AddTransient<SingletonsAccessor>();
             services.AddTransient<ILiquidityImportService, LiquidityImportService>();
 
-            var mapperConfig = new MapperConfiguration(c =>
-            {
-                c.CreateMap<Order, Bid>();
-                c.CreateMap<Order, Ask>();
-                c.CreateMap<Order, OrderEvent>(MemberList.None);
-            });
-            mapperConfig.AssertConfigurationIsValid();
-            services.AddSingleton(mapperConfig.CreateMapper());
+            services.AddAutoMapper(typeof(Startup));
 
             // lowercase routing
             services.AddRouting(options => options.LowercaseUrls = true);
@@ -99,13 +93,16 @@ namespace MatchingEngine
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, Microsoft.AspNetCore.Hosting.IHostingEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(IApplicationBuilder app, Microsoft.AspNetCore.Hosting.IHostingEnvironment env,
+            ILoggerFactory loggerFactory, IMapper mapper)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
                 app.UseDatabaseErrorPage();
             }
+
+            mapper.ConfigurationProvider.AssertConfigurationIsValid();
 
             app.UseSwagger();
 

@@ -4,7 +4,7 @@
     <BumpPatch>true</BumpPatch>
   </PropertyGroup>
   <PropertyGroup>
-    <Version>1.0.285</Version>
+    <Version>1.0.293</Version>
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
@@ -15,7 +15,8 @@
     <NoWarn>1701;1702;1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="8.1.1" />
+    <PackageReference Include="AutoMapper" Version="9.0.0" />
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="7.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="8.2.2" />
     <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
