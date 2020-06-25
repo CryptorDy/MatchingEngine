@@ -4,7 +4,6 @@ namespace MatchingEngine.Models
 {
     public class Currency
     {
-
         /// <summary>
         /// Currency code
         /// </summary>

@@ -1,11 +1,8 @@
-using MatchingEngine.Data;
-using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
 using MatchingEngine.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -29,14 +26,14 @@ namespace Stock.Trading.Controllers
         }
 
         [HttpPost("trade-result")]
-        public async Task<SaveExternalOrderResult> ApplyTradeResult([FromBody]ExternalCreatedOrder createdOrder)
+        public async Task<SaveExternalOrderResult> ApplyTradeResult([FromBody] ExternalCreatedOrder createdOrder)
         {
             var result = await _matchingPool.UpdateExternalOrder(createdOrder);
             return result;
         }
 
         [HttpPost("orders-update")]
-        public async Task SaveLiquidityImportUpdate([FromBody]ImportUpdateDto dto)
+        public async Task SaveLiquidityImportUpdate([FromBody] ImportUpdateDto dto)
         {
             // check that there is no local orders
             var localOrders = dto.OrdersToAdd.Union(dto.OrdersToUpdate).Union(dto.OrdersToDelete)

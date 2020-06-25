@@ -1,6 +1,5 @@
 using MatchingEngine.HttpClients;
 using MatchingEngine.Models;
-using System;
 using System.Threading.Tasks;
 
 namespace MatchingEngine.Services
