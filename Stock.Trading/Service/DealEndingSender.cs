@@ -1,5 +1,4 @@
 using MatchingEngine.Data;
-using MatchingEngine.HttpClients;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
