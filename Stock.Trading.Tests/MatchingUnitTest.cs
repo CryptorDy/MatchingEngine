@@ -1,5 +1,6 @@
 using AutoMapper;
 using MatchingEngine.Data;
+using MatchingEngine.Helpers;
 using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
 using MatchingEngine.Services;
@@ -318,8 +319,7 @@ namespace Stock.Trading.Tests
         {
             var mapperConfig = new MapperConfiguration(cfg =>
             {
-                cfg.CreateMap<Order, Bid>();
-                cfg.CreateMap<Order, Ask>();
+                cfg.AddProfile<AutoMapperProfile>();
             });
             mapperConfig.AssertConfigurationIsValid();
             return mapperConfig.CreateMapper();
