@@ -21,7 +21,6 @@ namespace MatchingEngine.Services
     {
         private readonly BufferBlock<Order> _newOrdersBuffer = new BufferBlock<Order>();
         private readonly List<Order> _orders = new List<Order>();
-        private readonly Dictionary<Guid, DateTime> _liquidityDeletedOrderIds = new Dictionary<Guid, DateTime>();
 
         private DealEndingSender _dealEndingSender;
         private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -29,6 +28,7 @@ namespace MatchingEngine.Services
         private readonly OrdersMatcher _ordersMatcher;
         private readonly MarketDataService _marketDataService;
         private readonly MarketDataHolder _marketDataHolder;
+        private readonly ILiquidityDeletedOrdersKeeper _liquidityDeletedOrdersKeeper;
         private readonly IOptions<AppSettings> _settings;
         private readonly ILogger _logger;
 
@@ -45,6 +45,7 @@ namespace MatchingEngine.Services
             OrdersMatcher ordersMatcher,
             MarketDataService marketDataService,
             MarketDataHolder marketDataHolder,
+            ILiquidityDeletedOrdersKeeper liquidityDeletedOrdersKeeper,
             IOptions<AppSettings> settings,
             ILogger<MatchingPool> logger)
         {
@@ -53,6 +54,7 @@ namespace MatchingEngine.Services
             _ordersMatcher = ordersMatcher;
             _marketDataService = marketDataService;
             _marketDataHolder = marketDataHolder;
+            _liquidityDeletedOrdersKeeper = liquidityDeletedOrdersKeeper;
             _settings = settings;
             _logger = logger;
 
@@ -364,7 +366,7 @@ namespace MatchingEngine.Services
 
         public async Task RemoveOrders(IEnumerable<Guid> ids)
         {
-            AddToLiquidityDeletedOrderIds(ids);
+            _liquidityDeletedOrdersKeeper.AddRange(ids);
             lock (_orders)
             {
                 var ordersToRemove = _orders.Where(_ => ids.Contains(_.Id)).ToList();
@@ -376,28 +378,6 @@ namespace MatchingEngine.Services
                 _orders.RemoveAll(_ => ids.Contains(_.Id));
             }
             await SendOrdersToMarketData();
-        }
-
-        private void AddToLiquidityDeletedOrderIds(IEnumerable<Guid> ids)
-        {
-            lock (_liquidityDeletedOrderIds)
-            {
-                var oldIds = _liquidityDeletedOrderIds.Where(_ => _.Value < DateTime.Now.AddMinutes(-10)).ToList();
-                oldIds.ForEach(_ => _liquidityDeletedOrderIds.Remove(_.Key)); // remove old Ids from dictionary
-
-                foreach (Guid orderId in ids)
-                {
-                    _liquidityDeletedOrderIds.TryAdd(orderId, DateTime.Now);
-                }
-            }
-        }
-
-        private bool IsInLiquidityDeletedOrderIds(Guid id)
-        {
-            lock (_liquidityDeletedOrderIds)
-            {
-                return _liquidityDeletedOrderIds.ContainsKey(id);
-            }
         }
 
         public void RemoveLiquidityOrderbook(Exchange exchange, string currencyPairCode)
@@ -470,7 +450,7 @@ namespace MatchingEngine.Services
 
                     var newOrder = await _newOrdersBuffer.ReceiveAsync(cancellationToken);
 
-                    if (!newOrder.IsLocal && IsInLiquidityDeletedOrderIds(newOrder.Id))
+                    if (!newOrder.IsLocal && _liquidityDeletedOrdersKeeper.Contains(newOrder.Id))
                     {
                         Console.WriteLine($"Skipped order processing (already deleted): {newOrder}");
                     }
