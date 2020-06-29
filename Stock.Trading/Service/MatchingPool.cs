@@ -21,7 +21,7 @@ namespace MatchingEngine.Services
     {
         private readonly BufferBlock<Order> _newOrdersBuffer = new BufferBlock<Order>();
         private readonly List<Order> _orders = new List<Order>();
-        private readonly List<Guid> _liquidityDeletedOrderIds = new List<Guid>();
+        private readonly Dictionary<Guid, DateTime> _liquidityDeletedOrderIds = new Dictionary<Guid, DateTime>();
 
         private DealEndingSender _dealEndingSender;
         private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -364,11 +364,7 @@ namespace MatchingEngine.Services
 
         public async Task RemoveOrders(IEnumerable<Guid> ids)
         {
-            lock (_liquidityDeletedOrderIds)
-            {
-                _liquidityDeletedOrderIds.AddRange(ids);
-            }
-
+            AddToLiquidityDeletedOrderIds(ids);
             lock (_orders)
             {
                 var ordersToRemove = _orders.Where(_ => ids.Contains(_.Id)).ToList();
@@ -382,11 +378,25 @@ namespace MatchingEngine.Services
             await SendOrdersToMarketData();
         }
 
+        private void AddToLiquidityDeletedOrderIds(IEnumerable<Guid> ids)
+        {
+            lock (_liquidityDeletedOrderIds)
+            {
+                var oldIds = _liquidityDeletedOrderIds.Where(_ => _.Value < DateTime.Now.AddMinutes(-10)).ToList();
+                oldIds.ForEach(_ => _liquidityDeletedOrderIds.Remove(_.Key)); // remove old Ids from dictionary
+
+                foreach (Guid orderId in ids)
+                {
+                    _liquidityDeletedOrderIds.TryAdd(orderId, DateTime.Now);
+                }
+            }
+        }
+
         private bool IsInLiquidityDeletedOrderIds(Guid id)
         {
             lock (_liquidityDeletedOrderIds)
             {
-                return _liquidityDeletedOrderIds.Contains(id);
+                return _liquidityDeletedOrderIds.ContainsKey(id);
             }
         }
 
