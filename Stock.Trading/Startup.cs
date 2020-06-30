@@ -61,6 +61,7 @@ namespace MatchingEngine
             services.AddSingleton<IHostedService, DealEndingSender>();
             services.AddSingleton<IHostedService, MarketDataSender>();
             services.AddSingleton<IHostedService, LiquidityExpireWatcher>();
+            services.AddSingleton<IHostedService, LiquidityExpireBlocksWatcher>();
             services.AddSingleton<ILiquidityDeletedOrdersKeeper, LiquidityDeletedOrdersKeeper>();
             services.AddSingleton<IHostedService, InnerBotExpireWatcher>();
             services.AddSingleton<MarketDataHolder>();

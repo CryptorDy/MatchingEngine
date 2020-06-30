@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace MatchingEngine.Services
 {
-    public class LiquidityExpireWatcher : Services.BackgroundService
+    public class LiquidityExpireWatcher : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private MatchingPool _matchingPool;

@@ -17,11 +17,10 @@ namespace Stock.Trading.Controllers
 
         public LiquidityImportController(
             SingletonsAccessor singletonsAccessor,
-            SingletonsAccessor liquidityExpireWatcherAccessor,
             ILogger<LiquidityImportController> logger)
         {
             _matchingPool = singletonsAccessor.MatchingPool;
-            _liquidityExpireWatcher = liquidityExpireWatcherAccessor.LiquidityExpireWatcher;
+            _liquidityExpireWatcher = singletonsAccessor.LiquidityExpireWatcher;
             _logger = logger;
         }
 

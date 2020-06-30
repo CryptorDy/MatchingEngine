@@ -34,8 +34,9 @@ namespace MatchingEngine
             var singletonsAccessor = host.Services.GetService<SingletonsAccessor>();
             var matchingPool = singletonsAccessor.MatchingPool;
             singletonsAccessor.LiquidityExpireWatcher.SetMatchingPool(matchingPool);
+            singletonsAccessor.LiquidityExpireBlocksWatcher.SetMatchingPool(matchingPool);
             singletonsAccessor.InnerBotExpireWatcher.SetMatchingPool(matchingPool);
-            matchingPool.SetDealEndingSender(singletonsAccessor.DealEndingSender);
+            matchingPool.SetServices(singletonsAccessor.DealEndingSender, singletonsAccessor.LiquidityExpireBlocksWatcher);
 
             host.Run();
         }
