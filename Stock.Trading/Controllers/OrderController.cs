@@ -50,7 +50,7 @@ namespace MatchingEngine.Controllers
         [HttpGet("{id}")]
         public async Task<Order> GetOrder(Guid id, bool? isBid = null)
         {
-            var order = await _service.GetOrder(isBid, id);
+            var order = await _service.GetOrder(id, isBid);
             return order;
         }
 
@@ -75,14 +75,14 @@ namespace MatchingEngine.Controllers
         /// <summary>
         /// Delete Order by id
         /// </summary>
-        /// <param name="isBid">Order isBid</param>
-        /// <param name="id">Order id</param>
+        /// <param name="orderId">Order id</param>
         /// <param name="userId">User id</param>
         /// <returns></returns>
-        [HttpDelete("{isBid}/{id}")]
-        public async Task<CancelOrderResponse> Delete(bool isBid, Guid id, string userId)
+        [HttpDelete("{orderId}")]
+        [HttpDelete("{isBid}/{orderId}")] // Obsolete
+        public async Task<CancelOrderResponse> Delete(Guid orderId)
         {
-            var response = await _service.DeleteOrder(isBid, id, userId);
+            var response = await _service.DeleteOrder(orderId);
             return response;
         }
     }

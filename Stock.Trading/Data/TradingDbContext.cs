@@ -123,16 +123,16 @@ namespace MatchingEngine.Data
             return dbOrders;
         }
 
-        public async Task<Order> GetOrder(bool? isBid, Guid id)
+        public async Task<Order> GetOrder(Guid orderId, bool? isBid = null)
         {
             Order order = null;
             if (isBid == null || isBid == true)
             {
-                order = await Bids.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == id);
+                order = await Bids.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == orderId);
             }
             if (isBid == false || (isBid == null && order == null))
             {
-                order = await Asks.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == id);
+                order = await Asks.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == orderId);
             }
 
             foreach (var deal in order.DealList)

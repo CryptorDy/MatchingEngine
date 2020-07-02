@@ -29,14 +29,14 @@ namespace MatchingEngine.Services
 
         #region GET-requests
 
-        public async Task<Order> GetOrder(bool? isBid, Guid id)
+        public async Task<Order> GetOrder(Guid orderId, bool? isBid = null)
         {
             try
             {
-                var order = _matchingPool.GetPoolOrder(id);
+                var order = _matchingPool.GetPoolOrder(orderId);
                 if (order == null)
                 {
-                    order = await _context.GetOrder(isBid, id);
+                    order = await _context.GetOrder(orderId, isBid);
                 }
                 return order;
             }
@@ -148,23 +148,18 @@ namespace MatchingEngine.Services
             return order.Id;
         }
 
-        public async Task<CancelOrderResponse> DeleteOrder(bool isBid, Guid id, string userId)
+        public async Task<CancelOrderResponse> DeleteOrder(Guid orderId)
         {
             try
             {
-                Console.WriteLine($"DeleteOrder() start. id:{id} userId:{userId}");
-                var order = await GetOrder(isBid, id);
+                Console.WriteLine($"DeleteOrder() start. id:{orderId}");
+                var order = await GetOrder(orderId);
                 if (order == null)
                 {
                     Console.WriteLine("DeleteOrder() Not found.");
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
                 }
                 Console.WriteLine($"DeleteOrder() {order}");
-                if (order.UserId != userId)
-                {
-                    Console.WriteLine($"DeleteOrder() wrong userId");
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
-                }
                 if (order.Blocked > 0)
                 {
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked };
@@ -178,10 +173,10 @@ namespace MatchingEngine.Services
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled };
                 }
 
-                order = await _context.GetOrder(isBid, id);
+                order = await _context.GetOrder(orderId);
                 order.IsCanceled = true;
                 await _context.UpdateOrder(order, true, OrderEventType.Cancel);
-                await _matchingPool.RemoveOrder(id);
+                await _matchingPool.RemoveOrder(orderId);
                 return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = order };
             }
             catch (Exception ex)
