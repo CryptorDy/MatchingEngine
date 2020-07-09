@@ -91,6 +91,11 @@ namespace MatchingEngine.Services
 
         private async Task UpdateDatabase(TradingDbContext context, List<Order> modifiedOrders, List<Deal> newDeals)
         {
+            if (modifiedOrders.Count == 0 && newDeals.Count == 0)
+            {
+                return;
+            }
+
             if (modifiedOrders.Count > 0)
             {
                 _logger.LogInformation($"Updating {modifiedOrders.Count} orders");
@@ -153,39 +158,48 @@ namespace MatchingEngine.Services
                 _logger.LogInformation($"Created {newDeals.Count} new deals");
                 context.Deals.AddRange(newDeals);
             }
-            context.SaveChanges();
+
+            await context.SaveChangesAsync();
         }
 
-        private async Task ReportData(TradingDbContext context, List<Order> modifiedOrders, List<Models.Deal> newDeals)
+        private async Task ReportData(TradingDbContext context, List<Order> modifiedOrders, List<Deal> newDeals)
         {
+            if (modifiedOrders.Count == 0 && newDeals.Count == 0)
+            {
+                return;
+            }
+
             try
             {
-                // checks for correct finishing state
-                foreach (var order in modifiedOrders)
+                if (modifiedOrders.Count > 0)
                 {
-                    if (!order.IsActive && (order.AvailableAmount != 0 || order.Blocked != 0))
+                    // checks for correct finishing state
+                    foreach (var order in modifiedOrders)
                     {
-                        _logger.LogWarning($"CompletedOrder has incorrect state: {order}");
+                        if (!order.IsActive && (order.AvailableAmount != 0 || order.Blocked != 0))
+                        {
+                            _logger.LogWarning($"CompletedOrder has incorrect state: {order}");
+                        }
                     }
+
+                    await SendOrdersToMarketData();
                 }
 
-                await SendOrdersToMarketData();
-                var dealGuids = newDeals.Select(md => md.DealId).ToList();
-                if (dealGuids.Count == 0)
+                if (newDeals.Count > 0)
                 {
-                    return;
-                }
+                    var dealGuids = newDeals.Select(md => md.DealId).ToList();
+                    var dbDeals = context.Deals.Include(d => d.Ask).Include(d => d.Bid)
+                        .Where(d => dealGuids.Contains(d.DealId))
+                        .ToDictionary(d => d.DealId, d => d);
 
-                var dbDeals = context.Deals.Include(d => d.Ask).Include(d => d.Bid)
-                    .Where(d => dealGuids.Contains(d.DealId))
-                    .ToDictionary(d => d.DealId, d => d);
-                foreach (var item in newDeals)
-                {
-                    var dbDeal = dbDeals[item.DealId];
-                    dbDeal.RemoveCircularDependency();
-                    await SendDealToMarketData(dbDeal);
+                    foreach (var item in newDeals)
+                    {
+                        var dbDeal = dbDeals[item.DealId];
+                        dbDeal.RemoveCircularDependency();
+                        await SendDealToMarketData(dbDeal);
+                    }
+                    _dealEndingSender.SendDeals();
                 }
-                _dealEndingSender.SendDeals();
             }
             catch (Exception ex)
             {
