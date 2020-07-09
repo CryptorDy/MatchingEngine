@@ -450,16 +450,19 @@ namespace MatchingEngine.Services
             }
         }
 
-        public void RemoveLiquidityOldOrders()
+        public async Task RemoveLiquidityOldOrders()
         {
+            int removedOrdersCount;
             lock (_orders)
             {
                 var minDate = DateTimeOffset.UtcNow.AddMinutes(-_settings.Value.ImportedOrdersExpirationMinutes);
-                int removedOrdersCount = _orders.RemoveAll(_ => !_.IsLocal && _.Blocked == 0 && _.DateCreated < minDate);
-                if (removedOrdersCount > 0)
-                {
-                    Console.WriteLine($"RemoveLiquidityOldOrders() expired {removedOrdersCount} orders");
-                }
+                removedOrdersCount = _orders.RemoveAll(_ => !_.IsLocal && _.Blocked == 0 && _.DateCreated < minDate);
+            }
+
+            if (removedOrdersCount > 0)
+            {
+                Console.WriteLine($"RemoveLiquidityOldOrders() expired {removedOrdersCount} orders");
+                await SendOrdersToMarketData();
             }
         }
 

@@ -44,6 +44,11 @@ namespace MatchingEngine.Services
 
         public async Task CheckBlockings()
         {
+            if (_matchingPool == null)
+            {
+                return;
+            }
+
             List<Guid> orderIdsToUnblock;
             lock (OrderBlockings)
             {

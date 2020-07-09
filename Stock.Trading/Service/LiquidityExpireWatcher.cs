@@ -12,7 +12,6 @@ namespace MatchingEngine.Services
 {
     public class LiquidityExpireWatcher : BackgroundService
     {
-        private readonly IServiceScopeFactory _scopeFactory;
         private MatchingPool _matchingPool;
         private readonly ILiquidityImportService _liquidityImportService;
         private readonly IOptions<AppSettings> _settings;
@@ -21,12 +20,10 @@ namespace MatchingEngine.Services
         private List<CurrencyPairExpiration> CurrencyPairExpirations = new List<CurrencyPairExpiration>();
 
         public LiquidityExpireWatcher(
-            IServiceScopeFactory scopeFactory,
             ILiquidityImportService liquidityImportService,
             IOptions<AppSettings> settings,
             ILogger<LiquidityExpireWatcher> logger)
         {
-            _scopeFactory = scopeFactory;
             _liquidityImportService = liquidityImportService;
             _settings = settings;
             _logger = logger;
@@ -72,6 +69,11 @@ namespace MatchingEngine.Services
 
         private async Task CheckExpirationDates()
         {
+            if (_matchingPool == null)
+            {
+                return;
+            }
+
             lock (CurrencyPairExpirations)
             {
                 foreach (var expiration in CurrencyPairExpirations)
@@ -86,8 +88,8 @@ namespace MatchingEngine.Services
                 }
                 CurrencyPairExpirations = CurrencyPairExpirations.Where(_ => !_.IsExecuted).ToList();
             }
-            _matchingPool.RemoveLiquidityOldOrders();
-            await _matchingPool.SendOrdersToMarketData();
+
+            await _matchingPool.RemoveLiquidityOldOrders();
         }
     }
 }
