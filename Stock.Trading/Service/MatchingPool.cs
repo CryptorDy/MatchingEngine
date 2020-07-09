@@ -77,9 +77,9 @@ namespace MatchingEngine.Services
                 var dbOrders = context.Bids.AsNoTracking().Where(a => a.IsActive).Cast<Order>()
                     .Union(context.Asks.AsNoTracking().Where(a => a.IsActive))
                     .ToList();
-                foreach (var order in dbOrders.OrderBy(o => o.DateCreated))
+                lock (_orders)
                 {
-                    _newOrdersBuffer.Post(order);
+                    _orders.AddRange(dbOrders);
                 }
             }
         }
@@ -164,26 +164,18 @@ namespace MatchingEngine.Services
 
         private async Task ReportData(TradingDbContext context, List<Order> modifiedOrders, List<Deal> newDeals)
         {
-            if (modifiedOrders.Count == 0 && newDeals.Count == 0)
-            {
-                return;
-            }
-
             try
             {
-                if (modifiedOrders.Count > 0)
+                // checks for correct finishing state
+                foreach (var order in modifiedOrders)
                 {
-                    // checks for correct finishing state
-                    foreach (var order in modifiedOrders)
+                    if (!order.IsActive && (order.AvailableAmount != 0 || order.Blocked != 0))
                     {
-                        if (!order.IsActive && (order.AvailableAmount != 0 || order.Blocked != 0))
-                        {
-                            _logger.LogWarning($"CompletedOrder has incorrect state: {order}");
-                        }
+                        _logger.LogWarning($"CompletedOrder has incorrect state: {order}");
                     }
-
-                    await SendOrdersToMarketData();
                 }
+
+                await SendOrdersToMarketData(); // send even if no orders matched, because we need to display new order
 
                 if (newDeals.Count > 0)
                 {
