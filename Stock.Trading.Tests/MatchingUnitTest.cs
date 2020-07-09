@@ -1,5 +1,6 @@
 using AutoMapper;
 using MatchingEngine.Data;
+using MatchingEngine.Helpers;
 using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
 using MatchingEngine.Services;
@@ -209,8 +210,11 @@ namespace Stock.Trading.Tests
 
             var ordersMatcher = new OrdersMatcher(liquidityImportService.Object);
             var matchingPool = new MatchingPool(serviceScopeFactory.Object, GetCurrenciesServiceMock(), ordersMatcher,
-                null, null, null, new Mock<ILogger<MatchingPool>>().Object);
-            var singletonsAccessor = new SingletonsAccessor(new List<IHostedService> { matchingPool });
+                null, null, new LiquidityDeletedOrdersKeeper(), null, new Mock<ILogger<MatchingPool>>().Object);
+            var liquidityExpireBlocksWatcher = new LiquidityExpireBlocksWatcher(new Mock<ILogger<LiquidityExpireBlocksWatcher>>().Object);
+            matchingPool.SetServices(null, liquidityExpireBlocksWatcher);
+            liquidityExpireBlocksWatcher.SetMatchingPool(matchingPool);
+            var singletonsAccessor = new SingletonsAccessor(new List<IHostedService> { matchingPool, liquidityExpireBlocksWatcher });
             var tradingService = new TradingService(context, GetCurrenciesServiceMock(), singletonsAccessor,
                 new Mock<ILogger<TradingService>>().Object);
             return (matchingPool, tradingService);
@@ -318,8 +322,7 @@ namespace Stock.Trading.Tests
         {
             var mapperConfig = new MapperConfiguration(cfg =>
             {
-                cfg.CreateMap<Order, Bid>();
-                cfg.CreateMap<Order, Ask>();
+                cfg.AddProfile<AutoMapperProfile>();
             });
             mapperConfig.AssertConfigurationIsValid();
             return mapperConfig.CreateMapper();
