@@ -57,7 +57,7 @@ namespace MatchingEngine
             services.AddScoped<IDbInitializer, DbInitializer>();
 
             services.AddSingleton<ICurrenciesService, CurrenciesService>();
-            services.AddHostedService<MatchingPool>();
+            services.AddSingleton<IHostedService, MatchingPool>();
             services.AddHostedService<DealEndingSender>();
             services.AddHostedService<MarketDataSender>();
             services.AddHostedService<LiquidityExpireWatcher>();
