@@ -50,7 +50,7 @@ namespace MatchingEngine.Services
                     }
                     else
                     {
-                        Thread.Sleep(100);
+                        await Task.Delay(100);
                     }
                 }
                 catch (Exception ex)
