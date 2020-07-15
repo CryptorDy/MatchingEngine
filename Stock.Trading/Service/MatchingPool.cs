@@ -82,6 +82,7 @@ namespace MatchingEngine.Services
                     _orders.AddRange(dbOrders);
                 }
             }
+            _ = SendOrdersToMarketData();
         }
 
         public Order GetPoolOrder(Guid id)
