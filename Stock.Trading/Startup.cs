@@ -60,8 +60,8 @@ namespace MatchingEngine
             services.AddSingleton<IHostedService, MatchingPool>();
             services.AddHostedService<DealEndingSender>();
             services.AddHostedService<MarketDataSender>();
-            services.AddHostedService<LiquidityExpireWatcher>();
-            services.AddHostedService<LiquidityExpireBlocksWatcher>();
+            services.AddSingleton<IHostedService, LiquidityExpireWatcher>();
+            services.AddSingleton<IHostedService, LiquidityExpireBlocksWatcher>();
             services.AddSingleton<ILiquidityDeletedOrdersKeeper, LiquidityDeletedOrdersKeeper>();
             services.AddHostedService<InnerBotExpireWatcher>();
             services.AddSingleton<MarketDataHolder>();
