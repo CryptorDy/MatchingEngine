@@ -58,12 +58,12 @@ namespace MatchingEngine
 
             services.AddSingleton<ICurrenciesService, CurrenciesService>();
             services.AddSingleton<IHostedService, MatchingPool>();
-            services.AddSingleton<IHostedService, DealEndingSender>();
-            services.AddSingleton<IHostedService, MarketDataSender>();
+            services.AddHostedService<DealEndingSender>();
+            services.AddHostedService<MarketDataSender>();
             services.AddSingleton<IHostedService, LiquidityExpireWatcher>();
             services.AddSingleton<IHostedService, LiquidityExpireBlocksWatcher>();
             services.AddSingleton<ILiquidityDeletedOrdersKeeper, LiquidityDeletedOrdersKeeper>();
-            services.AddSingleton<IHostedService, InnerBotExpireWatcher>();
+            services.AddHostedService<InnerBotExpireWatcher>();
             services.AddSingleton<MarketDataHolder>();
 
             services.AddSingleton<OrdersMatcher>();

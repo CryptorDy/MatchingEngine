@@ -77,11 +77,12 @@ namespace MatchingEngine.Services
                 var dbOrders = context.Bids.AsNoTracking().Where(a => a.IsActive).Cast<Order>()
                     .Union(context.Asks.AsNoTracking().Where(a => a.IsActive))
                     .ToList();
-                foreach (var order in dbOrders.OrderBy(o => o.DateCreated))
+                lock (_orders)
                 {
-                    _newOrdersBuffer.Post(order);
+                    _orders.AddRange(dbOrders);
                 }
             }
+            _ = SendOrdersToMarketData();
         }
 
         public Order GetPoolOrder(Guid id)
@@ -91,6 +92,11 @@ namespace MatchingEngine.Services
 
         private async Task UpdateDatabase(TradingDbContext context, List<Order> modifiedOrders, List<Deal> newDeals)
         {
+            if (modifiedOrders.Count == 0 && newDeals.Count == 0)
+            {
+                return;
+            }
+
             if (modifiedOrders.Count > 0)
             {
                 _logger.LogInformation($"Updating {modifiedOrders.Count} orders");
@@ -153,10 +159,11 @@ namespace MatchingEngine.Services
                 _logger.LogInformation($"Created {newDeals.Count} new deals");
                 context.Deals.AddRange(newDeals);
             }
-            context.SaveChanges();
+
+            await context.SaveChangesAsync();
         }
 
-        private async Task ReportData(TradingDbContext context, List<Order> modifiedOrders, List<Models.Deal> newDeals)
+        private async Task ReportData(TradingDbContext context, List<Order> modifiedOrders, List<Deal> newDeals)
         {
             try
             {
@@ -169,23 +176,23 @@ namespace MatchingEngine.Services
                     }
                 }
 
-                await SendOrdersToMarketData();
-                var dealGuids = newDeals.Select(md => md.DealId).ToList();
-                if (dealGuids.Count == 0)
-                {
-                    return;
-                }
+                await SendOrdersToMarketData(); // send even if no orders matched, because we need to display new order
 
-                var dbDeals = context.Deals.Include(d => d.Ask).Include(d => d.Bid)
-                    .Where(d => dealGuids.Contains(d.DealId))
-                    .ToDictionary(d => d.DealId, d => d);
-                foreach (var item in newDeals)
+                if (newDeals.Count > 0)
                 {
-                    var dbDeal = dbDeals[item.DealId];
-                    dbDeal.RemoveCircularDependency();
-                    await SendDealToMarketData(dbDeal);
+                    var dealGuids = newDeals.Select(md => md.DealId).ToList();
+                    var dbDeals = context.Deals.Include(d => d.Ask).Include(d => d.Bid)
+                        .Where(d => dealGuids.Contains(d.DealId))
+                        .ToDictionary(d => d.DealId, d => d);
+
+                    foreach (var item in newDeals)
+                    {
+                        var dbDeal = dbDeals[item.DealId];
+                        dbDeal.RemoveCircularDependency();
+                        await SendDealToMarketData(dbDeal);
+                    }
+                    _dealEndingSender.SendDeals();
                 }
-                _dealEndingSender.SendDeals();
             }
             catch (Exception ex)
             {
@@ -436,16 +443,19 @@ namespace MatchingEngine.Services
             }
         }
 
-        public void RemoveLiquidityOldOrders()
+        public async Task RemoveLiquidityOldOrders()
         {
+            int removedOrdersCount;
             lock (_orders)
             {
                 var minDate = DateTimeOffset.UtcNow.AddMinutes(-_settings.Value.ImportedOrdersExpirationMinutes);
-                int removedOrdersCount = _orders.RemoveAll(_ => !_.IsLocal && _.Blocked == 0 && _.DateCreated < minDate);
-                if (removedOrdersCount > 0)
-                {
-                    Console.WriteLine($"RemoveLiquidityOldOrders() expired {removedOrdersCount} orders");
-                }
+                removedOrdersCount = _orders.RemoveAll(_ => !_.IsLocal && _.Blocked == 0 && _.DateCreated < minDate);
+            }
+
+            if (removedOrdersCount > 0)
+            {
+                Console.WriteLine($"RemoveLiquidityOldOrders() expired {removedOrdersCount} orders");
+                await SendOrdersToMarketData();
             }
         }
 

@@ -29,7 +29,7 @@ namespace MatchingEngine.Services
             while (!cancellationToken.IsCancellationRequested)
             {
                 await SendDeals();
-                Thread.Sleep(10 * 60 * 1000); // every 10 minutes
+                await Task.Delay(10 * 60 * 1000); // every 10 minutes
             }
         }
 

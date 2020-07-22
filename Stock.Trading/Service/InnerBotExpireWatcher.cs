@@ -28,7 +28,10 @@ namespace MatchingEngine.Services
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                await _matchingPool.RemoveOldInnerBotOrders();
+                if (_matchingPool != null)
+                {
+                    await _matchingPool.RemoveOldInnerBotOrders();
+                }
                 await Task.Delay(1 * 1000);
             }
         }

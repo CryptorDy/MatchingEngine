@@ -15,19 +15,16 @@ namespace MatchingEngine.Services
     public class MarketDataSender : BackgroundService
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly GatewayHttpClient _gatewayHttpClient;
         private readonly MarketDataService _marketDataService;
         private readonly MarketDataHolder _marketDataHolder;
         private readonly ILogger _logger;
 
         public MarketDataSender(IServiceScopeFactory serviceScopeFactory,
-            GatewayHttpClient gatewayHttpClient,
             MarketDataService marketDataService,
             MarketDataHolder marketDataHolder,
             ILogger<MarketDataSender> logger)
         {
             _serviceScopeFactory = serviceScopeFactory;
-            _gatewayHttpClient = gatewayHttpClient;
             _marketDataService = marketDataService;
             _marketDataHolder = marketDataHolder;
             _logger = logger;
@@ -50,7 +47,7 @@ namespace MatchingEngine.Services
                     }
                     else
                     {
-                        Thread.Sleep(100);
+                        await Task.Delay(100);
                     }
                 }
                 catch (Exception ex)
