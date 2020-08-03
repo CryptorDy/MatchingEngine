@@ -252,7 +252,7 @@ namespace MatchingEngine.Services
                         Id = Guid.NewGuid(),
                         IsBid = !createdOrder.IsBid,
                         CurrencyPairCode = createdOrder.CurrencyPairCode,
-                        DateCreated = DateTimeOffset.UtcNow,
+                        DateCreated = matchedImportedOrder?.DateCreated ?? DateTimeOffset.UtcNow,
                         Exchange = createdOrder.Exchange,
                         Price = createdOrder.MatchingEngineDealPrice,
                         Amount = createdOrder.Fulfilled,
