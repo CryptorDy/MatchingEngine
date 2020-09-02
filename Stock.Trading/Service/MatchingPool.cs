@@ -202,6 +202,7 @@ namespace MatchingEngine.Services
 
         public async Task<SaveExternalOrderResult> UpdateExternalOrder(ExternalCreatedOrder createdOrder)
         {
+            _logger.LogInformation($"UpdateExternalOrder() start: {createdOrder}");
             createdOrder.Fulfilled = Math.Round(createdOrder.Fulfilled, _currenciesService.GetAmountDigits(createdOrder.CurrencyPairCode));
             var modifiedOrders = new List<Order>();
             var newDeals = new List<Deal>();
@@ -270,11 +271,13 @@ namespace MatchingEngine.Services
                 await UpdateDatabase(db, modifiedOrders, newDeals);
                 await ReportData(db, modifiedOrders, newDeals);
 
-                return new SaveExternalOrderResult
+                var result = new SaveExternalOrderResult
                 {
                     NewExternalOrderId = newDeals.Count > 0 ? newImportedOrder.ToString() : null,
                     CreatedDealId = newDeals.FirstOrDefault()?.DealId.ToString() ?? null,
                 };
+                _logger.LogInformation($"UpdateExternalOrder() finished. {result}\n newImportedOrder:{newImportedOrder}");
+                return result;
             }
         }
 

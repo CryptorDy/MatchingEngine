@@ -20,5 +20,9 @@ namespace MatchingEngine.Models.LiquidityImport
         public string CurrencyPairCode { get; set; }
 
         public decimal Fulfilled { get; set; }
+
+        public override string ToString() => $"{nameof(ExternalCreatedOrder)}({Exchange} {(IsBid ? "bid" : "ask")} " +
+            $"{Fulfilled}/{Amount} {CurrencyPairCode}, " +
+            $"{(string.IsNullOrEmpty(ExchangeOrderId) ? "" : $"ExchangeOrder:{ExchangeOrderId}")})";
     }
 }
