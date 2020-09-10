@@ -80,9 +80,9 @@ namespace MatchingEngine.Services
                 lock (_orders)
                 {
                     _orders.AddRange(dbOrders);
+                    SendOrdersToMarketData();
                 }
             }
-            _ = SendOrdersToMarketData();
         }
 
         public Order GetPoolOrder(Guid id)
@@ -176,7 +176,10 @@ namespace MatchingEngine.Services
                     }
                 }
 
-                await SendOrdersToMarketData(); // send even if no orders matched, because we need to display new order
+                lock (_orders)
+                {
+                    SendOrdersToMarketData(); // send even if no orders matched, because we need to display new order
+                }
 
                 if (newDeals.Count > 0)
                 {
@@ -281,7 +284,7 @@ namespace MatchingEngine.Services
             }
         }
 
-        public async Task SendOrdersToMarketData()
+        public void SendOrdersToMarketData()
         {
             try
             {
@@ -342,9 +345,9 @@ namespace MatchingEngine.Services
                 if (order != null)
                 {
                     _orders.Remove(order);
+                    SendOrdersToMarketData();
                 }
             }
-            await SendOrdersToMarketData();
         }
 
         #region Liquidity
@@ -383,7 +386,10 @@ namespace MatchingEngine.Services
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
                 await UpdateDatabase(context, ordersToUnblock, new List<Deal>());
             }
-            await SendOrdersToMarketData();
+            lock (_orders)
+            {
+                SendOrdersToMarketData();
+            }
         }
 
         public async Task SaveLiquidityImportUpdate(ImportUpdateDto dto)
@@ -414,7 +420,10 @@ namespace MatchingEngine.Services
             var ordersToAdd = dto.OrdersToAdd.Select(_ => _.GetOrder()).ToList();
             ordersToAdd.ForEach(_ => AppendOrder(_));
 
-            await SendOrdersToMarketData();
+            lock (_orders)
+            {
+                SendOrdersToMarketData();
+            }
         }
 
         public async Task RemoveOrders(IEnumerable<Guid> ids)
@@ -428,9 +437,12 @@ namespace MatchingEngine.Services
                     throw new ArgumentException("Local exchange changes are forbidden");
                 }
 
-                _orders.RemoveAll(_ => ids.Contains(_.Id));
+                int removedOrdersCount = _orders.RemoveAll(_ => ids.Contains(_.Id));
+                if (removedOrdersCount > 0)
+                {
+                    SendOrdersToMarketData();
+                }
             }
-            await SendOrdersToMarketData();
         }
 
         public void RemoveLiquidityOrderbook(Exchange exchange, string currencyPairCode)
@@ -442,23 +454,25 @@ namespace MatchingEngine.Services
 
             lock (_orders)
             {
-                _orders.RemoveAll(_ => _.Exchange == exchange && _.CurrencyPairCode == currencyPairCode);
+                int removedOrdersCount = _orders.RemoveAll(_ => _.Exchange == exchange && _.CurrencyPairCode == currencyPairCode);
+                if (removedOrdersCount > 0)
+                {
+                    SendOrdersToMarketData();
+                }
             }
         }
 
         public async Task RemoveLiquidityOldOrders()
         {
-            int removedOrdersCount;
             lock (_orders)
             {
                 var minDate = DateTimeOffset.UtcNow.AddMinutes(-_settings.Value.ImportedOrdersExpirationMinutes);
-                removedOrdersCount = _orders.RemoveAll(_ => !_.IsLocal && _.Blocked == 0 && _.DateCreated < minDate);
-            }
-
-            if (removedOrdersCount > 0)
-            {
-                Console.WriteLine($"RemoveLiquidityOldOrders() expired {removedOrdersCount} orders");
-                await SendOrdersToMarketData();
+                int removedOrdersCount = _orders.RemoveAll(_ => !_.IsLocal && _.Blocked == 0 && _.DateCreated < minDate);
+                if (removedOrdersCount > 0)
+                {
+                    Console.WriteLine($"RemoveLiquidityOldOrders() expired {removedOrdersCount} orders");
+                    SendOrdersToMarketData();
+                }
             }
         }
 
@@ -468,9 +482,12 @@ namespace MatchingEngine.Services
         {
             lock (_orders)
             {
-                _orders.RemoveAll(_ => _.ClientType == ClientType.DealsBot && _.DateCreated < DateTimeOffset.UtcNow.AddSeconds(-50));
+                int removedOrdersCount = _orders.RemoveAll(_ => _.ClientType == ClientType.DealsBot && _.DateCreated < DateTimeOffset.UtcNow.AddSeconds(-50));
+                if (removedOrdersCount > 0)
+                {
+                    SendOrdersToMarketData();
+                }
             }
-            await SendOrdersToMarketData();
         }
 
         private long _orderbookIntersectionLogsCounter = 0;
