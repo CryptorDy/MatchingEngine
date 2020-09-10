@@ -38,7 +38,14 @@ namespace MatchingEngine.Services
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                await CheckExpirationDates().ConfigureAwait(false);
+                try
+                {
+                    await CheckExpirationDates();
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "");
+                }
 
                 await Task.Delay(1 * 60 * 1000);
             }
@@ -74,19 +81,21 @@ namespace MatchingEngine.Services
                 return;
             }
 
+            List<CurrencyPairExpiration> requiredExpirations;
+
             lock (CurrencyPairExpirations)
             {
-                foreach (var expiration in CurrencyPairExpirations)
-                {
-                    if (expiration.ExpirationDate < DateTime.UtcNow)
-                    {
-                        _logger.LogWarning($"Liquidity expired:{expiration.Exchange}-{expiration.CurrencyPairCode}");
-                        _matchingPool.RemoveLiquidityOrderbook(expiration.Exchange, expiration.CurrencyPairCode);
-                        _liquidityImportService.RemoveOrderbook(expiration.Exchange, expiration.CurrencyPairCode);
-                        expiration.IsExecuted = true;
-                    }
-                }
-                CurrencyPairExpirations = CurrencyPairExpirations.Where(_ => !_.IsExecuted).ToList();
+                requiredExpirations = CurrencyPairExpirations.Where(_ => _.ExpirationDate < DateTime.UtcNow).ToList();
+            }
+            foreach (var expiration in requiredExpirations)
+            {
+                _logger.LogWarning($"Liquidity expired:{expiration.Exchange}-{expiration.CurrencyPairCode}");
+                _matchingPool.RemoveLiquidityOrderbook(expiration.Exchange, expiration.CurrencyPairCode);
+                _ = _liquidityImportService.RemoveOrderbook(expiration.Exchange, expiration.CurrencyPairCode);
+            }
+            lock (CurrencyPairExpirations)
+            {
+                CurrencyPairExpirations = CurrencyPairExpirations.Except(requiredExpirations).ToList();
             }
 
             await _matchingPool.RemoveLiquidityOldOrders();
