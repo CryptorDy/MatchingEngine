@@ -470,7 +470,7 @@ namespace MatchingEngine.Services
                 int removedOrdersCount = _orders.RemoveAll(_ => !_.IsLocal && _.Blocked == 0 && _.DateCreated < minDate);
                 if (removedOrdersCount > 0)
                 {
-                    Console.WriteLine($"RemoveLiquidityOldOrders() expired {removedOrdersCount} orders");
+                    _logger.LogInformation($"RemoveLiquidityOldOrders() expired {removedOrdersCount} orders");
                     SendOrdersToMarketData();
                 }
             }
@@ -527,7 +527,7 @@ namespace MatchingEngine.Services
 
                     if (!newOrder.IsLocal && _liquidityDeletedOrdersKeeper.Contains(newOrder.Id))
                     {
-                        Console.WriteLine($"Skipped order processing (already deleted): {newOrder}");
+                        _logger.LogInformation($"Skipped order processing (already deleted): {newOrder}");
                     }
                     else
                     {
