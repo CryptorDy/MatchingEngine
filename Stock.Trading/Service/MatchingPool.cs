@@ -100,7 +100,7 @@ namespace MatchingEngine.Services
             if (modifiedOrders.Count > 0)
             {
                 _logger.LogInformation($"Updating {modifiedOrders.Count} orders");
-                var dbOrdersDict = (await context.GetOrders(modifiedOrders)).ToDictionary(_ => _.Id, _ => _);
+                var dbOrdersDict = (await context.LoadDbOrders(modifiedOrders)).ToDictionary(_ => _.Id, _ => _);
 
                 foreach (var order in modifiedOrders)
                 {
