@@ -63,6 +63,8 @@ namespace MatchingEngine.Services
                     // liquidity will try to fill all amount of local order
                     newOrder.Blocked = newOrder.AvailableAmount;
                     poolOrder.Blocked = poolOrder.AvailableAmount;
+                    newOrder.LiquidityBlocksCount++;
+                    poolOrder.LiquidityBlocksCount++;
                 }
                 else
                 {
