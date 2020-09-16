@@ -74,9 +74,9 @@ namespace MatchingEngine.Services
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                var dbOrders = context.Bids.AsNoTracking().Where(a => a.IsActive).Cast<Order>()
-                    .Union(context.Asks.AsNoTracking().Where(a => a.IsActive))
-                    .ToList();
+                var dbBids = context.Bids.AsNoTracking().Where(a => a.IsActive).ToList();
+                var dbAsks = context.Asks.AsNoTracking().Where(a => a.IsActive).ToList();
+                var dbOrders = dbBids.Cast<Order>().Union(dbAsks).ToList();
                 lock (_orders)
                 {
                     _orders.AddRange(dbOrders);
