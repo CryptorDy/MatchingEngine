@@ -62,6 +62,11 @@ namespace MatchingEngine.Models
         /// </summary>
         public Exchange Exchange { get; set; } = Exchange.Local;
 
+        /// <summary>
+        /// How many times was this order sent to other exchange
+        /// </summary>
+        public int LiquidityBlocksCount { get; set; }
+
         public virtual List<Deal> DealList { get; set; }
 
         public decimal AvailableAmount => (Amount - Fulfilled - Blocked);
