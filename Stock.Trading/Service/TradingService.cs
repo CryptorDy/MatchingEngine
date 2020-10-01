@@ -164,7 +164,6 @@ namespace MatchingEngine.Services
 
                 order = await _context.GetOrder(orderId);
                 order.IsCanceled = true;
-                order.SetIsActive();
                 await _context.UpdateOrder(order, true, OrderEventType.Cancel);
                 await _matchingPool.RemoveOrder(orderId);
                 return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = order };

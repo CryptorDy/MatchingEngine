@@ -27,6 +27,9 @@ namespace MatchingEngine.Data
         {
             base.OnModelCreating(builder);
 
+            builder.Entity<Bid>().Property(e => e.IsActive2).UsePropertyAccessMode(PropertyAccessMode.Property);
+            builder.Entity<Ask>().Property(e => e.IsActive2).UsePropertyAccessMode(PropertyAccessMode.Property);
+
             builder.Entity<OrderEvent>().Property(_ => _.EventDate)
                 .ValueGeneratedOnAdd().HasDefaultValueSql("current_timestamp"); // set curent date
             builder.Entity<OrderEvent>().Property(_ => _.EventType)
@@ -37,7 +40,6 @@ namespace MatchingEngine.Data
 
         public async Task<Order> AddOrder(Order order, bool toSave, OrderEventType eventType)
         {
-            order.SetIsActive();
             Order trackedOrder;
             if (order.IsBid)
             {
@@ -61,7 +63,6 @@ namespace MatchingEngine.Data
 
         public async Task UpdateOrder(Order order, bool toSave, OrderEventType eventType, string dealIds = null)
         {
-            order.SetIsActive();
             if (order.IsBid)
             {
                 Bids.Update((Bid)order);

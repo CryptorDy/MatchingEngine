@@ -10,8 +10,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Stock.Trading.Migrations
 {
     [DbContext(typeof(TradingDbContext))]
-    [Migration("20201001153439_AddOrderIsActive")]
-    partial class AddOrderIsActive
+    [Migration("20201001193230_AddOrderIsActive2")]
+    partial class AddOrderIsActive2
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -41,7 +41,7 @@ namespace Stock.Trading.Migrations
 
                     b.Property<decimal>("Fulfilled");
 
-                    b.Property<bool?>("IsActiveOrder");
+                    b.Property<bool?>("IsActive2");
 
                     b.Property<bool>("IsBid");
 
@@ -79,7 +79,7 @@ namespace Stock.Trading.Migrations
 
                     b.Property<decimal>("Fulfilled");
 
-                    b.Property<bool?>("IsActiveOrder");
+                    b.Property<bool?>("IsActive2");
 
                     b.Property<bool>("IsBid");
 

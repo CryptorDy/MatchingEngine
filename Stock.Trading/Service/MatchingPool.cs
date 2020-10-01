@@ -150,7 +150,6 @@ namespace MatchingEngine.Services
 
                     dbOrder.Fulfilled = order.Fulfilled;
                     dbOrder.Blocked = order.Blocked;
-                    dbOrder.SetIsActive();
                     await context.UpdateOrder(dbOrder, false, eventType, orderDealIds);
                 }
             }
@@ -244,7 +243,6 @@ namespace MatchingEngine.Services
 
                     matchedLocalOrder.Blocked = 0;
                     matchedLocalOrder.Fulfilled += createdOrder.Fulfilled;
-                    matchedLocalOrder.SetIsActive();
                     modifiedOrders.Add(matchedLocalOrder);
                     _orders.RemoveAll(o => !o.IsActive);
                 }
@@ -266,7 +264,6 @@ namespace MatchingEngine.Services
                         ClientType = ClientType.LiquidityBot,
                         UserId = $"{createdOrder.Exchange}_matched"
                     };
-                    newImportedOrder.SetIsActive();
                     modifiedOrders.Add(newImportedOrder);
 
                     // Create deal

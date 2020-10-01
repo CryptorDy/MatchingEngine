@@ -2,17 +2,17 @@
 
 namespace Stock.Trading.Migrations
 {
-    public partial class AddOrderIsActive : Migration
+    public partial class AddOrderIsActive2 : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<bool>(
-                name: "IsActiveOrder",
+                name: "IsActive2",
                 table: "Bids",
                 nullable: true);
 
             migrationBuilder.AddColumn<bool>(
-                name: "IsActiveOrder",
+                name: "IsActive2",
                 table: "Asks",
                 nullable: true);
         }
@@ -20,11 +20,11 @@ namespace Stock.Trading.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "IsActiveOrder",
+                name: "IsActive2",
                 table: "Bids");
 
             migrationBuilder.DropColumn(
-                name: "IsActiveOrder",
+                name: "IsActive2",
                 table: "Asks");
         }
     }

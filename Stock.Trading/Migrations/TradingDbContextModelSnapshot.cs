@@ -39,7 +39,7 @@ namespace Stock.Trading.Migrations
 
                     b.Property<decimal>("Fulfilled");
 
-                    b.Property<bool?>("IsActiveOrder");
+                    b.Property<bool?>("IsActive2");
 
                     b.Property<bool>("IsBid");
 
@@ -77,7 +77,7 @@ namespace Stock.Trading.Migrations
 
                     b.Property<decimal>("Fulfilled");
 
-                    b.Property<bool?>("IsActiveOrder");
+                    b.Property<bool?>("IsActive2");
 
                     b.Property<bool>("IsBid");
 
