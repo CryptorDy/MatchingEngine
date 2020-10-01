@@ -125,18 +125,7 @@ namespace MatchingEngine.Services
         {
             request.Price = Math.Round(request.Price, _currenciesService.GetPriceDigits(request.CurrencyPairCode));
             request.Amount = Math.Round(request.Amount, _currenciesService.GetAmountDigits(request.CurrencyPairCode));
-            var order = new Order
-            {
-                Id = new Guid(request.ActionId),
-                IsBid = request.IsBid,
-                Price = request.Price,
-                Amount = request.Amount,
-                CurrencyPairCode = request.CurrencyPairCode,
-                DateCreated = request.DateCreated,
-                ClientType = request.ClientType,
-                UserId = request.UserId,
-                Exchange = request.Exchange,
-            };
+            var order = request.GetOrder();
 
             if (order.ClientType != ClientType.DealsBot)
             {
@@ -175,6 +164,7 @@ namespace MatchingEngine.Services
 
                 order = await _context.GetOrder(orderId);
                 order.IsCanceled = true;
+                order.SetIsActive();
                 await _context.UpdateOrder(order, true, OrderEventType.Cancel);
                 await _matchingPool.RemoveOrder(orderId);
                 return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = order };

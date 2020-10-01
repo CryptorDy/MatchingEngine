@@ -71,6 +71,7 @@ namespace MatchingEngine.Models
 
         public decimal AvailableAmount => (Amount - Fulfilled - Blocked);
 
+        public bool? IsActiveOrder { get; set; } // temp name, will replace IsActive
         public bool IsActive => !IsCanceled && Fulfilled < Amount;
 
         public bool IsLocal => Exchange == Exchange.Local;
@@ -80,5 +81,10 @@ namespace MatchingEngine.Models
             $"Available:{AvailableAmount} filled:{Fulfilled}+{Blocked}/{Amount} for price:{Price}, user:{UserId})";
 
         public Order Clone() => (Order)MemberwiseClone();
+
+        public void SetIsActive()
+        {
+            IsActiveOrder = !IsCanceled && Fulfilled < Amount;
+        }
     }
 }

@@ -37,6 +37,7 @@ namespace MatchingEngine.Data
 
         public async Task<Order> AddOrder(Order order, bool toSave, OrderEventType eventType)
         {
+            order.SetIsActive();
             Order trackedOrder;
             if (order.IsBid)
             {
@@ -60,6 +61,7 @@ namespace MatchingEngine.Data
 
         public async Task UpdateOrder(Order order, bool toSave, OrderEventType eventType, string dealIds = null)
         {
+            order.SetIsActive();
             if (order.IsBid)
             {
                 Bids.Update((Bid)order);

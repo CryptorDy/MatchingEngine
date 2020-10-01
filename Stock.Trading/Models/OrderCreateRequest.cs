@@ -27,7 +27,7 @@ namespace MatchingEngine.Models
 
         public Order GetOrder()
         {
-            return new Order
+            var order = new Order
             {
                 Id = Guid.Parse(ActionId),
                 IsBid = IsBid,
@@ -39,6 +39,8 @@ namespace MatchingEngine.Models
                 ClientType = ClientType,
                 Exchange = Exchange,
             };
+            order.SetIsActive();
+            return order;
         }
     }
 }

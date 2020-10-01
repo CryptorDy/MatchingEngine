@@ -74,8 +74,8 @@ namespace MatchingEngine.Services
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                var dbBids = context.Bids.AsNoTracking().Where(a => a.IsActive).ToList();
-                var dbAsks = context.Asks.AsNoTracking().Where(a => a.IsActive).ToList();
+                var dbBids = context.Bids.AsNoTracking().Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount).ToList(); // todo change back to IsActive
+                var dbAsks = context.Asks.AsNoTracking().Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount).ToList();
                 var dbOrders = dbBids.Cast<Order>().Union(dbAsks).ToList();
                 lock (_orders)
                 {
@@ -150,6 +150,7 @@ namespace MatchingEngine.Services
 
                     dbOrder.Fulfilled = order.Fulfilled;
                     dbOrder.Blocked = order.Blocked;
+                    dbOrder.SetIsActive();
                     await context.UpdateOrder(dbOrder, false, eventType, orderDealIds);
                 }
             }
@@ -243,6 +244,7 @@ namespace MatchingEngine.Services
 
                     matchedLocalOrder.Blocked = 0;
                     matchedLocalOrder.Fulfilled += createdOrder.Fulfilled;
+                    matchedLocalOrder.SetIsActive();
                     modifiedOrders.Add(matchedLocalOrder);
                     _orders.RemoveAll(o => !o.IsActive);
                 }
@@ -264,6 +266,7 @@ namespace MatchingEngine.Services
                         ClientType = ClientType.LiquidityBot,
                         UserId = $"{createdOrder.Exchange}_matched"
                     };
+                    newImportedOrder.SetIsActive();
                     modifiedOrders.Add(newImportedOrder);
 
                     // Create deal

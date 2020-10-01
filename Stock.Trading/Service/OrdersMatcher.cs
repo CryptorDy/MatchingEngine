@@ -71,7 +71,9 @@ namespace MatchingEngine.Services
                     decimal fulfilmentAmount = Math.Min(newOrder.AvailableAmount, poolOrder.AvailableAmount);
                     newDeals.Add(new Deal(bid, ask, poolOrder.Price, fulfilmentAmount));
                     newOrder.Fulfilled += fulfilmentAmount;
+                    newOrder.SetIsActive();
                     poolOrder.Fulfilled += fulfilmentAmount;
+                    poolOrder.SetIsActive();
                 }
 
                 modifiedOrders.Add(poolOrder);
