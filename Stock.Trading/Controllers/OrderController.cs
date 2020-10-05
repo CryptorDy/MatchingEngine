@@ -24,20 +24,12 @@ namespace MatchingEngine.Controllers
         /// <summary>
         /// Get orders list
         /// </summary>
-        [HttpGet("orders/{isBid}/{userId?}")]
-        public async Task<List<Order>> GetOrders(bool isBid, string userId = null)
+        [HttpGet]
+        public async Task<List<Order>> GetOrders(bool? isBid = null, string currencyPairId = null, int? count = Constants.DefaultRequestOrdersCount,
+            string userId = null, OrderStatusRequest status = OrderStatusRequest.Active,
+            DateTimeOffset? from = null, DateTimeOffset? to = null)
         {
-            var result = await _context.GetOrders(isBid, userId);
-            return result;
-        }
-
-        /// <summary>
-        /// Get orders list
-        /// </summary>
-        [HttpGet("active-orders")]
-        public async Task<List<Order>> GetActiveOrders()
-        {
-            var result = await _context.GetOrders(onlyActive: true);
+            var result = await _context.GetOrders(isBid, currencyPairId, count, userId, status, from, to);
             return result;
         }
 

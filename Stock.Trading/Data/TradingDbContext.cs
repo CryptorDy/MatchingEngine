@@ -81,38 +81,38 @@ namespace MatchingEngine.Data
 
         #region Order getters
 
-        public async Task<List<Order>> GetOrders(bool? isBid = null, string userId = null, bool onlyActive = false)
+        protected IQueryable<Order> GetOrdersQuery(IQueryable<Order> source, string currencyPairCode, int? count,
+            string userId, OrderStatusRequest status,
+            DateTimeOffset? from, DateTimeOffset? to)
+        {
+            var query = source.Include(_ => _.DealList).Where(_ => 
+                (string.IsNullOrWhiteSpace(currencyPairCode) || _.CurrencyPairCode == currencyPairCode)
+                && (string.IsNullOrWhiteSpace(userId) || _.UserId == userId)
+                && (status == OrderStatusRequest.All || (status == OrderStatusRequest.Active && _.IsActive) || (status == OrderStatusRequest.Canceled && _.IsCanceled))
+                && (!from.HasValue || _.DateCreated >= from) && (!to.HasValue || _.DateCreated <= to));
+            query = query.Take(count ?? int.MaxValue);
+            return query;
+        }
+
+        public async Task<List<Order>> GetOrders(bool? isBid = null, string currencyPairCode = null, int? count = Constants.DefaultRequestOrdersCount,
+            string userId = null, OrderStatusRequest status = OrderStatusRequest.Active,
+            DateTimeOffset? from = null, DateTimeOffset? to = null)
         {
             List<Order> dbOrders = new List<Order>();
             if (!isBid.HasValue || isBid.Value)
             {
-                var bids = await Bids.Include(o => o.DealList)
-                    .Where(_ => (string.IsNullOrEmpty(userId) || _.UserId == userId)
-                        && (!onlyActive || _.IsActive))
-                    .Cast<Order>().ToListAsync();
+                var bids = await GetOrdersQuery(Bids, currencyPairCode, count, userId, status, from, to).ToListAsync();
                 dbOrders.AddRange(bids);
             }
             if (!isBid.HasValue || !isBid.Value)
             {
-                var asks = await Asks.Include(o => o.DealList)
-                    .Where(_ => (string.IsNullOrEmpty(userId) || _.UserId == userId)
-                        && (!onlyActive || _.IsActive))
-                    .Cast<Order>().ToListAsync();
+                var asks = await GetOrdersQuery(Asks, currencyPairCode, count, userId, status, from, to).ToListAsync();
                 dbOrders.AddRange(asks);
-            }
-
-            foreach (var order in dbOrders)  // remove circular dependency to prevent json error
-            {
-                foreach (var deal in order.DealList)
-                {
-                    deal.Ask = null;
-                    deal.Bid = null;
-                }
             }
             return dbOrders;
         }
 
-        public async Task<List<Order>> GetOrders(List<Order> orders)
+        public async Task<List<Order>> LoadDbOrders(List<Order> orders)
         {
             var bidIds = orders.Where(_ => _.IsBid).Select(_ => _.Id).ToList();
             var askIds = orders.Where(_ => !_.IsBid).Select(_ => _.Id).ToList();
