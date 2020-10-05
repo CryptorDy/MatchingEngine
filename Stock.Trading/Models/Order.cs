@@ -71,6 +71,12 @@ namespace MatchingEngine.Models
 
         public decimal AvailableAmount => (Amount - Fulfilled - Blocked);
 
+        public bool? IsActive2 { // temp name, will replace IsActive
+            get {
+                return !IsCanceled && Fulfilled < Amount;
+            }
+            set { }
+        }
         public bool IsActive => !IsCanceled && Fulfilled < Amount;
 
         public bool IsLocal => Exchange == Exchange.Local;
