@@ -233,6 +233,14 @@ namespace MatchingEngine.Services
 
                 var (matchedLocalOrder, matchedImportedOrder) = createdOrder.IsBid ? (bid, ask) : (ask, bid);
 
+                bool isFullfillmentError = false;
+                if (matchedLocalOrder.IsCanceled || matchedLocalOrder.Fulfilled + createdOrder.Fulfilled > matchedLocalOrder.Amount
+                    || matchedLocalOrder.Exchange != Exchange.Local || matchedLocalOrder.CurrencyPairCode != createdOrder.CurrencyPairCode)
+                {
+                    _logger.LogError($"UpdateExternalOrder() error for {matchedLocalOrder}: " +
+                        $"order is wrong Or total fullfilled {matchedLocalOrder.Fulfilled + createdOrder.Fulfilled} is bigger than amount");
+                    isFullfillmentError = true;
+                }
                 // Update matched orders
                 lock (_orders)
                 {
@@ -242,13 +250,16 @@ namespace MatchingEngine.Services
                     }
 
                     matchedLocalOrder.Blocked = 0;
-                    matchedLocalOrder.Fulfilled += createdOrder.Fulfilled;
+                    if (!isFullfillmentError)
+                    {
+                        matchedLocalOrder.Fulfilled += createdOrder.Fulfilled;
+                    }
                     modifiedOrders.Add(matchedLocalOrder);
                     _orders.RemoveAll(o => !o.IsActive);
                 }
 
                 Order newImportedOrder = null;
-                if (createdOrder.Fulfilled > 0)
+                if (createdOrder.Fulfilled > 0 && !isFullfillmentError)
                 {
                     // Create a separate completed order for the matched part of the imported order
                     newImportedOrder = new Order()
