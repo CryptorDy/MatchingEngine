@@ -234,8 +234,10 @@ namespace MatchingEngine.Services
                 var (matchedLocalOrder, matchedImportedOrder) = createdOrder.IsBid ? (bid, ask) : (ask, bid);
 
                 bool isFullfillmentError = false;
-                if (matchedLocalOrder.IsCanceled || matchedLocalOrder.Fulfilled + createdOrder.Fulfilled > matchedLocalOrder.Amount
-                    || matchedLocalOrder.Exchange != Exchange.Local || matchedLocalOrder.CurrencyPairCode != createdOrder.CurrencyPairCode)
+                if (matchedLocalOrder.IsCanceled
+                    || matchedLocalOrder.Fulfilled + createdOrder.Fulfilled > matchedLocalOrder.Amount
+                    || matchedLocalOrder.Exchange != Exchange.Local
+                    || matchedLocalOrder.CurrencyPairCode != createdOrder.CurrencyPairCode)
                 {
                     _logger.LogError($"UpdateExternalOrder() error for {matchedLocalOrder}: " +
                         $"order is wrong Or total fullfilled {matchedLocalOrder.Fulfilled + createdOrder.Fulfilled} is bigger than amount");

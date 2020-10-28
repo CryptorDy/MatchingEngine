@@ -55,6 +55,6 @@ namespace MatchingEngine.Models
         /// <summary>
         /// Get gateway serviceId for crypto-adapter of this currency
         /// </summary>
-        public string CryptoAdapterId => (TokenOf ?? Code).ToLower();
+        public string CryptoAdapterId => IsFiat ? "advcash" : (TokenOf ?? Code).ToLower();
     }
 }
