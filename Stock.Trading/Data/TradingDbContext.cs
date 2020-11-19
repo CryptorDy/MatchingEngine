@@ -91,7 +91,9 @@ namespace MatchingEngine.Data
             var query = source.Include(_ => _.DealList).Where(_ => 
                 (string.IsNullOrWhiteSpace(currencyPairCode) || _.CurrencyPairCode == currencyPairCode)
                 && (string.IsNullOrWhiteSpace(userId) || _.UserId == userId)
-                && (status == OrderStatusRequest.All || (status == OrderStatusRequest.Active && _.IsActive) || (status == OrderStatusRequest.Canceled && _.IsCanceled))
+                && (status == OrderStatusRequest.All
+                    || (status == OrderStatusRequest.Active && !_.IsCanceled && _.Fulfilled < _.Amount)
+                    || (status == OrderStatusRequest.Canceled && _.IsCanceled))
                 && (!from.HasValue || _.DateCreated >= from) && (!to.HasValue || _.DateCreated <= to));
             query = query.Take(count ?? int.MaxValue);
             return query;
