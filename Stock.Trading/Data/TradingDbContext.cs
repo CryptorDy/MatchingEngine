@@ -95,7 +95,7 @@ namespace MatchingEngine.Data
                     || (status == OrderStatusRequest.Active && !_.IsCanceled && _.Fulfilled < _.Amount)
                     || (status == OrderStatusRequest.Canceled && _.IsCanceled))
                 && (!from.HasValue || _.DateCreated >= from) && (!to.HasValue || _.DateCreated <= to));
-            query = query.Take(count ?? int.MaxValue);
+            query = query.OrderByDescending(_ => _.DateCreated).Take(count ?? int.MaxValue);
             return query;
         }
 
