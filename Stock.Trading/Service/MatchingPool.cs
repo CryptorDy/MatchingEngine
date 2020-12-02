@@ -323,7 +323,7 @@ namespace MatchingEngine.Services
 
         private async Task Process(Order newOrder)
         {
-            _logger.LogInformation("Detected new order, Matching process started");
+            _logger.LogDebug("Detected new order, Matching process started");
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
@@ -336,7 +336,7 @@ namespace MatchingEngine.Services
                     (modifiedOrders, newDeals) = _ordersMatcher.Match(_orders, newOrder);
                     _orders.Add(newOrder);
                     _orders.RemoveAll(o => !o.IsActive);
-                    _logger.LogInformation($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
+                    _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
                         $"Orders in pool: {_orders.Count};");
                     CheckOrderbookIntersection(newOrder);
                 }
