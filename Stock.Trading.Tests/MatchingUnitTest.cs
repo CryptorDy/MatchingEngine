@@ -139,7 +139,7 @@ namespace Stock.Trading.Tests
             async Task<int> TestProcessingWithDeletedIds(List<Order> poolOrders, List<Guid> deletedIds)
             {
                 int liquidityCallbackCounter = 0;
-                using (var context = new TradingDbContext(GetDbOptions(), GetMapper()))
+                using (var context = GetDbContext())
                 {
                     var (matchingPool, tradingService) = GenerateServices(context, (resultBid, resultAsk) => { liquidityCallbackCounter++; });
 
@@ -223,7 +223,7 @@ namespace Stock.Trading.Tests
         private async Task SimulateExternalTrade(Order bid, Order ask, decimal fulfilled)
         {
             int liquidityCallbackCounter = 0;
-            using (var context = new TradingDbContext(GetDbOptions(), GetMapper()))
+            using (var context = GetDbContext())
             {
                 var (matchingPool, tradingService) = GenerateServices(context, (resultBid, resultAsk) => { liquidityCallbackCounter++; });
 
@@ -314,6 +314,9 @@ namespace Stock.Trading.Tests
             });
             return currenciesService;
         }
+
+        private TradingDbContext GetDbContext() =>
+            new TradingDbContext(GetDbOptions(), GetMapper(), new Mock<ILogger<TradingDbContext>>().Object);
 
         private DbContextOptions<TradingDbContext> GetDbOptions() => new DbContextOptionsBuilder<TradingDbContext>()
                 .UseInMemoryDatabase(databaseName: $"MemoryDb-{new Random().Next(9999)}").Options;

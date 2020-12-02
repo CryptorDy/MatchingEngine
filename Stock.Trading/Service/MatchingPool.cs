@@ -156,7 +156,7 @@ namespace MatchingEngine.Services
 
             if (newDeals.Count > 0)
             {
-                _logger.LogInformation($"Created {newDeals.Count} new deals");
+                _logger.LogInformation($"Saved {newDeals.Count} new deals: \n{string.Join("\n", newDeals)}");
                 context.Deals.AddRange(newDeals);
             }
 

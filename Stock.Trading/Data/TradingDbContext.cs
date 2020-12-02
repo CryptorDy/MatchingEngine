@@ -2,6 +2,7 @@ using AutoMapper;
 using MatchingEngine.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,10 +13,14 @@ namespace MatchingEngine.Data
     public class TradingDbContext : DbContext
     {
         private readonly IMapper _mapper;
+        private readonly ILogger _logger;
 
-        public TradingDbContext(DbContextOptions opts, IMapper mapper) : base(opts)
+        public TradingDbContext(DbContextOptions opts,
+            IMapper mapper,
+            ILogger<TradingDbContext> logger) : base(opts)
         {
             _mapper = mapper;
+            _logger = logger;
         }
 
         public virtual DbSet<Bid> Bids { get; set; }
@@ -53,7 +58,7 @@ namespace MatchingEngine.Data
             }
 
             OrderEvents.Add(OrderEvent.Create(_mapper, trackedOrder, eventType));
-
+            _logger.LogInformation($"AddOrder() toSave:{toSave}, eventType:{eventType}, order:{order}");
             if (toSave)
             {
                 await SaveChangesAsync();
