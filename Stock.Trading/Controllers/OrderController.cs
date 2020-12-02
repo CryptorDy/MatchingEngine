@@ -2,8 +2,11 @@ using MatchingEngine.Data;
 using MatchingEngine.Models;
 using MatchingEngine.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MatchingEngine.Controllers
@@ -13,12 +16,18 @@ namespace MatchingEngine.Controllers
     {
         private readonly TradingDbContext _context;
         private readonly TradingService _service;
+        private readonly MarketDataService _marketDataService;
+        private readonly ILogger _logger;
 
         public OrderController(TradingDbContext context,
-            TradingService service)
+            TradingService service,
+            MarketDataService marketDataService,
+            ILogger<OrderController> logger)
         {
             _context = context;
             _service = service;
+            _marketDataService = marketDataService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -76,6 +85,30 @@ namespace MatchingEngine.Controllers
         {
             var response = await _service.DeleteOrder(orderId);
             return response;
+        }
+
+        [HttpPost("send-all-to-marketdata")]
+        public async Task<IActionResult> SendAllOrdersToMarketData()
+        {
+            int page = 0, pageSize = 1000;
+            while (true)
+            {
+                var orders = (await _context.Bids.OrderBy(_ => _.DateCreated).Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
+                if (orders.Count == 0)
+                    break;
+                _logger.LogInformation($"SendAllOrdersToMarketData() bids, page {page}");
+                await _marketDataService.SendOldOrders(orders);
+            }
+            page = 0;
+            while (true)
+            {
+                var orders = (await _context.Asks.OrderBy(_ => _.DateCreated).Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
+                if (orders.Count == 0)
+                    break;
+                _logger.LogInformation($"SendAllOrdersToMarketData() asks, page {page}");
+                await _marketDataService.SendOldOrders(orders);
+            }
+            return Ok();
         }
     }
 }

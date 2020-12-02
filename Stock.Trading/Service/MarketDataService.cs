@@ -33,6 +33,11 @@ namespace MatchingEngine.Services
             }
         }
 
+        public async Task SendOldOrders(List<Order> orders)
+        {
+            await _gatewayHttpClient.PostJsonAsync($"marketdata/orders/old-orders", orders);
+        }
+
         public async Task SendActiveOrders(List<Order> orders)
         {
             var marketDataResponse = await _gatewayHttpClient.PostJsonAsync($"marketdata/orders", orders);
