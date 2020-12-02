@@ -44,7 +44,9 @@ namespace MatchingEngine.Services
 
                     var unprocessedDeals = await context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
                         .Where(_ => !_.IsSentToDealEnding && !_.FromInnerTradingBot)
-                        .Take(_batchSize).ToListAsync();
+                        .OrderByDescending(_ => _.DateCreated)
+                        .Take(_batchSize)
+                        .ToListAsync();
 
                     foreach (var deal in unprocessedDeals)
                     {
