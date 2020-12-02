@@ -12,5 +12,4 @@ indent_size = 4
 indent_style = space
 
 # Code-block preferences
-csharp_prefer_braces = true:error
 csharp_prefer_simple_using_statement = true:suggestion
