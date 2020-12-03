@@ -312,7 +312,7 @@ namespace MatchingEngine.Services
         {
             try
             {
-                await _marketDataService.SaveNewDeal(deal.GetDealResponse());
+                await _marketDataService.SendNewDeal(deal.GetDealResponse());
             }
             catch (Exception ex)
             {

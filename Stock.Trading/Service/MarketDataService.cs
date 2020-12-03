@@ -43,7 +43,12 @@ namespace MatchingEngine.Services
             var marketDataResponse = await _gatewayHttpClient.PostJsonAsync($"marketdata/orders", orders);
         }
 
-        public async Task SaveNewDeal(DealResponse deal)
+        public async Task SendDeals(List<DealResponse> deals)
+        {
+            await _gatewayHttpClient.PostJsonAsync($"marketdata/deals/old", deals);
+        }
+
+        public async Task SendNewDeal(DealResponse deal)
         {
             var marketDataResponse = await _gatewayHttpClient.PostJsonAsync($"marketdata/orders/savedeal", deal);
         }
