@@ -40,17 +40,17 @@ namespace MatchingEngine.Services
 
         public async Task SendActiveOrders(List<Order> orders)
         {
-            var marketDataResponse = await _gatewayHttpClient.PostJsonAsync($"marketdata/orders", orders);
+            await _gatewayHttpClient.PostJsonAsync($"marketdata/orders", orders);
         }
 
         public async Task SendDeals(List<DealResponse> deals)
         {
-            await _gatewayHttpClient.PostJsonAsync($"marketdata/deals/old", deals);
+            await _gatewayHttpClient.PostJsonAsync($"marketdata/deals", deals);
         }
 
         public async Task SendNewDeal(DealResponse deal)
         {
-            var marketDataResponse = await _gatewayHttpClient.PostJsonAsync($"marketdata/orders/savedeal", deal);
+            await _gatewayHttpClient.PostJsonAsync($"marketdata/deal", deal);
         }
     }
 }
