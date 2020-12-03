@@ -75,13 +75,14 @@ namespace Stock.Trading.Controllers
             int page = 0;
             while (true)
             {
-                var deals = await _context.Deals.Where(_ => _.DateCreated >= from).OrderBy(_ => _.DateCreated)
+                var deals = await _context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
+                    .Where(_ => _.DateCreated >= from).OrderBy(_ => _.DateCreated)
                     .Skip(page++ * pageSize).Take(pageSize)
                     .ToListAsync();
                 if (deals.Count == 0)
                     break;
                 _logger.LogInformation($"ResendDealsToMarketData() page:{page}, count:{deals.Count}, " +
-                    $"firstDate:{deals.First().DateCreated}");
+                    $"firstDate:{deals.First().DateCreated:o}");
                 await _marketDataService.SendDeals(deals.Select(_ => _.GetDealResponse()).ToList());
             }
             return Ok();
