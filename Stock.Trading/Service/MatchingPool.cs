@@ -191,7 +191,6 @@ namespace MatchingEngine.Services
                     foreach (var item in newDeals)
                     {
                         var dbDeal = dbDeals[item.DealId];
-                        dbDeal.RemoveCircularDependency();
                         await SendDealToMarketData(dbDeal);
                     }
                     _dealEndingSender.SendDeals();

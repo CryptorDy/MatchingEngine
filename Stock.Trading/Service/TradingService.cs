@@ -70,10 +70,6 @@ namespace MatchingEngine.Services
                     .Take(lastNum ?? int.MaxValue)
                     .ToListAsync();
 
-                foreach (var deal in deals)
-                {
-                    deal.RemoveCircularDependency();
-                }
                 return deals;
             }
             catch (Exception ex)
@@ -91,10 +87,6 @@ namespace MatchingEngine.Services
                     .Include(d => d.Ask)
                     .Include(d => d.Bid)
                     .FirstOrDefault(o => o.DealId == Guid.Parse(id));
-                if (deal != null)
-                {
-                    deal.RemoveCircularDependency();
-                }
                 return deal;
             }
             catch (Exception ex)

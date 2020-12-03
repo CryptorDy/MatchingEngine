@@ -110,21 +110,6 @@ namespace MatchingEngine.Models
             };
         }
 
-        /// <summary>
-        /// Fix for serialization
-        /// </summary>
-        public void RemoveCircularDependency()
-        {
-            if (Bid != null)
-            {
-                Bid.DealList = null;
-            }
-            if (Ask != null)
-            {
-                Ask.DealList = null;
-            }
-        }
-
         public override string ToString() => $"Deal({DealId}, {DateCreated}, Volume:{Volume}, {(IsSentToDealEnding ? "" : "Not processed")}, " +
             $"\n{Bid?.ToString() ?? BidId.ToString()} ,\n{Ask?.ToString() ?? AskId.ToString()} )";
     }
