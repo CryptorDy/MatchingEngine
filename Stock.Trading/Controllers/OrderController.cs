@@ -91,14 +91,14 @@ namespace MatchingEngine.Controllers
         public async Task<IActionResult> SendAllOrdersToMarketData()
         {
             int page = 0, pageSize = 1000;
-            while (true)
-            {
-                var orders = (await _context.Bids.OrderBy(_ => _.DateCreated).Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
-                if (orders.Count == 0)
-                    break;
-                _logger.LogInformation($"SendAllOrdersToMarketData() bids, page {page}");
-                await _marketDataService.SendOldOrders(orders);
-            }
+            //while (true)
+            //{
+            //    var orders = (await _context.Bids.OrderBy(_ => _.DateCreated).Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
+            //    if (orders.Count == 0)
+            //        break;
+            //    _logger.LogInformation($"SendAllOrdersToMarketData() bids, page {page}");
+            //    await _marketDataService.SendOldOrders(orders);
+            //}
             page = 0;
             while (true)
             {
