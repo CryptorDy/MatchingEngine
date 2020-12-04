@@ -67,7 +67,7 @@ namespace Stock.Trading.Controllers
             return result;
         }
 
-        [HttpPost("resend-to-marketdata")]
+        [HttpPost("marketdata/resend")]
         public async Task<IActionResult> ResendDealsToMarketData(DateTimeOffset from, int pageSize = 1000)
         {
             await _marketDataService.SendDealsFromDate(from, pageSize);
