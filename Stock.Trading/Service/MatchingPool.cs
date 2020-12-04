@@ -434,7 +434,8 @@ namespace MatchingEngine.Services
 
             lock (_orders)
             {
-                var bidPrice = _orders.FirstOrDefault(_ => _.IsBid && _.CurrencyPairCode == Constants.DebugCurrencyPair)?.Price;
+                var bidPrice = _orders.Where(_ => _.IsBid && _.CurrencyPairCode == Constants.DebugCurrencyPair)
+                    .OrderByDescending(_ => _.Price).FirstOrDefault()?.Price;
                 _logger.LogInformation($"SaveLiquidityImportUpdate() top {Constants.DebugCurrencyPair} bid: {bidPrice}");
 
                 SendOrdersToMarketData();
