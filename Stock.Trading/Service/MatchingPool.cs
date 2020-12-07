@@ -158,6 +158,15 @@ namespace MatchingEngine.Services
             {
                 _logger.LogInformation($"Saved {newDeals.Count} new deals: \n{string.Join("\n", newDeals)}");
                 context.Deals.AddRange(newDeals);
+                context.DealCopies.AddRange(newDeals.Select(_ => new DealCopy {
+                    DealId = _.DealId,
+                    DateCreated = _.DateCreated,
+                    Volume = _.Volume,
+                    Price = _.Price,
+                    BidId = _.BidId,
+                    AskId = _.AskId,
+                    FromInnerTradingBot = _.FromInnerTradingBot,
+                }));
             }
 
             await context.SaveChangesAsync();
