@@ -170,6 +170,11 @@ namespace MatchingEngine.Services
             }
 
             await context.SaveChangesAsync();
+
+            if (newDeals.Count > 0)
+            {
+                await context.LogDealExists(newDeals.First().DealId, "UpdateDatabase after save");
+            }
         }
 
         private async Task ReportData(TradingDbContext context, List<Order> modifiedOrders, List<Deal> newDeals)
@@ -199,8 +204,10 @@ namespace MatchingEngine.Services
 
                     foreach (var item in newDeals)
                     {
+                        await context.LogDealExists(item.DealId, "ReportData before marketdata");
                         var dbDeal = dbDeals[item.DealId];
                         await SendDealToMarketData(dbDeal);
+                        await context.LogDealExists(item.DealId, "ReportData after marketdata");
                     }
                     _dealEndingSender.SendDeals();
                 }

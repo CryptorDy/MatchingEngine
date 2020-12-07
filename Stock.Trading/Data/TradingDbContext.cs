@@ -43,6 +43,13 @@ namespace MatchingEngine.Data
                 .HasConversion(new EnumToStringConverter<OrderEventType>()); // save enum as string
         }
 
+        public async Task LogDealExists(Guid dealId, string place)
+        {
+            bool exists = await Deals.AnyAsync(_ => _.DealId == dealId);
+            _logger.Log(exists ? LogLevel.Information : LogLevel.Error,
+                $"LogDealExists() exists:{exists} '{place}' dealId:{dealId}");
+        }
+
         #region Order setters
 
         public async Task<Order> AddOrder(Order order, bool toSave, OrderEventType eventType)
