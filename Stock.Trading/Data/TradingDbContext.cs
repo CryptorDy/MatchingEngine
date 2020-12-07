@@ -25,8 +25,10 @@ namespace MatchingEngine.Data
 
         public virtual DbSet<Bid> Bids { get; set; }
         public virtual DbSet<Ask> Asks { get; set; }
-        public virtual DbSet<Deal> Deals { get; set; }
         public virtual DbSet<OrderEvent> OrderEvents { get; set; }
+
+        public virtual DbSet<Deal> Deals { get; set; }
+        public virtual DbSet<DealCopy> DealCopies { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
