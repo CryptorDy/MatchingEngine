@@ -304,7 +304,7 @@ namespace MatchingEngine.Services
 
                 var result = new SaveExternalOrderResult
                 {
-                    NewExternalOrderId = newDeals.Count > 0 ? newImportedOrder.ToString() : null,
+                    NewExternalOrderId = newDeals.Count > 0 ? newImportedOrder.Id.ToString() : null,
                     CreatedDealId = newDeals.FirstOrDefault()?.DealId.ToString() ?? null,
                 };
                 _logger.LogInformation($"UpdateExternalOrder() finished. {result}\n newImportedOrder:{newImportedOrder}");
