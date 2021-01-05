@@ -146,19 +146,9 @@ namespace MatchingEngine.Data
         {
             Order order = null;
             if (isBid == null || isBid == true)
-            {
                 order = await Bids.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == orderId);
-            }
             if (isBid == false || (isBid == null && order == null))
-            {
                 order = await Asks.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == orderId);
-            }
-
-            foreach (var deal in order.DealList)
-            {
-                deal.Ask = null;
-                deal.Bid = null;
-            }
             return order;
         }
 
