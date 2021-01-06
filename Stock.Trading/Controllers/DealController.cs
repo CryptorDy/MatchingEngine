@@ -90,7 +90,7 @@ namespace Stock.Trading.Controllers
 
 
         [HttpPost("resave-from-marketdata")]
-        public async Task<IActionResult> ResaveOldDeals(List<DealResponse> dealResponses)
+        public async Task<IActionResult> ResaveOldDeals([FromBody] List<DealResponse> dealResponses)
         {
             var dealIds = dealResponses.Select(_ => _.DealId).ToList();
             var dbDealIds = await _context.Deals.Where(_ => dealIds.Contains(_.DealId)).Select(_ => _.DealId).ToListAsync();
@@ -116,7 +116,7 @@ namespace Stock.Trading.Controllers
                     _context.DealCopies.Add(new DealCopy(deal));
                 addedCounter++;
             }
-            _logger.LogInformation($"ResaveOldDeals() added {addedCounter}, dbDealIds:{dbDealIds.Count}");
+            _logger.LogInformation($"ResaveOldDeals() added {addedCounter}, dealResponses:{dealResponses.Count}, dbDealIds:{dbDealIds.Count}");
             await _context.SaveChangesAsync();
             return Ok();
         }
