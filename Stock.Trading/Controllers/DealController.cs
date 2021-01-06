@@ -109,7 +109,7 @@ namespace Stock.Trading.Controllers
                     BidId = dealResponse.BidId,
                     AskId = dealResponse.AskId,
                     FromInnerTradingBot = dealResponse.FromInnerTradingBot,
-                    IsSentToDealEnding = false,
+                    IsSentToDealEnding = dealResponse.FromInnerTradingBot, // resend if not from bot
                 };
                 _context.Deals.Add(deal);
                 if (!dbDealCopiesIds.Contains(dealResponse.DealId))

@@ -14,7 +14,7 @@ namespace MatchingEngine.Services
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger _logger;
 
-        private const int _batchSize = 50;
+        private const int _batchSize = 1000;
 
         public DealEndingSender(
             IServiceScopeFactory scopeFactory,
@@ -29,7 +29,7 @@ namespace MatchingEngine.Services
             while (!cancellationToken.IsCancellationRequested)
             {
                 await SendDeals();
-                await Task.Delay(10 * 60 * 1000); // every 10 minutes
+                await Task.Delay(TimeSpan.FromMinutes(5));
             }
         }
 
