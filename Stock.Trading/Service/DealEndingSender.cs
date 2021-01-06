@@ -14,7 +14,7 @@ namespace MatchingEngine.Services
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger _logger;
 
-        private const int _batchSize = 1000;
+        private const int _batchSize = 100;
 
         public DealEndingSender(
             IServiceScopeFactory scopeFactory,
@@ -47,7 +47,11 @@ namespace MatchingEngine.Services
                         .OrderByDescending(_ => _.DateCreated)
                         .Take(_batchSize)
                         .ToListAsync();
+                    if (unprocessedDeals.Count == 0)
+                        return;
+                    _logger.LogInformation($"SendDeals() unprocessed:{unprocessedDeals.Count}");
 
+                    int errorsCount = 0;
                     foreach (var deal in unprocessedDeals)
                     {
                         try
@@ -61,8 +65,10 @@ namespace MatchingEngine.Services
                         catch (Exception ex)
                         {
                             _logger.LogError(ex, $"Error sending to DealEnding: {deal}");
+                            errorsCount++;
                         }
                     }
+                    _logger.LogInformation($"SendDeals() end. processed:{unprocessedDeals.Count}, with errors: {errorsCount}");
                 }
             }
             catch (Exception ex)
