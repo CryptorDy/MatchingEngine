@@ -70,13 +70,13 @@ namespace Stock.Trading.Controllers
         }
 
         [HttpPost("resend-to-marketdata")]
-        public async Task<IActionResult> ResendDealsToMarketData(DateTimeOffset from, int pageSize = 1000)
+        public async Task<IActionResult> ResendDealsToMarketData(DateTimeOffset? from = null, int pageSize = 1000)
         {
             int page = 0;
             while (true)
             {
                 var deals = await _context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
-                    .Where(_ => _.DateCreated >= from).OrderBy(_ => _.DateCreated)
+                    .Where(_ => from == null || _.DateCreated >= from).OrderBy(_ => _.DateCreated)
                     .Skip(page++ * pageSize).Take(pageSize)
                     .ToListAsync();
                 if (deals.Count == 0)
@@ -85,6 +85,39 @@ namespace Stock.Trading.Controllers
                     $"firstDate:{deals.First().DateCreated:o}");
                 await _marketDataService.SendDeals(deals.Select(_ => _.GetDealResponse()).ToList());
             }
+            return Ok();
+        }
+
+
+        [HttpPost("resave-from-marketdata")]
+        public async Task<IActionResult> ResaveOldDeals(List<DealResponse> dealResponses)
+        {
+            var dealIds = dealResponses.Select(_ => _.DealId).ToList();
+            var dbDealIds = await _context.Deals.Where(_ => dealIds.Contains(_.DealId)).Select(_ => _.DealId).ToListAsync();
+            var dbDealCopiesIds = await _context.DealCopies.Where(_ => dealIds.Contains(_.DealId)).Select(_ => _.DealId).ToListAsync();
+            int addedCounter = 0;
+            foreach (var dealResponse in dealResponses)
+            {
+                if (dbDealIds.Contains(dealResponse.DealId))
+                    continue;
+                var deal = new Deal
+                {
+                    DealId = dealResponse.DealId,
+                    DateCreated = new DateTimeOffset(dealResponse.DealDateUtc, TimeSpan.Zero),
+                    Volume = dealResponse.Volume,
+                    Price = dealResponse.Price,
+                    BidId = dealResponse.BidId,
+                    AskId = dealResponse.AskId,
+                    FromInnerTradingBot = dealResponse.FromInnerTradingBot,
+                    IsSentToDealEnding = false,
+                };
+                _context.Deals.Add(deal);
+                if (!dbDealCopiesIds.Contains(dealResponse.DealId))
+                    _context.DealCopies.Add(new DealCopy(deal));
+                addedCounter++;
+            }
+            _logger.LogInformation($"ResaveOldDeals() added {addedCounter}");
+            await _context.SaveChangesAsync();
             return Ok();
         }
     }

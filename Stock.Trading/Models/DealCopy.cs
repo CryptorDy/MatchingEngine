@@ -6,6 +6,19 @@ namespace MatchingEngine.Models
 {
     public class DealCopy
     {
+        public DealCopy() { }
+
+        public DealCopy(Deal deal)
+        {
+            DealId = deal.DealId;
+            DateCreated = deal.DateCreated;
+            Volume = deal.Volume;
+            Price = deal.Price;
+            BidId = deal.BidId;
+            AskId = deal.AskId;
+            FromInnerTradingBot = deal.FromInnerTradingBot;
+        }
+
         /// <summary>
         /// Deal guid id
         /// </summary>
