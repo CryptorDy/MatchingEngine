@@ -48,7 +48,8 @@ namespace MatchingEngine
             services.Configure<AppSettings>(settings => settings.ConnectionString = Configuration.GetSection("ConnectionStrings:DefaultConnection").Value);
 
             services.AddDbContext<TradingDbContext>(options =>
-                options.UseNpgsql(Configuration["ConnectionStrings:DefaultConnection"]));
+                options.UseNpgsql(Configuration["ConnectionStrings:DefaultConnection"]),
+                ServiceLifetime.Transient);
 
             services.AddTransient<MarketDataService>();
             services.AddTransient<IDealEndingService, DealEndingService>();

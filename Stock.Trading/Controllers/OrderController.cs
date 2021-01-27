@@ -1,4 +1,5 @@
 using MatchingEngine.Data;
+using MatchingEngine.HttpClients;
 using MatchingEngine.Models;
 using MatchingEngine.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -15,16 +16,19 @@ namespace MatchingEngine.Controllers
     public class OrderController : Controller
     {
         private readonly TradingDbContext _context;
+        private readonly GatewayHttpClient _gatewayHttpClient;
         private readonly TradingService _service;
         private readonly MarketDataService _marketDataService;
         private readonly ILogger _logger;
 
         public OrderController(TradingDbContext context,
+            GatewayHttpClient gatewayHttpClient,
             TradingService service,
             MarketDataService marketDataService,
             ILogger<OrderController> logger)
         {
             _context = context;
+            _gatewayHttpClient = gatewayHttpClient;
             _service = service;
             _marketDataService = marketDataService;
             _logger = logger;
@@ -93,20 +97,59 @@ namespace MatchingEngine.Controllers
             int page = 0, pageSize = 1000;
             while (true)
             {
-                var orders = (await _context.Bids.OrderBy(_ => _.DateCreated).Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
+                var orders = (await _context.Bids.OrderBy(_ => _.DateCreated)
+                    .Where(_ => _.ClientType != ClientType.DealsBot)
+                    .Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
                 if (orders.Count == 0)
                     break;
-                _logger.LogInformation($"SendAllOrdersToMarketData() bids, page {page}");
+                _logger.LogInformation($"SendAllOrdersToMarketData() bids, page {page}, count:{orders.Count}, " +
+                    $"firstDate:{orders.First().DateCreated:o}");
                 await _marketDataService.SendOldOrders(orders);
             }
             page = 0;
             while (true)
             {
-                var orders = (await _context.Asks.OrderBy(_ => _.DateCreated).Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
+                var orders = (await _context.Asks.OrderBy(_ => _.DateCreated)
+                    .Where(_ => _.ClientType != ClientType.DealsBot)
+                    .Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
                 if (orders.Count == 0)
                     break;
-                _logger.LogInformation($"SendAllOrdersToMarketData() asks, page {page}");
+                _logger.LogInformation($"SendAllOrdersToMarketData() asks, page {page}, count:{orders.Count}, " +
+                    $"firstDate:{orders.First().DateCreated:o}");
                 await _marketDataService.SendOldOrders(orders);
+            }
+            return Ok();
+        }
+
+        [HttpPost("recancel-in-depository")]
+        public async Task<IActionResult> RecancelAllOrdersInDepository(DateTimeOffset? from = null, DateTimeOffset? to = null)
+        {
+            int page = 0, pageSize = 1000;
+            string url = "depository/deal/check-canceled-orders";
+            while (true)
+            {
+                var orders = (await _context.Bids.OrderBy(_ => _.DateCreated)
+                    .Where(_ => _.IsCanceled && _.ClientType != ClientType.DealsBot
+                        && (from == null || _.DateCreated > from) && (to == null || _.DateCreated < to))
+                    .Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
+                if (orders.Count == 0)
+                    break;
+                _logger.LogInformation($"RecancelAllOrdersInDepository() bids, page {page}, count:{orders.Count}, " +
+                    $"firstDate:{orders.First().DateCreated:o}");
+                await _gatewayHttpClient.PostJsonAsync(url, orders);
+            }
+            page = 0;
+            while (true)
+            {
+                var orders = (await _context.Asks.OrderBy(_ => _.DateCreated)
+                    .Where(_ => _.IsCanceled && _.ClientType != ClientType.DealsBot
+                        && (from == null || _.DateCreated > from) && (to == null || _.DateCreated < to))
+                    .Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
+                if (orders.Count == 0)
+                    break;
+                _logger.LogInformation($"RecancelAllOrdersInDepository() asks, page {page}, count:{orders.Count}, " +
+                    $"firstDate:{orders.First().DateCreated:o}");
+                await _gatewayHttpClient.PostJsonAsync(url, orders);
             }
             return Ok();
         }

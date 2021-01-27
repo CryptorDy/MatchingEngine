@@ -158,9 +158,15 @@ namespace MatchingEngine.Services
             {
                 _logger.LogInformation($"Saved {newDeals.Count} new deals: \n{string.Join("\n", newDeals)}");
                 context.Deals.AddRange(newDeals);
+                context.DealCopies.AddRange(newDeals.Select(_ => new DealCopy(_)));
             }
 
             await context.SaveChangesAsync();
+
+            if (newDeals.Count > 0)
+            {
+                await context.LogDealExists(newDeals.First().DealId, "UpdateDatabase after save");
+            }
         }
 
         private async Task ReportData(TradingDbContext context, List<Order> modifiedOrders, List<Deal> newDeals)
@@ -190,8 +196,10 @@ namespace MatchingEngine.Services
 
                     foreach (var item in newDeals)
                     {
+                        await context.LogDealExists(item.DealId, "ReportData before marketdata");
                         var dbDeal = dbDeals[item.DealId];
                         await SendDealToMarketData(dbDeal);
+                        await context.LogDealExists(item.DealId, "ReportData after marketdata");
                     }
                     _dealEndingSender.SendDeals();
                 }
@@ -288,7 +296,7 @@ namespace MatchingEngine.Services
 
                 var result = new SaveExternalOrderResult
                 {
-                    NewExternalOrderId = newDeals.Count > 0 ? newImportedOrder.ToString() : null,
+                    NewExternalOrderId = newDeals.Count > 0 ? newImportedOrder.Id.ToString() : null,
                     CreatedDealId = newDeals.FirstOrDefault()?.DealId.ToString() ?? null,
                 };
                 _logger.LogInformation($"UpdateExternalOrder() finished. {result}\n newImportedOrder:{newImportedOrder}");
@@ -406,9 +414,11 @@ namespace MatchingEngine.Services
 
         public async Task SaveLiquidityImportUpdate(ImportUpdateDto dto)
         {
+            var date1 = DateTimeOffset.UtcNow;
             // delete
             await RemoveOrders(dto.OrdersToDelete.Select(_ => Guid.Parse(_.ActionId)).ToList());
 
+            var date2 = DateTimeOffset.UtcNow;
             // update
             lock (_orders)
             {
@@ -428,13 +438,23 @@ namespace MatchingEngine.Services
                 }
             }
 
+            var date3 = DateTimeOffset.UtcNow;
             // add
             var ordersToAdd = dto.OrdersToAdd.Select(_ => _.GetOrder()).ToList();
             ordersToAdd.ForEach(_ => AppendOrder(_));
 
             lock (_orders)
             {
+                var bidPrice = _orders.Where(_ => _.IsBid && _.CurrencyPairCode == Constants.DebugCurrencyPair)
+                    .OrderByDescending(_ => _.Price).FirstOrDefault()?.Price;
+                _logger.LogDebug($"SaveLiquidityImportUpdate() top {Constants.DebugCurrencyPair} bid: {bidPrice}");
+
                 SendOrdersToMarketData();
+
+                var date4 = DateTimeOffset.UtcNow;
+                if (dto.OrdersToAdd.Count > 100 || new Random().Next(100) == 0)
+                    _logger.LogInformation($"SaveLiquidityImportUpdate()  Orders came:{dto.OrdersToAdd.Count}/{dto.OrdersToUpdate.Count}/{dto.OrdersToDelete.Count}. " +
+                        $"Dates: {date1:HH:mm:ss.fff} {date2:HH:mm:ss.fff} {date3:HH:mm:ss.fff} {date4:HH:mm:ss.fff}. Orders in memory:{_orders.Count}");
             }
         }
 

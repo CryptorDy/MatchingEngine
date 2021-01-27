@@ -14,7 +14,7 @@ namespace MatchingEngine.Services
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger _logger;
 
-        private const int _batchSize = 50;
+        private const int _batchSize = 100;
 
         public DealEndingSender(
             IServiceScopeFactory scopeFactory,
@@ -29,7 +29,7 @@ namespace MatchingEngine.Services
             while (!cancellationToken.IsCancellationRequested)
             {
                 await SendDeals();
-                await Task.Delay(10 * 60 * 1000); // every 10 minutes
+                await Task.Delay(TimeSpan.FromMinutes(5));
             }
         }
 
@@ -47,20 +47,28 @@ namespace MatchingEngine.Services
                         .OrderByDescending(_ => _.DateCreated)
                         .Take(_batchSize)
                         .ToListAsync();
+                    if (unprocessedDeals.Count == 0)
+                        return;
+                    _logger.LogInformation($"SendDeals() unprocessed:{unprocessedDeals.Count}");
 
+                    int errorsCount = 0;
                     foreach (var deal in unprocessedDeals)
                     {
                         try
                         {
+                            await context.LogDealExists(deal.DealId, "SendDeals before");
                             await dealEndingService.SendDeal(deal);
                             deal.IsSentToDealEnding = true;
                             await context.SaveChangesAsync();
+                            await context.LogDealExists(deal.DealId, "SendDeals after");
                         }
                         catch (Exception ex)
                         {
                             _logger.LogError(ex, $"Error sending to DealEnding: {deal}");
+                            errorsCount++;
                         }
                     }
+                    _logger.LogInformation($"SendDeals() end. processed:{unprocessedDeals.Count}, with errors: {errorsCount}");
                 }
             }
             catch (Exception ex)

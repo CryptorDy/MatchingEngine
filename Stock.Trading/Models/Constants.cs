@@ -9,5 +9,7 @@ namespace MatchingEngine.Models
     public class Constants
     {
         public const int DefaultRequestOrdersCount = 100;
+
+        public const string DebugCurrencyPair = "BTC_USDT";
     }
 }

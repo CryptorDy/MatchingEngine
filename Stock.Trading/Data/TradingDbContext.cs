@@ -25,8 +25,10 @@ namespace MatchingEngine.Data
 
         public virtual DbSet<Bid> Bids { get; set; }
         public virtual DbSet<Ask> Asks { get; set; }
-        public virtual DbSet<Deal> Deals { get; set; }
         public virtual DbSet<OrderEvent> OrderEvents { get; set; }
+
+        public virtual DbSet<Deal> Deals { get; set; }
+        public virtual DbSet<DealCopy> DealCopies { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -39,6 +41,13 @@ namespace MatchingEngine.Data
                 .ValueGeneratedOnAdd().HasDefaultValueSql("current_timestamp"); // set curent date
             builder.Entity<OrderEvent>().Property(_ => _.EventType)
                 .HasConversion(new EnumToStringConverter<OrderEventType>()); // save enum as string
+        }
+
+        public async Task LogDealExists(Guid dealId, string place)
+        {
+            bool exists = await Deals.AnyAsync(_ => _.DealId == dealId);
+            if (!exists)
+                _logger.Log(LogLevel.Error, $"LogDealExists() exists:{exists} '{place}' dealId:{dealId}");
         }
 
         #region Order setters
@@ -137,19 +146,9 @@ namespace MatchingEngine.Data
         {
             Order order = null;
             if (isBid == null || isBid == true)
-            {
                 order = await Bids.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == orderId);
-            }
             if (isBid == false || (isBid == null && order == null))
-            {
                 order = await Asks.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == orderId);
-            }
-
-            foreach (var deal in order.DealList)
-            {
-                deal.Ask = null;
-                deal.Bid = null;
-            }
             return order;
         }
 

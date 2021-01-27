@@ -143,15 +143,15 @@ namespace MatchingEngine.Services
                 Console.WriteLine($"DeleteOrder() {order}");
                 if (order.Blocked > 0)
                 {
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked };
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked, Order = order };
                 }
                 if (order.IsCanceled)
                 {
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyCanceled };
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyCanceled, Order = order };
                 }
                 if (order.Fulfilled >= order.Amount)
                 {
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled };
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled, Order = order };
                 }
 
                 order = await _context.GetOrder(orderId);
