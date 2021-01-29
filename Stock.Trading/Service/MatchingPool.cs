@@ -33,13 +33,6 @@ namespace MatchingEngine.Services
         private readonly IOptions<AppSettings> _settings;
         private readonly ILogger _logger;
 
-        /// <summary>
-        /// DI constructor
-        /// </summary>
-        /// <param name="marketDataService"></param>
-        /// <param name="logger"></param>
-        /// <param name="ordersMatcher"></param>
-        /// <param name="serviceScopeFactory"></param>
         public MatchingPool(string currencyPairCode,
             IServiceScopeFactory serviceScopeFactory,
             ICurrenciesService currenciesService,
@@ -64,7 +57,6 @@ namespace MatchingEngine.Services
             _logger = logger;
 
             //todo edit
-            UnblockAllDbOrders().Wait(); // Remove liquidity blocks created before app restart
             LoadOrders(); // load orders from db after all services are set
         }
 
@@ -202,7 +194,7 @@ namespace MatchingEngine.Services
                         await SendDealToMarketData(dbDeal);
                         await context.LogDealExists(item.DealId, "ReportData after marketdata");
                     }
-                    _dealEndingService.SendDeals();
+                    _ = _dealEndingService.SendDeals();
                 }
             }
             catch (Exception ex)
@@ -362,7 +354,7 @@ namespace MatchingEngine.Services
             _newOrdersBuffer.Post(order);
         }
 
-        public async Task RemoveOrder(Guid id)
+        public void RemoveOrder(Guid id)
         {
             lock (_orders)
             {
@@ -376,22 +368,6 @@ namespace MatchingEngine.Services
         }
 
         #region Liquidity
-
-        private async Task UnblockAllDbOrders()
-        {
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
-                var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-
-                var blockedBids = await context.Bids.Where(_ => _.Blocked > 0).ToListAsync();
-                var blockedAsks = await context.Asks.Where(_ => _.Blocked > 0).ToListAsync();
-                foreach (Order order in blockedBids.Cast<Order>().Union(blockedAsks))
-                {
-                    order.Blocked = 0;
-                }
-                await context.SaveChangesAsync();
-            }
-        }
 
         public async Task UnblockOrders(List<Guid> orderIds)
         {
@@ -417,11 +393,11 @@ namespace MatchingEngine.Services
             }
         }
 
-        public async Task SaveLiquidityImportUpdate(ImportUpdateDto dto)
+        public void SaveLiquidityImportUpdate(ImportUpdateDto dto)
         {
             var date1 = DateTimeOffset.UtcNow;
             // delete
-            await RemoveOrders(dto.OrdersToDelete.Select(_ => Guid.Parse(_.ActionId)).ToList());
+            RemoveOrders(dto.OrdersToDelete.Select(_ => Guid.Parse(_.ActionId)).ToList());
 
             var date2 = DateTimeOffset.UtcNow;
             // update
@@ -463,7 +439,7 @@ namespace MatchingEngine.Services
             }
         }
 
-        public async Task RemoveOrders(IEnumerable<Guid> ids)
+        public void RemoveOrders(IEnumerable<Guid> ids)
         {
             _liquidityDeletedOrdersKeeper.AddRange(ids);
             lock (_orders)
@@ -499,7 +475,7 @@ namespace MatchingEngine.Services
             }
         }
 
-        public async Task RemoveLiquidityOldOrders()
+        public void RemoveLiquidityOldOrders()
         {
             lock (_orders)
             {
@@ -515,7 +491,7 @@ namespace MatchingEngine.Services
 
         #endregion Liquidity
 
-        public async Task RemoveOldInnerBotOrders()
+        public void RemoveOldInnerBotOrders()
         {
             lock (_orders)
             {

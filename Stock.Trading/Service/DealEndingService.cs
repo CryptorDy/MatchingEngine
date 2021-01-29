@@ -47,7 +47,6 @@ namespace MatchingEngine.Services
                 using (var scope = _scopeFactory.CreateScope())
                 {
                     var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                    var dealEndingService = scope.ServiceProvider.GetRequiredService<IDealEndingService>();
 
                     var unprocessedDeals = await context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
                         .Where(_ => !_.IsSentToDealEnding && !_.FromInnerTradingBot)
@@ -64,7 +63,7 @@ namespace MatchingEngine.Services
                         try
                         {
                             await context.LogDealExists(deal.DealId, "SendDeals before");
-                            await dealEndingService.SendDeal(deal);
+                            await SendDeal(deal);
                             deal.IsSentToDealEnding = true;
                             await context.SaveChangesAsync();
                             await context.LogDealExists(deal.DealId, "SendDeals after");

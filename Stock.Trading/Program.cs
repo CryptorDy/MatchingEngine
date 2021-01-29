@@ -18,17 +18,7 @@ namespace MatchingEngine
             using (var scope = host.Services.CreateScope())
             {
                 var dbInitializer = scope.ServiceProvider.GetService<IDbInitializer>();
-                var env = scope.ServiceProvider.GetService<IHostingEnvironment>();
-
-                if (env.EnvironmentName == "Testing")
-                {
-                    dbInitializer.Init();
-                    dbInitializer.Seed();
-                }
-                else
-                {
-                    dbInitializer.Seed();
-                }
+                dbInitializer.Init();
             }
             host.Services.GetRequiredService<ICurrenciesService>().LoadData().Wait(); // load currencies and currency pairs
             var singletonsAccessor = host.Services.GetRequiredService<SingletonsAccessor>();
