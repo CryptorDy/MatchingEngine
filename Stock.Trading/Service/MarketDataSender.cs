@@ -38,7 +38,7 @@ namespace MatchingEngine.Services
                 {
                     if (_marketDataHolder.NeedsUpdate())
                     {
-                        var pairs = _marketDataHolder.DequeueAllPairsForUpdate();
+                        var pairs = _marketDataHolder.DequeueAllPairsForSend();
                         await Task.WhenAll(pairs.Select(async pairCode =>
                         {
                             var orders = _marketDataHolder.GetOrders(pairCode);

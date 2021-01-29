@@ -7,7 +7,7 @@ namespace MatchingEngine.Services
 {
     public class MarketDataHolder
     {
-        private readonly ConcurrentDictionary<string, object> _pairsForUpdate =
+        private readonly ConcurrentDictionary<string, object> _pairsForSend =
             new ConcurrentDictionary<string, object>();
         private readonly ConcurrentDictionary<string, ConcurrentQueue<Order>> _orders =
             new ConcurrentDictionary<string, ConcurrentQueue<Order>>();
@@ -15,7 +15,7 @@ namespace MatchingEngine.Services
         public void SetOrders(string pairCode, List<Order> orders)
         {
             _orders[pairCode] = new ConcurrentQueue<Order>(orders);
-            _pairsForUpdate[pairCode] = null;
+            _pairsForSend.TryAdd(pairCode, new object());
         }
 
         public List<Order> GetOrders(string pairCode)
@@ -23,16 +23,17 @@ namespace MatchingEngine.Services
             return new List<Order>(_orders[pairCode]); // copy list to prevent concurrency error
         }
 
-        public List<string> DequeueAllPairsForUpdate()
+        public List<string> DequeueAllPairsForSend()
         {
-            var pairs = _pairsForUpdate.Keys.ToList();
-            _pairsForUpdate.Clear();
+            var pairs = _pairsForSend.Keys.ToList();
+            foreach (string pair in pairs)
+                _pairsForSend.TryRemove(pair, out _);
             return pairs;
         }
 
         public bool NeedsUpdate()
         {
-            return _pairsForUpdate.Count > 0;
+            return _pairsForSend.Count > 0;
         }
     }
 }
