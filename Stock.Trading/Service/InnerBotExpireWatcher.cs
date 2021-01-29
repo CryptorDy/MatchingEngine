@@ -34,7 +34,7 @@ namespace MatchingEngine.Services
                     if (_matchingPoolsHandler != null)
                     {
                         foreach (var pool in _matchingPoolsHandler.GetExistingPools())
-                            await pool.RemoveOldInnerBotOrders();
+                            pool.RemoveOldInnerBotOrders();
                     }
                 }
                 catch (Exception e)

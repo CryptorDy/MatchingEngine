@@ -48,7 +48,7 @@ namespace Stock.Trading.Controllers
                     throw new Exception($"SaveLiquidityImportUpdate() has local orders");
                 }
 
-                await _matchingPoolsHandler.GetPool(dto.CurrencyPairCode).SaveLiquidityImportUpdate(dto);
+                _matchingPoolsHandler.GetPool(dto.CurrencyPairCode).SaveLiquidityImportUpdate(dto);
             }));
         }
 

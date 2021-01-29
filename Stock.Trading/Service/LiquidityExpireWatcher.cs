@@ -99,7 +99,7 @@ namespace MatchingEngine.Services
             }
 
             foreach (var pool in _matchingPoolsHandler.GetExistingPools())
-                await pool.RemoveLiquidityOldOrders();
+                pool.RemoveLiquidityOldOrders();
         }
     }
 }

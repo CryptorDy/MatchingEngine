@@ -145,7 +145,7 @@ namespace MatchingEngine.Services
                 order = await _context.GetOrder(orderId);
                 order.IsCanceled = true;
                 await _context.UpdateOrder(order, true, OrderEventType.Cancel);
-                await _matchingPoolsHandler.GetPool(order.CurrencyPairCode).RemoveOrder(orderId);
+                _matchingPoolsHandler.GetPool(order.CurrencyPairCode).RemoveOrder(orderId);
                 return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = order };
             }
             catch (Exception ex)
