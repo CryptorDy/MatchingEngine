@@ -14,15 +14,17 @@ namespace Stock.Trading.Controllers
     [Route("api/[controller]")]
     public class DealController : Controller
     {
+        private readonly TradingDbContext _context;
         private readonly TradingService _service;
         private readonly MarketDataService _marketDataService;
         private readonly ILogger _logger;
 
-        public DealController(
+        public DealController(TradingDbContext context,
             TradingService service,
             MarketDataService marketDataService,
             ILogger<DealController> logger)
         {
+            _context = context;
             _service = service;
             _marketDataService = marketDataService;
             _logger = logger;
@@ -68,10 +70,9 @@ namespace Stock.Trading.Controllers
         }
 
         [HttpPost("marketdata/resend")]
-        public async Task<IActionResult> ResendDealsToMarketData(DateTimeOffset? from = null, int pageSize = 1000)
+        public async Task<IActionResult> ResendDealsToMarketData(DateTimeOffset from, int pageSize = 1000)
         {
             await _marketDataService.SendDealsFromDate(from, pageSize);
-                    .Where(_ => from == null || _.DateCreated >= from).OrderBy(_ => _.DateCreated)
             return Ok();
         }
 
