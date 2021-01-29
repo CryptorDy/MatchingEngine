@@ -31,12 +31,11 @@ namespace MatchingEngine
                 }
             }
             host.Services.GetRequiredService<ICurrenciesService>().LoadData().Wait(); // load currencies and currency pairs
-            var singletonsAccessor = host.Services.GetService<SingletonsAccessor>();
-            var matchingPool = singletonsAccessor.MatchingPool;
-            singletonsAccessor.LiquidityExpireWatcher.SetMatchingPool(matchingPool);
-            singletonsAccessor.LiquidityExpireBlocksWatcher.SetMatchingPool(matchingPool);
-            singletonsAccessor.InnerBotExpireWatcher.SetMatchingPool(matchingPool);
-            matchingPool.SetServices(singletonsAccessor.DealEndingSender, singletonsAccessor.LiquidityExpireBlocksWatcher);
+            var singletonsAccessor = host.Services.GetRequiredService<SingletonsAccessor>();
+            var matchingPoolsHandler = singletonsAccessor.MatchingPoolsHandler;
+            host.Services.GetRequiredService<LiquidityExpireBlocksHandler>().SetMatchingPoolsHandler(matchingPoolsHandler);
+            singletonsAccessor.LiquidityExpireWatcher.SetMatchingPoolsHandler(matchingPoolsHandler);
+            singletonsAccessor.InnerBotExpireWatcher.SetMatchingPoolsHandler(matchingPoolsHandler);
 
             host.Run();
         }

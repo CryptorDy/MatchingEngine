@@ -50,26 +50,25 @@ namespace MatchingEngine
             services.AddDbContext<TradingDbContext>(options =>
                 options.UseNpgsql(Configuration["ConnectionStrings:DefaultConnection"]),
                 ServiceLifetime.Transient);
+            services.AddScoped<IDbInitializer, DbInitializer>();
+            services.AddSingleton<ICurrenciesService, CurrenciesService>();
+            services.AddTransient<SingletonsAccessor>();
 
+            services.AddSingleton<IHostedService, MatchingPoolsHandler>();
+            services.AddSingleton<OrdersMatcher>();
+            services.AddTransient<TradingService>();
+            services.AddHostedService<DealEndingSender>();
+            services.AddSingleton<MarketDataHolder>();
+            services.AddHostedService<MarketDataSender>();
             services.AddTransient<MarketDataService>();
             services.AddTransient<IDealEndingService, DealEndingService>();
-            services.AddTransient<TradingService>();
 
-            services.AddScoped<IDbInitializer, DbInitializer>();
-
-            services.AddSingleton<ICurrenciesService, CurrenciesService>();
-            services.AddSingleton<IHostedService, MatchingPool>();
-            services.AddHostedService<DealEndingSender>();
-            services.AddHostedService<MarketDataSender>();
+            services.AddTransient<ILiquidityImportService, LiquidityImportService>();
             services.AddSingleton<IHostedService, LiquidityExpireWatcher>();
-            services.AddSingleton<IHostedService, LiquidityExpireBlocksWatcher>();
+            services.AddSingleton<LiquidityExpireBlocksHandler>();
+            services.AddHostedService<LiquidityExpireBlocksBgService>();
             services.AddSingleton<ILiquidityDeletedOrdersKeeper, LiquidityDeletedOrdersKeeper>();
             services.AddHostedService<InnerBotExpireWatcher>();
-            services.AddSingleton<MarketDataHolder>();
-
-            services.AddSingleton<OrdersMatcher>();
-            services.AddTransient<SingletonsAccessor>();
-            services.AddTransient<ILiquidityImportService, LiquidityImportService>();
 
             services.AddAutoMapper(typeof(Startup));
 

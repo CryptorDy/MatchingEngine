@@ -38,9 +38,9 @@ namespace MatchingEngine.Services
             await _gatewayHttpClient.PostJsonAsync($"marketdata/orders/old-orders", orders);
         }
 
-        public async Task SendActiveOrders(List<Order> orders)
+        public async Task SendActiveOrders(string currencyPairCode, List<Order> orders)
         {
-            await _gatewayHttpClient.PostJsonAsync($"marketdata/orders", orders);
+            await _gatewayHttpClient.PostJsonAsync($"marketdata/orders?currencyPairCode={currencyPairCode}", orders);
         }
 
         public async Task SendDeals(List<DealResponse> deals)

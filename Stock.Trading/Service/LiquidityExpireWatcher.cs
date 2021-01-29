@@ -12,7 +12,7 @@ namespace MatchingEngine.Services
 {
     public class LiquidityExpireWatcher : BackgroundService
     {
-        private MatchingPool _matchingPool;
+        private MatchingPoolsHandler _matchingPoolsHandler;
         private readonly ILiquidityImportService _liquidityImportService;
         private readonly IOptions<AppSettings> _settings;
         private readonly ILogger _logger;
@@ -29,9 +29,9 @@ namespace MatchingEngine.Services
             _logger = logger;
         }
 
-        public void SetMatchingPool(MatchingPool matchingPool)
+        public void SetMatchingPoolsHandler(MatchingPoolsHandler matchingPoolsHandler)
         {
-            _matchingPool = matchingPool;
+            _matchingPoolsHandler = matchingPoolsHandler;
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -76,7 +76,7 @@ namespace MatchingEngine.Services
 
         private async Task CheckExpirationDates()
         {
-            if (_matchingPool == null)
+            if (_matchingPoolsHandler == null)
             {
                 return;
             }
@@ -90,7 +90,7 @@ namespace MatchingEngine.Services
             foreach (var expiration in requiredExpirations)
             {
                 _logger.LogWarning($"Liquidity expired:{expiration.Exchange}-{expiration.CurrencyPairCode}");
-                _matchingPool.RemoveLiquidityOrderbook(expiration.Exchange, expiration.CurrencyPairCode);
+                _matchingPoolsHandler.GetPool(expiration.CurrencyPairCode).RemoveLiquidityOrderbook(expiration.Exchange);
                 _ = _liquidityImportService.RemoveOrderbook(expiration.Exchange, expiration.CurrencyPairCode);
             }
             lock (CurrencyPairExpirations)
@@ -98,7 +98,8 @@ namespace MatchingEngine.Services
                 CurrencyPairExpirations = CurrencyPairExpirations.Except(requiredExpirations).ToList();
             }
 
-            await _matchingPool.RemoveLiquidityOldOrders();
+            foreach (var pool in _matchingPoolsHandler.GetExistingPools())
+                await pool.RemoveLiquidityOldOrders();
         }
     }
 }

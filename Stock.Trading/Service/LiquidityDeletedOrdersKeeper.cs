@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -13,7 +14,8 @@ namespace MatchingEngine.Services
 
     public class LiquidityDeletedOrdersKeeper : ILiquidityDeletedOrdersKeeper
     {
-        private readonly Dictionary<Guid, DateTime> _liquidityDeletedOrderIds = new Dictionary<Guid, DateTime>();
+        private readonly ConcurrentDictionary<Guid, DateTime> _liquidityDeletedOrderIds =
+            new ConcurrentDictionary<Guid, DateTime>();
 
         public LiquidityDeletedOrdersKeeper()
         {
@@ -21,32 +23,21 @@ namespace MatchingEngine.Services
 
         public bool Contains(Guid id)
         {
-            lock (_liquidityDeletedOrderIds)
-            {
-                return _liquidityDeletedOrderIds.ContainsKey(id);
-            }
+            return _liquidityDeletedOrderIds.ContainsKey(id);
         }
 
         public void AddRange(IEnumerable<Guid> ids)
         {
             RemoveOldIds();
 
-            lock (_liquidityDeletedOrderIds)
-            {
-                foreach (Guid orderId in ids)
-                {
-                    _liquidityDeletedOrderIds.TryAdd(orderId, DateTime.Now);
-                }
-            }
+            foreach (Guid orderId in ids)
+                _liquidityDeletedOrderIds[orderId] = DateTime.Now;
         }
 
         private void RemoveOldIds()
         {
-            lock (_liquidityDeletedOrderIds)
-            {
-                var oldIds = _liquidityDeletedOrderIds.Where(_ => _.Value < DateTime.Now.AddMinutes(-10)).ToList();
-                oldIds.ForEach(_ => _liquidityDeletedOrderIds.Remove(_.Key));
-            }
+            var oldIds = _liquidityDeletedOrderIds.Where(_ => _.Value < DateTime.Now.AddMinutes(-10)).ToList();
+            oldIds.ForEach(id => _liquidityDeletedOrderIds.TryRemove(id.Key, out _));
         }
     }
 }

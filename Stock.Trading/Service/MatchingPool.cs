@@ -19,17 +19,17 @@ namespace MatchingEngine.Services
     /// </summary>
     public class MatchingPool : BackgroundService
     {
+        public readonly string _pairCode;
         private readonly BufferBlock<Order> _newOrdersBuffer = new BufferBlock<Order>();
         private readonly List<Order> _orders = new List<Order>();
 
-        private DealEndingSender _dealEndingSender;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ICurrenciesService _currenciesService;
         private readonly OrdersMatcher _ordersMatcher;
-        private readonly MarketDataService _marketDataService;
         private readonly MarketDataHolder _marketDataHolder;
+        private readonly IDealEndingService _dealEndingService;
         private readonly ILiquidityDeletedOrdersKeeper _liquidityDeletedOrdersKeeper;
-        private LiquidityExpireBlocksWatcher _liquidityExpireBlocksWatcher;
+        private readonly LiquidityExpireBlocksHandler _liquidityExpireBlocksHandler;
         private readonly IOptions<AppSettings> _settings;
         private readonly ILogger _logger;
 
@@ -40,32 +40,31 @@ namespace MatchingEngine.Services
         /// <param name="logger"></param>
         /// <param name="ordersMatcher"></param>
         /// <param name="serviceScopeFactory"></param>
-        public MatchingPool(
+        public MatchingPool(string currencyPairCode,
             IServiceScopeFactory serviceScopeFactory,
             ICurrenciesService currenciesService,
             OrdersMatcher ordersMatcher,
-            MarketDataService marketDataService,
             MarketDataHolder marketDataHolder,
+            IDealEndingService dealEndingService,
             ILiquidityDeletedOrdersKeeper liquidityDeletedOrdersKeeper,
+            LiquidityExpireBlocksHandler liquidityExpireBlocksHandler,
             IOptions<AppSettings> settings,
-            ILogger<MatchingPool> logger)
+            ILogger logger)
         {
+            _pairCode = currencyPairCode;
+
             _serviceScopeFactory = serviceScopeFactory;
             _currenciesService = currenciesService;
             _ordersMatcher = ordersMatcher;
-            _marketDataService = marketDataService;
             _marketDataHolder = marketDataHolder;
+            _dealEndingService = dealEndingService;
             _liquidityDeletedOrdersKeeper = liquidityDeletedOrdersKeeper;
+            _liquidityExpireBlocksHandler = liquidityExpireBlocksHandler;
             _settings = settings;
             _logger = logger;
 
+            //todo edit
             UnblockAllDbOrders().Wait(); // Remove liquidity blocks created before app restart
-        }
-
-        public void SetServices(DealEndingSender dealEndingSender, LiquidityExpireBlocksWatcher liquidityExpireBlocksWatcher)
-        {
-            _dealEndingSender = dealEndingSender;
-            _liquidityExpireBlocksWatcher = liquidityExpireBlocksWatcher;
             LoadOrders(); // load orders from db after all services are set
         }
 
@@ -74,8 +73,10 @@ namespace MatchingEngine.Services
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                var dbBids = context.Bids.AsNoTracking().Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount).ToList(); // todo change back to IsActive
-                var dbAsks = context.Asks.AsNoTracking().Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount).ToList();
+                var dbBids = context.Bids.AsNoTracking().Where(_ => _.CurrencyPairCode == _pairCode
+                    && !_.IsCanceled && _.Fulfilled < _.Amount).ToList(); // todo change back to IsActive
+                var dbAsks = context.Asks.AsNoTracking().Where(_ => _.CurrencyPairCode == _pairCode
+                    && !_.IsCanceled && _.Fulfilled < _.Amount).ToList();
                 var dbOrders = dbBids.Cast<Order>().Union(dbAsks).ToList();
                 lock (_orders)
                 {
@@ -133,12 +134,12 @@ namespace MatchingEngine.Services
                     else if (order.Blocked > 0 && dbOrder.Blocked == 0)
                     {
                         eventType = OrderEventType.Block;
-                        _liquidityExpireBlocksWatcher.Add(order.Id);
+                        _liquidityExpireBlocksHandler.Add(order.Id, _pairCode);
                     }
                     else if (order.Blocked == 0 && dbOrder.Blocked > 0)
                     {
                         eventType = OrderEventType.Unblock;
-                        _liquidityExpireBlocksWatcher.Remove(order.Id);
+                        _liquidityExpireBlocksHandler.Remove(order.Id);
                     }
                     else
                     {
@@ -201,7 +202,7 @@ namespace MatchingEngine.Services
                         await SendDealToMarketData(dbDeal);
                         await context.LogDealExists(item.DealId, "ReportData after marketdata");
                     }
-                    _dealEndingSender.SendDeals();
+                    _dealEndingService.SendDeals();
                 }
             }
             catch (Exception ex)
@@ -308,7 +309,7 @@ namespace MatchingEngine.Services
         {
             try
             {
-                _marketDataHolder.SendOrders(_orders);
+                _marketDataHolder.SetOrders(_pairCode, _orders);
             }
             catch (Exception ex)
             {
@@ -320,7 +321,11 @@ namespace MatchingEngine.Services
         {
             try
             {
-                await _marketDataService.SendNewDeal(deal.GetDealResponse());
+                using (var scope = _serviceScopeFactory.CreateScope())
+                {
+                    var marketDataService = scope.ServiceProvider.GetRequiredService<MarketDataService>();
+                    await marketDataService.SendNewDeal(deal.GetDealResponse());
+                }
             }
             catch (Exception ex)
             {
@@ -477,7 +482,7 @@ namespace MatchingEngine.Services
             }
         }
 
-        public void RemoveLiquidityOrderbook(Exchange exchange, string currencyPairCode)
+        public void RemoveLiquidityOrderbook(Exchange exchange)
         {
             if (exchange == Exchange.Local)
             {
@@ -486,7 +491,7 @@ namespace MatchingEngine.Services
 
             lock (_orders)
             {
-                int removedOrdersCount = _orders.RemoveAll(_ => _.Exchange == exchange && _.CurrencyPairCode == currencyPairCode);
+                int removedOrdersCount = _orders.RemoveAll(_ => _.Exchange == exchange);
                 if (removedOrdersCount > 0)
                 {
                     SendOrdersToMarketData();

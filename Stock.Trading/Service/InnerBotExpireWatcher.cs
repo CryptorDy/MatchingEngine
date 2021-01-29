@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -7,7 +8,7 @@ namespace MatchingEngine.Services
 {
     public class InnerBotExpireWatcher : BackgroundService
     {
-        private MatchingPool _matchingPool;
+        private MatchingPoolsHandler _matchingPoolsHandler;
         private readonly IOptions<AppSettings> _settings;
         private readonly ILogger _logger;
 
@@ -19,20 +20,29 @@ namespace MatchingEngine.Services
             _logger = logger;
         }
 
-        public void SetMatchingPool(MatchingPool matchingPool)
+        public void SetMatchingPoolsHandler(MatchingPoolsHandler matchingPoolsHandler)
         {
-            _matchingPool = matchingPool;
+            _matchingPoolsHandler = matchingPoolsHandler;
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                if (_matchingPool != null)
+                try
                 {
-                    await _matchingPool.RemoveOldInnerBotOrders();
+                    if (_matchingPoolsHandler != null)
+                    {
+                        foreach (var pool in _matchingPoolsHandler.GetExistingPools())
+                            await pool.RemoveOldInnerBotOrders();
+                    }
                 }
-                await Task.Delay(1 * 1000);
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "");
+                }
+
+                await Task.Delay(TimeSpan.FromMinutes(1));
             }
         }
     }

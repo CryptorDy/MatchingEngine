@@ -12,18 +12,18 @@ namespace MatchingEngine.Services
     public class TradingService
     {
         private readonly TradingDbContext _context;
+        private readonly MatchingPoolsHandler _matchingPoolsHandler;
         private readonly ICurrenciesService _currenciesService;
-        private readonly MatchingPool _matchingPool;
         private readonly ILogger _logger;
 
         public TradingService(TradingDbContext context,
-            ICurrenciesService currenciesService,
             SingletonsAccessor singletonsAccessor,
+            ICurrenciesService currenciesService,
             ILogger<TradingService> logger)
         {
             _context = context;
+            _matchingPoolsHandler = singletonsAccessor.MatchingPoolsHandler;
             _currenciesService = currenciesService;
-            _matchingPool = singletonsAccessor.MatchingPool;
             _logger = logger;
         }
 
@@ -31,20 +31,8 @@ namespace MatchingEngine.Services
 
         public async Task<Order> GetOrder(Guid orderId, bool? isBid = null)
         {
-            try
-            {
-                var order = _matchingPool.GetPoolOrder(orderId);
-                if (order == null)
-                {
-                    order = await _context.GetOrder(orderId, isBid);
-                }
-                return order;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("0", ex);
-                return null;
-            }
+            var order = await _context.GetOrder(orderId, isBid);
+            return order;
         }
 
         public async Task<List<Deal>> GetDeals(string currencyPairCode, int? lastNum, string userId,
@@ -124,7 +112,7 @@ namespace MatchingEngine.Services
                 await _context.AddOrder(order, true, OrderEventType.Create);
             }
 
-            _matchingPool.AppendOrder(order);
+            _matchingPoolsHandler.GetPool(request.CurrencyPairCode).AppendOrder(order);
 
             return order.Id;
         }
@@ -157,7 +145,7 @@ namespace MatchingEngine.Services
                 order = await _context.GetOrder(orderId);
                 order.IsCanceled = true;
                 await _context.UpdateOrder(order, true, OrderEventType.Cancel);
-                await _matchingPool.RemoveOrder(orderId);
+                await _matchingPoolsHandler.GetPool(order.CurrencyPairCode).RemoveOrder(orderId);
                 return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = order };
             }
             catch (Exception ex)

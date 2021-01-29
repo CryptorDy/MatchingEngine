@@ -13,11 +13,10 @@ namespace MatchingEngine.Services
             _hostedServices = hostedServices.ToList();
         }
 
-        public MatchingPool MatchingPool => _hostedServices.FirstOrDefault(s => s is MatchingPool) as MatchingPool;
+        public MatchingPoolsHandler MatchingPoolsHandler => _hostedServices.FirstOrDefault(s => s is MatchingPoolsHandler) as MatchingPoolsHandler;
         public MarketDataSender MarketDataSender => _hostedServices.FirstOrDefault(s => s is MarketDataSender) as MarketDataSender;
         public DealEndingSender DealEndingSender => _hostedServices.FirstOrDefault(s => s is DealEndingSender) as DealEndingSender;
         public LiquidityExpireWatcher LiquidityExpireWatcher => _hostedServices.FirstOrDefault(s => s is LiquidityExpireWatcher) as LiquidityExpireWatcher;
-        public LiquidityExpireBlocksWatcher LiquidityExpireBlocksWatcher => _hostedServices.FirstOrDefault(s => s is LiquidityExpireBlocksWatcher) as LiquidityExpireBlocksWatcher;
         public InnerBotExpireWatcher InnerBotExpireWatcher => _hostedServices.FirstOrDefault(s => s is InnerBotExpireWatcher) as InnerBotExpireWatcher;
     }
 }
