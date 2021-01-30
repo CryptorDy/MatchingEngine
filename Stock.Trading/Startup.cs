@@ -45,7 +45,7 @@ namespace MatchingEngine
             services.AddSingleton<GatewayHttpClient>();
             services.AddSingleton<IConfigurationRoot>(Configuration);
             services.AddTransient<SingletonsAccessor>();
-          
+
             services.Configure<AppSettings>(Configuration);
             services.Configure<AppSettings>(settings => settings.ConnectionString = Configuration.GetSection("ConnectionStrings:DefaultConnection").Value);
 
@@ -53,7 +53,7 @@ namespace MatchingEngine
                 options.UseNpgsql(Configuration["ConnectionStrings:DefaultConnection"]),
                 ServiceLifetime.Transient);
             services.AddScoped<IDbInitializer, DbInitializer>();
-            
+
             services.AddSingleton<ICurrenciesService, CurrenciesService>();
 
             services.AddSingleton<IHostedService, MatchingPoolsHandler>();
@@ -66,8 +66,8 @@ namespace MatchingEngine
             services.AddSingleton<MarketDataHolder>();
             services.AddHostedService<MarketDataSender>();
             services.AddTransient<MarketDataService>();
-            services.AddHostedService<MarketDataDealsSender>();  
-          
+            services.AddHostedService<MarketDataDealsSender>();
+
             services.AddTransient<ILiquidityImportService, LiquidityImportService>();
             services.AddSingleton<IHostedService, LiquidityExpireWatcher>();
             services.AddSingleton<LiquidityExpireBlocksHandler>();
