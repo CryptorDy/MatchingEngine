@@ -1,6 +1,6 @@
 using AutoMapper;
+using MatchingEngine;
 using MatchingEngine.Data;
-using MatchingEngine.Helpers;
 using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
 using MatchingEngine.Services;
@@ -139,19 +139,17 @@ namespace Stock.Trading.Tests
             async Task<int> TestProcessingWithDeletedIds(List<Order> poolOrders, List<Guid> deletedIds)
             {
                 int liquidityCallbackCounter = 0;
-                using (var context = GetDbContext())
+                var (provider, matchingPoolsHandler, tradingService) =
+                    CreateServiceProvider((resultBid, resultAsk) => { liquidityCallbackCounter++; });
+                var matchingPool = matchingPoolsHandler.GetPool(_currencyPairCode);
+
+                matchingPool.RemoveOrders(deletedIds);
+                foreach (var order in poolOrders)
                 {
-                    var (matchingPool, tradingService) = GenerateServices(context, (resultBid, resultAsk) => { liquidityCallbackCounter++; });
-
-                    await matchingPool.RemoveOrders(deletedIds);
-                    foreach (var order in poolOrders)
-                    {
-                        await AddOrder(order, tradingService, matchingPool);
-                    }
-
-                    matchingPool.StartAsync(new CancellationToken());
-                    Thread.Sleep(100);
+                    await AddOrder(order, tradingService, matchingPool);
                 }
+
+                Thread.Sleep(100);
                 return liquidityCallbackCounter;
             }
 
@@ -193,88 +191,59 @@ namespace Stock.Trading.Tests
             }
         }
 
-        private (MatchingPool, TradingService) GenerateServices(TradingDbContext context,
-            Action<Order, Order> liquidityImportServiceCallback)
-        {
-            var liquidityImportService = new Mock<ILiquidityImportService>();
-            liquidityImportService
-                .Setup(_ => _.CreateTrade(It.IsAny<Order>(), It.IsAny<Order>()))
-                .Callback<Order, Order>(liquidityImportServiceCallback);
-
-            var serviceProvider = new Mock<IServiceProvider>();
-            serviceProvider.Setup(x => x.GetService(typeof(TradingDbContext))).Returns(context);
-            var serviceScope = new Mock<IServiceScope>();
-            serviceScope.Setup(x => x.ServiceProvider).Returns(serviceProvider.Object);
-            var serviceScopeFactory = new Mock<IServiceScopeFactory>();
-            serviceScopeFactory.Setup(x => x.CreateScope()).Returns(serviceScope.Object);
-
-            var ordersMatcher = new OrdersMatcher(liquidityImportService.Object);
-            var matchingPool = new MatchingPool(serviceScopeFactory.Object, GetCurrenciesServiceMock(), ordersMatcher,
-                null, null, new LiquidityDeletedOrdersKeeper(), null, new Mock<ILogger<MatchingPool>>().Object);
-            var liquidityExpireBlocksWatcher = new LiquidityExpireBlocksWatcher(new Mock<ILogger<LiquidityExpireBlocksWatcher>>().Object);
-            matchingPool.SetServices(null, liquidityExpireBlocksWatcher);
-            liquidityExpireBlocksWatcher.SetMatchingPool(matchingPool);
-            var singletonsAccessor = new SingletonsAccessor(new List<IHostedService> { matchingPool, liquidityExpireBlocksWatcher });
-            var tradingService = new TradingService(context, GetCurrenciesServiceMock(), singletonsAccessor,
-                new Mock<ILogger<TradingService>>().Object);
-            return (matchingPool, tradingService);
-        }
-
         private async Task SimulateExternalTrade(Order bid, Order ask, decimal fulfilled)
         {
             int liquidityCallbackCounter = 0;
-            using (var context = GetDbContext())
+            var (provider, matchingPoolsHandler, tradingService) =
+                CreateServiceProvider((resultBid, resultAsk) => { liquidityCallbackCounter++; });
+            var matchingPool = matchingPoolsHandler.GetPool(_currencyPairCode);
+
+            // starting match with imported order
+            await AddOrder(bid, tradingService, matchingPool);
+            await AddOrder(ask, tradingService, matchingPool);
+            Thread.Sleep(100);
+            // check correct blocked value, local order updated in db, call to liquidity
+            var context = provider.GetRequiredService<TradingDbContext>();
+            var savedBid = context.Bids.Single();
+            Assert.Equal(1, liquidityCallbackCounter);
+            Assert.True(savedBid.Blocked > 0);
+            Assert.Equal(0, savedBid.AvailableAmount);
+
+            // calling from liquidity with result
+            await matchingPool.UpdateExternalOrder(new ExternalCreatedOrder
             {
-                var (matchingPool, tradingService) = GenerateServices(context, (resultBid, resultAsk) => { liquidityCallbackCounter++; });
+                IsBid = bid.IsLocal,
+                TradingBidId = bid.Id.ToString(),
+                TradingAskId = ask.Id.ToString(),
+                MatchingEngineDealPrice = bid.DateCreated > ask.DateCreated ? ask.Price : bid.Price,
+                Exchange = ask.Exchange,
+                CurrencyPairCode = ask.CurrencyPairCode,
+                Fulfilled = fulfilled,
+            });
 
-                // starting match with imported order
-                await AddOrder(bid, tradingService, matchingPool);
-                await AddOrder(ask, tradingService, matchingPool);
-
-                matchingPool.StartAsync(new CancellationToken());
-                Thread.Sleep(100);
-
-                // check correct blocked value, local order updated in db, call to liquidity
-                var savedBid = context.Bids.Single();
-                Assert.Equal(1, liquidityCallbackCounter);
-                Assert.True(savedBid.Blocked > 0);
-                Assert.Equal(0, savedBid.AvailableAmount);
-
-                // calling from liquidity with result
-                await matchingPool.UpdateExternalOrder(new ExternalCreatedOrder
-                {
-                    IsBid = bid.IsLocal,
-                    TradingBidId = bid.Id.ToString(),
-                    TradingAskId = ask.Id.ToString(),
-                    MatchingEngineDealPrice = bid.DateCreated > ask.DateCreated ? ask.Price : bid.Price,
-                    Exchange = ask.Exchange,
-                    CurrencyPairCode = ask.CurrencyPairCode,
-                    Fulfilled = fulfilled,
-                });
-
-                // check correct saved result
-                savedBid = context.Bids.Single();
-                var generatedAsk = context.Asks.SingleOrDefault();
-                var deal = context.Deals.SingleOrDefault();
-                Assert.Equal(fulfilled, savedBid.Fulfilled);
-                if (fulfilled == 0)
-                {
-                    Assert.True(generatedAsk == null);
-                    Assert.True(deal == null);
-                }
-                else
-                {
-                    Assert.True(generatedAsk != null);
-                    Assert.True(deal != null);
-                    Assert.Equal(fulfilled, generatedAsk.Fulfilled);
-                    Assert.Equal(fulfilled, generatedAsk.Amount);
-                    Assert.True(!generatedAsk.IsLocal);
-                    Assert.Equal(fulfilled, deal.Volume);
-                    Assert.Equal(savedBid.Price, deal.Price);
-                }
-
-                await matchingPool.StopAsync(new CancellationToken());
+            context = provider.GetRequiredService<TradingDbContext>(); // context requires reload to update content
+            // check correct saved result
+            savedBid = context.Bids.Single();
+            var generatedAsk = context.Asks.SingleOrDefault();
+            var deal = context.Deals.SingleOrDefault();
+            Assert.Equal(fulfilled, savedBid.Fulfilled);
+            if (fulfilled == 0)
+            {
+                Assert.True(generatedAsk == null);
+                Assert.True(deal == null);
             }
+            else
+            {
+                Assert.True(generatedAsk != null);
+                Assert.True(deal != null);
+                Assert.Equal(fulfilled, generatedAsk.Fulfilled);
+                Assert.Equal(fulfilled, generatedAsk.Amount);
+                Assert.True(!generatedAsk.IsLocal);
+                Assert.Equal(fulfilled, deal.Volume);
+                Assert.Equal(savedBid.Price, deal.Price);
+            }
+
+            await matchingPool.StopAsync(new CancellationToken());
         }
 
         private async Task AddOrder(Order order, TradingService tradingService,
@@ -302,7 +271,40 @@ namespace Stock.Trading.Tests
             }
         }
 
-        private ICurrenciesService GetCurrenciesServiceMock()
+        public (ServiceProvider, MatchingPoolsHandler, TradingService) CreateServiceProvider(Action<Order, Order> liquidityImportServiceCallback)
+        {
+            string testId = Guid.NewGuid().ToString(); // every test needs separate DB
+            var services = new ServiceCollection();
+            services.AddOptions();
+            services.Configure<AppSettings>((_) => { });
+            services.AddAutoMapper(typeof(Startup));
+            services.AddDbContext<TradingDbContext>(options =>
+                options.UseInMemoryDatabase(databaseName: $"MemoryDb-{testId}"), ServiceLifetime.Transient);
+
+            var liquidityImportService = new Mock<ILiquidityImportService>();
+            liquidityImportService
+                .Setup(_ => _.CreateTrade(It.IsAny<Order>(), It.IsAny<Order>()))
+                .Callback(liquidityImportServiceCallback);
+
+            services.AddTransient<SingletonsAccessor>();
+            services.AddTransient<ICurrenciesService, CurrenciesService>(_ => GetCurrenciesServiceMock());
+
+            services.AddSingleton<IHostedService, MatchingPoolsHandler>(); // if not singleton then mulitple instances are created
+            services.AddTransient<TradingService>();
+            services.AddSingleton<MarketDataHolder>();
+            services.AddSingleton<OrdersMatcher>(_ => new OrdersMatcher(liquidityImportService.Object));
+            // cant register liquidityImportService because it expects class, not interface
+            services.AddSingleton<ILiquidityDeletedOrdersKeeper, LiquidityDeletedOrdersKeeper>();
+            services.AddSingleton<LiquidityExpireBlocksHandler>();
+
+            var provider = services.AddLogging(config => config.AddConsole())
+                .BuildServiceProvider();
+            return (provider,
+                provider.GetRequiredService<SingletonsAccessor>().MatchingPoolsHandler,
+                provider.GetRequiredService<TradingService>());
+        }
+
+        private CurrenciesService GetCurrenciesServiceMock()
         {
             const int digits = 8;
             var currenciesService = new TestCurrenciesService();
@@ -313,22 +315,6 @@ namespace Stock.Trading.Tests
                 new CurrencyPair { Code = "ETH_BTC", CurrencyToId = "ETH", CurrencyFromId = "BTC", DigitsAmount = digits, DigitsPrice = digits },
             });
             return currenciesService;
-        }
-
-        private TradingDbContext GetDbContext() =>
-            new TradingDbContext(GetDbOptions(), GetMapper(), new Mock<ILogger<TradingDbContext>>().Object);
-
-        private DbContextOptions<TradingDbContext> GetDbOptions() => new DbContextOptionsBuilder<TradingDbContext>()
-                .UseInMemoryDatabase(databaseName: $"MemoryDb-{new Random().Next(9999)}").Options;
-
-        public IMapper GetMapper()
-        {
-            var mapperConfig = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<AutoMapperProfile>();
-            });
-            mapperConfig.AssertConfigurationIsValid();
-            return mapperConfig.CreateMapper();
         }
     }
 }

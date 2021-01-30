@@ -249,9 +249,7 @@ namespace MatchingEngine.Services
                 lock (_orders)
                 {
                     if (matchedImportedOrder != null)
-                    {
                         matchedImportedOrder.Blocked = 0;
-                    }
 
                     matchedLocalOrder.Blocked = 0;
                     if (!isFullfillmentError)
