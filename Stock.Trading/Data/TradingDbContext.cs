@@ -41,6 +41,9 @@ namespace MatchingEngine.Data
                 .ValueGeneratedOnAdd().HasDefaultValueSql("current_timestamp"); // set curent date
             builder.Entity<OrderEvent>().Property(_ => _.EventType)
                 .HasConversion(new EnumToStringConverter<OrderEventType>()); // save enum as string
+
+            builder.Entity<Deal>().HasIndex(_ => _.IsSentToDealEnding);
+            builder.Entity<Deal>().HasIndex(_ => _.FromInnerTradingBot);
         }
 
         public async Task LogDealExists(Guid dealId, string place)
@@ -102,7 +105,7 @@ namespace MatchingEngine.Data
             string userId, OrderStatusRequest status,
             DateTimeOffset? from, DateTimeOffset? to)
         {
-            var query = source.Include(_ => _.DealList).Where(_ => 
+            var query = source.Include(_ => _.DealList).Where(_ =>
                 (string.IsNullOrWhiteSpace(currencyPairCode) || _.CurrencyPairCode == currencyPairCode)
                 && (string.IsNullOrWhiteSpace(userId) || _.UserId == userId)
                 && (status == OrderStatusRequest.All

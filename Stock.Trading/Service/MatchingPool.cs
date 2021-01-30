@@ -33,7 +33,7 @@ namespace MatchingEngine.Services
         private readonly IOptions<AppSettings> _settings;
         private readonly ILogger _logger;
 
-        public MatchingPool(string currencyPairCode,
+        public MatchingPool(
             IServiceScopeFactory serviceScopeFactory,
             ICurrenciesService currenciesService,
             OrdersMatcher ordersMatcher,
@@ -42,9 +42,9 @@ namespace MatchingEngine.Services
             ILiquidityDeletedOrdersKeeper liquidityDeletedOrdersKeeper,
             LiquidityExpireBlocksHandler liquidityExpireBlocksHandler,
             IOptions<AppSettings> settings,
-            ILogger logger)
+            ILogger<MatchingPool> logger,
+            string currencyPairCode)
         {
-            _pairCode = currencyPairCode;
 
             _serviceScopeFactory = serviceScopeFactory;
             _currenciesService = currenciesService;
@@ -55,6 +55,8 @@ namespace MatchingEngine.Services
             _liquidityExpireBlocksHandler = liquidityExpireBlocksHandler;
             _settings = settings;
             _logger = logger;
+
+            _pairCode = currencyPairCode;
 
             //todo edit
             LoadOrders(); // load orders from db after all services are set

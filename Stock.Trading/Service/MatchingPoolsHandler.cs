@@ -1,4 +1,5 @@
 using MatchingEngine.Data;
+using MatchingEngine.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,38 +17,17 @@ namespace MatchingEngine.Services
     public class MatchingPoolsHandler : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
-        private readonly ICurrenciesService _currenciesService;
-        private readonly OrdersMatcher _ordersMatcher;
-        private readonly MarketDataHolder _marketDataHolder;
-        private readonly ILiquidityDeletedOrdersKeeper _liquidityDeletedOrdersKeeper;
-        private readonly LiquidityExpireBlocksHandler _liquidityExpireBlocksHandler;
-        private readonly IDealEndingService _dealEndingService;
-        private readonly IOptions<AppSettings> _settings;
-        private readonly ILogger _logger;
+        private readonly IServiceProvider _provider;
 
         private readonly ConcurrentDictionary<string, MatchingPool> _matchingPools =
             new ConcurrentDictionary<string, MatchingPool>();
 
         public MatchingPoolsHandler(
             IServiceScopeFactory serviceScopeFactory,
-            ICurrenciesService currenciesService,
-            OrdersMatcher ordersMatcher,
-            MarketDataHolder marketDataHolder,
-            ILiquidityDeletedOrdersKeeper liquidityDeletedOrdersKeeper,
-            LiquidityExpireBlocksHandler liquidityExpireBlocksHandler,
-            IDealEndingService dealEndingService,
-            IOptions<AppSettings> settings,
-            ILogger<MatchingPoolsHandler> logger)
+            IServiceProvider provider)
         {
             _scopeFactory = serviceScopeFactory;
-            _currenciesService = currenciesService;
-            _ordersMatcher = ordersMatcher;
-            _marketDataHolder = marketDataHolder;
-            _liquidityDeletedOrdersKeeper = liquidityDeletedOrdersKeeper;
-            _liquidityExpireBlocksHandler = liquidityExpireBlocksHandler;
-            _dealEndingService = dealEndingService;
-            _settings = settings;
-            _logger = logger;
+            _provider = provider;
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -98,12 +78,7 @@ namespace MatchingEngine.Services
             if (string.IsNullOrWhiteSpace(currencyPairCode))
                 throw new ArgumentException($"Invalid currencyPairCode '{currencyPairCode}'");
 
-            var matchingPool = new MatchingPool(currencyPairCode,
-                _scopeFactory,
-                _currenciesService,
-                _ordersMatcher, _marketDataHolder, _dealEndingService,
-                _liquidityDeletedOrdersKeeper, _liquidityExpireBlocksHandler,
-                _settings, _logger);
+            var matchingPool = _provider.CreateInstance<MatchingPool>(currencyPairCode);
             Task.Factory.StartNew(() => matchingPool.StartAsync(new CancellationTokenSource().Token));
             return matchingPool;
         }
