@@ -25,7 +25,7 @@ namespace MatchingEngine.Services
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(1 * 60 * 1000);
+                await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
 
                 try
                 {

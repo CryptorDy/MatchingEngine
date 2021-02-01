@@ -30,7 +30,7 @@ namespace MatchingEngine.Services
                     var dealEndingService = scope.ServiceProvider.GetRequiredService<IDealEndingService>();
                     await dealEndingService.SendDeals();
                 }
-                await Task.Delay(TimeSpan.FromMinutes(5));
+                await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
             }
         }
     }

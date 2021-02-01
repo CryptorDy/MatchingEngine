@@ -42,7 +42,7 @@ namespace MatchingEngine.Services
                     _logger.LogError(e, "");
                 }
 
-                await Task.Delay(TimeSpan.FromMinutes(1));
+                await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
             }
         }
     }
