@@ -35,7 +35,7 @@ namespace MatchingEngine.Services
             InitPools();
             while (!cancellationToken.IsCancellationRequested)
             {
-                Thread.Sleep(100);
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
             }
 
             const int defaultShutdownWaitPeriodSec = 5;
