@@ -138,11 +138,9 @@ namespace MatchingEngine.Data
         {
             var bidIds = orders.Where(_ => _.IsBid).Select(_ => _.Id).ToList();
             var askIds = orders.Where(_ => !_.IsBid).Select(_ => _.Id).ToList();
-            var dbOrders = await Bids.Where(_ => bidIds.Contains(_.Id))
-                .Cast<Order>()
-                .Union(Asks.Where(_ => askIds.Contains(_.Id)))
-                .ToListAsync();
-            return dbOrders;
+            var dbBids = await Bids.Where(_ => bidIds.Contains(_.Id)).ToListAsync();
+            var dbAsks = await Asks.Where(_ => askIds.Contains(_.Id)).ToListAsync();
+            return dbBids.Cast<Order>().Union(dbAsks).ToList();
         }
 
         public async Task<Order> GetOrder(Guid orderId, bool? isBid = null)
