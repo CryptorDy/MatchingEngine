@@ -38,6 +38,7 @@ namespace MatchingEngine.Services
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
             }
 
+            // stop all pools after cancel signal
             const int defaultShutdownWaitPeriodSec = 5;
             var poolsCancellationSource = new CancellationTokenSource(TimeSpan.FromSeconds(defaultShutdownWaitPeriodSec));
             await Task.WhenAll(_matchingPools.Values.Select(async pool =>
@@ -48,18 +49,16 @@ namespace MatchingEngine.Services
 
         private void InitPools()
         {
-            using (var scope = _scopeFactory.CreateScope())
-            {
-                var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                var dbBidPairs = context.Bids.Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount)
-                    .Select(_ => _.CurrencyPairCode).Distinct().ToList();
-                var dbAskPairs = context.Asks.Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount)
-                    .Select(_ => _.CurrencyPairCode).Distinct().ToList();
-                var pairs = dbBidPairs.Union(dbAskPairs).Distinct().ToList();
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+            var dbBidPairs = context.Bids.Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount)
+                .Select(_ => _.CurrencyPairCode).Distinct().ToList();
+            var dbAskPairs = context.Asks.Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount)
+                .Select(_ => _.CurrencyPairCode).Distinct().ToList();
+            var pairs = dbBidPairs.Union(dbAskPairs).Distinct().ToList();
 
-                foreach (var pair in pairs)
-                    GetPool(pair);
-            }
+            foreach (var pair in pairs)
+                GetPool(pair);
         }
 
         public List<MatchingPool> GetExistingPools()
