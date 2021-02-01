@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.PlatformAbstractions;
+using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Swagger;
 using System.IO;
@@ -21,7 +22,7 @@ namespace MatchingEngine
 {
     public class Startup
     {
-        public Startup(Microsoft.AspNetCore.Hosting.IHostingEnvironment env)
+        public Startup(IWebHostEnvironment env)
         {
             var basePath = env.EnvironmentName == "Testing"
                 ? Path.Combine(env.ContentRootPath, "..\\..\\..")
@@ -42,21 +43,33 @@ namespace MatchingEngine
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<GatewayHttpClient>();
-            services.AddSingleton<IConfigurationRoot>(Configuration);
-            services.AddTransient<SingletonsAccessor>();
-
             services.Configure<AppSettings>(Configuration);
-            services.Configure<AppSettings>(settings => settings.ConnectionString = Configuration.GetSection("ConnectionStrings:DefaultConnection").Value);
+
+            services.AddRouting(options => options.LowercaseUrls = true);
+            services.AddControllers()
+                .AddNewtonsoftJson(options => { options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; })
+                .AddFluentValidation(fvc => fvc.RegisterValidatorsFromAssemblyContaining<Startup>());
+
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "MatchingEngine", Version = "v1" });
+                c.IncludeXmlComments(Path.Combine(PlatformServices.Default.Application.ApplicationBasePath, "MatchingEngine.xml"));
+            });
+            services.AddSwaggerGenNewtonsoftSupport();
+
+            services.AddAutoMapper(typeof(Startup));
 
             services.AddDbContext<TradingDbContext>(options =>
                 options.UseNpgsql(Configuration["ConnectionStrings:DefaultConnection"]),
                 ServiceLifetime.Transient);
             services.AddScoped<IDbInitializer, DbInitializer>();
 
+            services.AddSingleton<GatewayHttpClient>();
+            services.AddTransient<SingletonsAccessor>();
+
             services.AddSingleton<ICurrenciesService, CurrenciesService>();
 
-            services.AddSingleton<IHostedService, MatchingPoolsHandler>();
+            services.AddHostedService<MatchingPoolsHandler>();
             services.AddSingleton<OrdersMatcher>();
             services.AddTransient<TradingService>();
 
@@ -69,56 +82,29 @@ namespace MatchingEngine
             services.AddHostedService<MarketDataDealsSender>();
 
             services.AddTransient<ILiquidityImportService, LiquidityImportService>();
-            services.AddSingleton<IHostedService, LiquidityExpireWatcher>();
+            services.AddHostedService<LiquidityExpireWatcher>();
             services.AddSingleton<LiquidityExpireBlocksHandler>();
             services.AddHostedService<LiquidityExpireBlocksBgService>();
             services.AddSingleton<ILiquidityDeletedOrdersKeeper, LiquidityDeletedOrdersKeeper>();
             services.AddHostedService<InnerBotExpireWatcher>();
-
-            services.AddAutoMapper(typeof(Startup));
-
-            // lowercase routing
-            services.AddRouting(options => options.LowercaseUrls = true);
-            services.AddMvc()
-                .AddJsonOptions(options =>
-                {
-                    options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-                })
-                .AddFluentValidation(fvc =>
-                    fvc.RegisterValidatorsFromAssemblyContaining<Startup>());
-
-            var basePath = PlatformServices.Default.Application.ApplicationBasePath;
-
-            //Set the comments path for the swagger json and ui.
-            var xmlPath = Path.Combine(basePath, "MatchingEngine.xml");
-
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new Info { Title = "MatchingEngine", Version = "v1" });
-                c.IncludeXmlComments(xmlPath);
-            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, Microsoft.AspNetCore.Hosting.IHostingEnvironment env,
-            ILoggerFactory loggerFactory, IMapper mapper)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory, IMapper mapper)
         {
-            if (env.IsDevelopment())
+            app.UseRouting();
+            app.UseEndpoints(endpoints =>
             {
-                app.UseDeveloperExceptionPage();
-                app.UseDatabaseErrorPage();
-            }
-
-            mapper.ConfigurationProvider.AssertConfigurationIsValid();
+                endpoints.MapControllers();
+            });
 
             app.UseSwagger();
-
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "MatchingEngine V1");
             });
 
-            app.UseMvc();
+            mapper.ConfigurationProvider.AssertConfigurationIsValid();
         }
     }
 }
