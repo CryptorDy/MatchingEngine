@@ -33,8 +33,35 @@ namespace Stock.Trading.Controllers
             return result;
         }
 
+        [Obsolete("For LiquidityMain versions <= 1.0.291")]
         [HttpPost("orders-update")]
-        public async Task SaveLiquidityImportUpdate([FromBody] List<ImportUpdateDto> dtos)
+        public async Task SaveLiquidityImportUpdate([FromBody] ImportUpdateDto dto)
+        {
+            var groupsToAdd = dto.OrdersToAdd.GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _);
+            var groupsToUpdate = dto.OrdersToUpdate.GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _);
+            var groupsToDelete = dto.OrdersToDelete.GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _);
+            var pairCodes = groupsToAdd.Keys.ToList().Union(groupsToUpdate.Keys).Union(groupsToDelete.Keys)
+                .Distinct().ToList();
+
+            if (new Random().Next(50) == 0)
+                _logger.LogInformation($"Used obsolete /orders-update with {pairCodes.Count} pairs");
+
+            var separateDtos = new List<ImportUpdateDto>();
+            foreach (var pairCode in pairCodes)
+            {
+                separateDtos.Add(new ImportUpdateDto
+                {
+                    CurrencyPairCode = pairCode,
+                    OrdersToAdd = groupsToAdd[pairCode].ToList(),
+                    OrdersToUpdate = groupsToUpdate[pairCode].ToList(),
+                    OrdersToDelete = groupsToDelete[pairCode].ToList(),
+                });
+            }
+            await SaveLiquidityImportUpdates(separateDtos);
+        }
+
+        [HttpPost("orders-updates")]
+        public async Task SaveLiquidityImportUpdates([FromBody] List<ImportUpdateDto> dtos)
         {
             await Task.WhenAll(dtos.Select(async dto =>
             {
