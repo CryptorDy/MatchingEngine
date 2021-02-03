@@ -65,13 +65,12 @@ namespace Stock.Trading.Controllers
         {
             await Task.WhenAll(dtos.Select(async dto =>
             {
-                // check that there is no local orders
-                var localOrders = dto.OrdersToAdd.Union(dto.OrdersToUpdate).Union(dto.OrdersToDelete)
-                    .Where(_ => _.Exchange == Exchange.Local).ToList();
-                if (localOrders.Count > 0)
+                // temporary check that there is no local orders
+                if (dto.OrdersToAdd.Any(_ => _.Exchange == Exchange.Local) ||
+                    dto.OrdersToUpdate.Any(_ => _.Exchange == Exchange.Local) ||
+                    dto.OrdersToDelete.Any(_ => _.Exchange == Exchange.Local)
+                )
                 {
-                    Console.WriteLine($"SaveLiquidityImportUpdate() has local orders: \n" +
-                        $"{string.Join("\n", localOrders.Select(_ => _.GetOrder()))}");
                     throw new Exception($"SaveLiquidityImportUpdate() has local orders");
                 }
 
