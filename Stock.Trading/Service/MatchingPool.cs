@@ -338,13 +338,16 @@ namespace MatchingEngine.Services
                 {
                     DateTime start = DateTime.UtcNow;
                     (modifiedOrders, newDeals) = _ordersMatcher.Match(_orders, newOrder);
-                    _orders.Add(newOrder);
+                    if (newOrder.IsActive)
+                    {
+                        _orders.Add(newOrder);
+                    }
                     _orders.RemoveAll(o => !o.IsActive);
                     _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
                         $"Orders in pool: {_orders.Count};");
                     CheckOrderbookIntersection(newOrder);
+                    UpdateDatabase(context, modifiedOrders, newDeals).Wait();
                 }
-                await UpdateDatabase(context, modifiedOrders, newDeals);
                 await ReportData(context, modifiedOrders, newDeals);
             }
         }
