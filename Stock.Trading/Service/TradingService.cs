@@ -29,12 +29,6 @@ namespace MatchingEngine.Services
 
         #region GET-requests
 
-        public async Task<Order> GetOrder(Guid orderId, bool? isBid = null)
-        {
-            var order = await _context.GetOrder(orderId, isBid);
-            return order;
-        }
-
         public async Task<List<Deal>> GetDeals(string currencyPairCode, int? lastNum, string userId,
             DateTimeOffset? sinceDate = null, DateTimeOffset? toDate = null, List<string> dealIds = null)
         {
@@ -121,14 +115,18 @@ namespace MatchingEngine.Services
         {
             try
             {
-                Console.WriteLine($"DeleteOrder() start. id:{orderId}");
-                var order = await GetOrder(orderId);
-                if (order == null)
+                _logger.LogDebug($"DeleteOrder() start. id:{orderId}");
+                var dbOrder = await _context.GetOrder(orderId);
+                if (dbOrder == null)
                 {
-                    Console.WriteLine("DeleteOrder() Not found.");
+                    _logger.LogDebug("DeleteOrder() Not found.");
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
                 }
-                Console.WriteLine($"DeleteOrder() {order}");
+
+                var pool = _matchingPoolsHandler.GetPool(dbOrder.CurrencyPairCode);
+                var order = pool.GetPoolOrder(orderId);
+                _logger.LogDebug($"DeleteOrder() {dbOrder}");
+
                 if (order.Blocked > 0)
                 {
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked, Order = order };
@@ -142,15 +140,15 @@ namespace MatchingEngine.Services
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled, Order = order };
                 }
 
-                order = await _context.GetOrder(orderId);
-                order.IsCanceled = true;
-                await _context.UpdateOrder(order, true, OrderEventType.Cancel);
-                _matchingPoolsHandler.GetPool(order.CurrencyPairCode).RemoveOrder(orderId);
-                return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = order };
+                pool.RemoveOrder(orderId);
+                dbOrder = await _context.GetOrder(orderId); // reload order from db after it was removed from pool
+                dbOrder.IsCanceled = true;
+                await _context.UpdateOrder(dbOrder, true, OrderEventType.Cancel);
+                return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = dbOrder };
             }
             catch (Exception ex)
             {
-                _logger.LogError("Delete order error", ex);
+                _logger.LogError($"Delete order {orderId} error", ex);
                 return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
             }
         }
