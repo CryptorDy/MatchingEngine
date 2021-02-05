@@ -22,6 +22,8 @@ namespace MatchingEngine.Services
         private readonly ConcurrentDictionary<string, MatchingPool> _matchingPools =
             new ConcurrentDictionary<string, MatchingPool>();
 
+        private Object _poolsCreationLock = new object();
+
         public MatchingPoolsHandler(
             IServiceScopeFactory serviceScopeFactory,
             IServiceProvider provider)
@@ -68,8 +70,14 @@ namespace MatchingEngine.Services
 
         public MatchingPool GetPool(string currencyPairCode)
         {
-            var matchingPool = _matchingPools.GetOrAdd(currencyPairCode, (code) => CreatePool(code));
-            return matchingPool;
+            if (_matchingPools.TryGetValue(currencyPairCode, out var pool))
+                return pool;
+
+            lock (_poolsCreationLock)
+            {
+                var newPool = _matchingPools.GetOrAdd(currencyPairCode, (code) => CreatePool(code));
+                return newPool;
+            }
         }
 
         private MatchingPool CreatePool(string currencyPairCode)
