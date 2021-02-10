@@ -18,7 +18,7 @@ namespace MatchingEngine
             using (var scope = host.Services.CreateScope())
             {
                 var dbInitializer = scope.ServiceProvider.GetService<IDbInitializer>();
-                dbInitializer.Init();
+                dbInitializer.Init().Wait();
             }
             host.Services.GetRequiredService<ICurrenciesService>().LoadData().Wait(); // load currencies and currency pairs
             var singletonsAccessor = host.Services.GetRequiredService<SingletonsAccessor>();

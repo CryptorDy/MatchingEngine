@@ -29,10 +29,9 @@ namespace MatchingEngine.Data
         private async Task LiquidityUnblockAllDbOrders()
         {
             Console.WriteLine("LiquidityUnblockAllDbOrders start");
-            var blockedBids = _dbContext.Bids.Where(_ => _.Blocked > 0).ToList();
-            Console.WriteLine("LiquidityUnblockAllDbOrders bids loaded");
-            var blockedAsks = _dbContext.Asks.Where(_ => _.Blocked > 0).ToList();
-            Console.WriteLine("LiquidityUnblockAllDbOrders asks loaded");
+            var blockedBids = await _dbContext.Bids.Where(_ => _.Blocked > 0).ToListAsync();
+            var blockedAsks = await _dbContext.Asks.Where(_ => _.Blocked > 0).ToListAsync();
+            Console.WriteLine("LiquidityUnblockAllDbOrders orders loaded");
             foreach (Order order in blockedBids.Cast<Order>().Union(blockedAsks))
                 order.Blocked = 0;
             Console.WriteLine("LiquidityUnblockAllDbOrders before save");
