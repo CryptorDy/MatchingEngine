@@ -37,9 +37,9 @@ namespace Stock.Trading.Controllers
         [HttpPost("orders-update")]
         public async Task SaveLiquidityImportUpdate([FromBody] ImportUpdateDto dto)
         {
-            var groupsToAdd = dto.OrdersToAdd.GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _);
-            var groupsToUpdate = dto.OrdersToUpdate.GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _);
-            var groupsToDelete = dto.OrdersToDelete.GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _);
+            var groupsToAdd = dto.OrdersToAdd.GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _.ToList());
+            var groupsToUpdate = dto.OrdersToUpdate.GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _.ToList());
+            var groupsToDelete = dto.OrdersToDelete.GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _.ToList());
             var pairCodes = groupsToAdd.Keys.ToList().Union(groupsToUpdate.Keys).Union(groupsToDelete.Keys)
                 .Distinct().ToList();
 
@@ -52,9 +52,9 @@ namespace Stock.Trading.Controllers
                 separateDtos.Add(new ImportUpdateDto
                 {
                     CurrencyPairCode = pairCode,
-                    OrdersToAdd = groupsToAdd[pairCode].ToList(),
-                    OrdersToUpdate = groupsToUpdate[pairCode].ToList(),
-                    OrdersToDelete = groupsToDelete[pairCode].ToList(),
+                    OrdersToAdd = groupsToAdd.GetValueOrDefault(pairCode, new()),
+                    OrdersToUpdate = groupsToUpdate.GetValueOrDefault(pairCode, new()),
+                    OrdersToDelete = groupsToDelete.GetValueOrDefault(pairCode, new()),
                 });
             }
             await SaveLiquidityImportUpdates(separateDtos);
