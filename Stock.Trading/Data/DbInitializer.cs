@@ -31,10 +31,13 @@ namespace MatchingEngine.Data
             Console.WriteLine("LiquidityUnblockAllDbOrders start");
             var blockedBids = _dbContext.Bids.Where(_ => _.Blocked > 0).ToList();
             Console.WriteLine("LiquidityUnblockAllDbOrders bids loaded");
-            var blockedAsks = await _dbContext.Asks.Where(_ => _.Blocked > 0).ToListAsync();
+            var blockedAsks = _dbContext.Asks.Where(_ => _.Blocked > 0).ToList();
+            Console.WriteLine("LiquidityUnblockAllDbOrders asks loaded");
             foreach (Order order in blockedBids.Cast<Order>().Union(blockedAsks))
                 order.Blocked = 0;
+            Console.WriteLine("LiquidityUnblockAllDbOrders before save");
             await _dbContext.SaveChangesAsync();
+            Console.WriteLine("LiquidityUnblockAllDbOrders after save");
         }
     }
 
