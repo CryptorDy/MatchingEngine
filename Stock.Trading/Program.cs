@@ -15,12 +15,12 @@ namespace MatchingEngine
             Console.WriteLine($"Version: {Assembly.GetExecutingAssembly().GetName().Version}");
             IWebHost host = BuildWebHost(args);
 
+            host.Services.GetRequiredService<ICurrenciesService>().LoadData().Wait(); // load currencies and currency pairs
             using (var scope = host.Services.CreateScope())
             {
                 var dbInitializer = scope.ServiceProvider.GetService<IDbInitializer>();
                 dbInitializer.Init().Wait();
             }
-            host.Services.GetRequiredService<ICurrenciesService>().LoadData().Wait(); // load currencies and currency pairs
             var singletonsAccessor = host.Services.GetRequiredService<SingletonsAccessor>();
             var matchingPoolsHandler = singletonsAccessor.MatchingPoolsHandler;
             host.Services.GetRequiredService<LiquidityExpireBlocksHandler>().SetMatchingPoolsHandler(matchingPoolsHandler);
