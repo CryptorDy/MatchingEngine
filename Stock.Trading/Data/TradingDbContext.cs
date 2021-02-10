@@ -69,8 +69,8 @@ namespace MatchingEngine.Data
                 Asks.Add((Ask)trackedOrder);
             }
 
-            OrderEvents.Add(OrderEvent.Create(_mapper, trackedOrder, eventType));
             _logger.LogInformation($"AddOrder() toSave:{toSave}, eventType:{eventType}, order:{order}");
+            OrderEvents.Add(OrderEvent.Create(_mapper, trackedOrder, eventType));
             if (toSave)
             {
                 await SaveChangesAsync();
@@ -89,6 +89,7 @@ namespace MatchingEngine.Data
                 Asks.Update((Ask)order);
             }
 
+            _logger.LogInformation($"UpdateOrder() toSave:{toSave}, eventType:{eventType}, order:{order}");
             OrderEvents.Add(OrderEvent.Create(_mapper, order, eventType, dealIds));
 
             if (toSave)
