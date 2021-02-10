@@ -45,7 +45,6 @@ namespace MatchingEngine.Services
             ILogger<MatchingPool> logger,
             string currencyPairCode)
         {
-
             _serviceScopeFactory = serviceScopeFactory;
             _currenciesService = currenciesService;
             _ordersMatcher = ordersMatcher;
@@ -550,6 +549,7 @@ namespace MatchingEngine.Services
                         await Process(newOrder);
                     }
                 }
+                catch (TaskCanceledException) { }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Trading processing error");
