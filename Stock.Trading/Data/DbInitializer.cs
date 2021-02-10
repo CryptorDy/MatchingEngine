@@ -1,5 +1,6 @@
 using MatchingEngine.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -27,7 +28,9 @@ namespace MatchingEngine.Data
         /// <returns></returns>
         private async Task LiquidityUnblockAllDbOrders()
         {
-            var blockedBids = await _dbContext.Bids.Where(_ => _.Blocked > 0).ToListAsync();
+            Console.WriteLine("LiquidityUnblockAllDbOrders start");
+            var blockedBids = _dbContext.Bids.Where(_ => _.Blocked > 0).ToList();
+            Console.WriteLine("LiquidityUnblockAllDbOrders bids loaded");
             var blockedAsks = await _dbContext.Asks.Where(_ => _.Blocked > 0).ToListAsync();
             foreach (Order order in blockedBids.Cast<Order>().Union(blockedAsks))
                 order.Blocked = 0;
