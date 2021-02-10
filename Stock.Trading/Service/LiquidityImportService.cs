@@ -30,8 +30,10 @@ namespace MatchingEngine.Services
         {
             try
             {
+                _logger.LogInformation($"CreateTrade() start");
                 await _gatewayHttpClient.PostJsonAsync($"liquiditymain/trade/create",
                     new ExternalMatchingPair { Bid = bid, Ask = ask });
+                _logger.LogInformation($"CreateTrade() end");
             }
             catch (Exception e)
             {
