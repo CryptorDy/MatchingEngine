@@ -144,7 +144,7 @@ namespace MatchingEngine.Services
 
                     dbOrder.Fulfilled = order.Fulfilled;
                     dbOrder.Blocked = order.Blocked;
-                    await context.UpdateOrder(dbOrder, true, eventType, orderDealIds);
+                    await context.UpdateOrder(dbOrder, false, eventType, orderDealIds);
                 }
             }
 
@@ -345,8 +345,8 @@ namespace MatchingEngine.Services
                     _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
                         $"Orders in pool: {_orders.Count};");
                     CheckOrderbookIntersection(newOrder);
-                    UpdateDatabase(context, modifiedOrders, newDeals).Wait();
                 }
+                await UpdateDatabase(context, modifiedOrders, newDeals);
                 await ReportData(context, modifiedOrders, newDeals);
             }
         }
