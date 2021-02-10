@@ -43,7 +43,8 @@ namespace MatchingEngine.Services
             LiquidityExpireBlocksHandler liquidityExpireBlocksHandler,
             IOptions<AppSettings> settings,
             ILogger<MatchingPool> logger,
-            string currencyPairCode)
+            string currencyPairCode,
+            List<Order> activeOrders)
         {
             _serviceScopeFactory = serviceScopeFactory;
             _currenciesService = currenciesService;
@@ -57,26 +58,8 @@ namespace MatchingEngine.Services
 
             _pairCode = currencyPairCode;
 
-            //todo edit
-            LoadOrders(); // load orders from db after all services are set
-        }
-
-        private void LoadOrders()
-        {
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
-                var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                var dbBids = context.Bids.AsNoTracking().Where(_ => _.CurrencyPairCode == _pairCode
-                    && !_.IsCanceled && _.Fulfilled < _.Amount).ToList(); // todo change back to IsActive
-                var dbAsks = context.Asks.AsNoTracking().Where(_ => _.CurrencyPairCode == _pairCode
-                    && !_.IsCanceled && _.Fulfilled < _.Amount).ToList();
-                var dbOrders = dbBids.Cast<Order>().Union(dbAsks).ToList();
-                lock (_orders)
-                {
-                    _orders.AddRange(dbOrders);
-                    SendOrdersToMarketData();
-                }
-            }
+            _orders = activeOrders;
+            SendOrdersToMarketData();
         }
 
         public Order GetPoolOrder(Guid id)

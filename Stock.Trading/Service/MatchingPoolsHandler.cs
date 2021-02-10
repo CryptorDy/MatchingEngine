@@ -1,5 +1,6 @@
 using MatchingEngine.Data;
 using MatchingEngine.Helpers;
+using MatchingEngine.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,7 @@ namespace MatchingEngine.Services
     public class MatchingPoolsHandler : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ICurrenciesService _currenciesService;
         private readonly IServiceProvider _provider;
 
         private readonly ConcurrentDictionary<string, MatchingPool> _matchingPools =
@@ -26,9 +28,11 @@ namespace MatchingEngine.Services
 
         public MatchingPoolsHandler(
             IServiceScopeFactory serviceScopeFactory,
+            ICurrenciesService currenciesService,
             IServiceProvider provider)
         {
             _scopeFactory = serviceScopeFactory;
+            _currenciesService = currenciesService;
             _provider = provider;
         }
 
@@ -51,16 +55,25 @@ namespace MatchingEngine.Services
 
         private void InitPools()
         {
-            using var scope = _scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-            var dbBidPairs = context.Bids.Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount)
-                .Select(_ => _.CurrencyPairCode).Distinct().ToList();
-            var dbAskPairs = context.Asks.Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount)
-                .Select(_ => _.CurrencyPairCode).Distinct().ToList();
-            var pairs = dbBidPairs.Union(dbAskPairs).Distinct().ToList();
+            lock (_poolsCreationLock)
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+                var bids = context.Bids.AsNoTracking().Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount).ToList();  // todo use IsActive field
+                var asks = context.Asks.AsNoTracking().Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount).ToList();
+                var activeOrdersByPair = bids.Cast<Order>().Union(asks)
+                    .GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _.ToList());
 
-            foreach (var pair in pairs)
-                GetPool(pair);
+                foreach (var pair in activeOrdersByPair.Keys)
+                    _matchingPools[pair] = CreatePool(pair, activeOrdersByPair[pair]); // initialize pools with active orders
+
+                var allPairs = _currenciesService.GetCurrencyPairs();
+                if (allPairs != null)
+                {
+                    foreach (var pair in allPairs.Select(_ => _.Code).Except(activeOrdersByPair.Keys))
+                        GetPool(pair); // initialize pools that have no active orders
+                }
+            }
         }
 
         public List<MatchingPool> GetExistingPools()
@@ -75,17 +88,18 @@ namespace MatchingEngine.Services
 
             lock (_poolsCreationLock)
             {
-                var newPool = _matchingPools.GetOrAdd(currencyPairCode, (code) => CreatePool(code));
+                var orders = new List<Order>(); // if pool wasn't created in InitPools() then it has no active orders
+                var newPool = _matchingPools.GetOrAdd(currencyPairCode, (code) => CreatePool(code, orders));
                 return newPool;
             }
         }
 
-        private MatchingPool CreatePool(string currencyPairCode)
+        private MatchingPool CreatePool(string currencyPairCode, List<Order> activeOrders)
         {
             if (string.IsNullOrWhiteSpace(currencyPairCode))
                 throw new ArgumentException($"Invalid currencyPairCode '{currencyPairCode}'");
 
-            var matchingPool = _provider.CreateInstance<MatchingPool>(currencyPairCode);
+            var matchingPool = _provider.CreateInstance<MatchingPool>(currencyPairCode, activeOrders);
             Task.Factory.StartNew(() => matchingPool.StartAsync(new CancellationTokenSource().Token));
             return matchingPool;
         }
