@@ -37,7 +37,7 @@ namespace MatchingEngine.Services
             InitPools();
             while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ContinueWith(task => { });
             }
 
             // stop all pools after cancel signal

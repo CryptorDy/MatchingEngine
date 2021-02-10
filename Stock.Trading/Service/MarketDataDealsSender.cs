@@ -27,7 +27,7 @@ namespace MatchingEngine.Services
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            //await Task.Delay(TimeSpan.FromHours(2), cancellationToken); // initial delay after service start
+            //await Task.Delay(TimeSpan.FromHours(2), cancellationToken).ContinueWith(task => { }); // initial delay after service start
 
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -39,7 +39,7 @@ namespace MatchingEngine.Services
                 {
                     _logger.LogError(e, "");
                 }
-                await Task.Delay(TimeSpan.FromDays(1), cancellationToken);
+                await Task.Delay(TimeSpan.FromDays(1), cancellationToken).ContinueWith(task => { });
             }
         }
     }

@@ -47,7 +47,7 @@ namespace MatchingEngine.Services
                     _logger.LogError(e, "");
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken).ContinueWith(task => { });
             }
         }
 

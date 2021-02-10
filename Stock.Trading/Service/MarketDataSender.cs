@@ -49,7 +49,7 @@ namespace MatchingEngine.Services
                     }
                     else
                     {
-                        await Task.Delay(100, cancellationToken);
+                        await Task.Delay(100, cancellationToken).ContinueWith(task => { });
                     }
                 }
                 catch (Exception ex)
