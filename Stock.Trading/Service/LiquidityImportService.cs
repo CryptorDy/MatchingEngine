@@ -30,7 +30,8 @@ namespace MatchingEngine.Services
         {
             try
             {
-                _logger.LogInformation($"CreateTrade() start");
+                var localOrder = bid.IsLocal ? bid : ask;
+                _logger.LogInformation($"CreateTrade() start {localOrder.Id} {localOrder.CurrencyPairCode}");
                 await _gatewayHttpClient.PostJsonAsync($"liquiditymain/trade/create",
                     new ExternalMatchingPair { Bid = bid, Ask = ask });
                 _logger.LogInformation($"CreateTrade() end");
