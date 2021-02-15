@@ -17,19 +17,22 @@ namespace MatchingEngine.Controllers
     {
         private readonly TradingDbContext _context;
         private readonly GatewayHttpClient _gatewayHttpClient;
-        private readonly TradingService _service;
+        private readonly TradingService _tradingService;
+        private readonly MatchingPoolsHandler _matchingPoolsHandler;
         private readonly MarketDataService _marketDataService;
         private readonly ILogger _logger;
 
         public OrderController(TradingDbContext context,
             GatewayHttpClient gatewayHttpClient,
-            TradingService service,
+            TradingService tradingService,
+            SingletonsAccessor singletonsAccessor,
             MarketDataService marketDataService,
             ILogger<OrderController> logger)
         {
             _context = context;
             _gatewayHttpClient = gatewayHttpClient;
-            _service = service;
+            _tradingService = tradingService;
+            _matchingPoolsHandler = singletonsAccessor.MatchingPoolsHandler;
             _marketDataService = marketDataService;
             _logger = logger;
         }
@@ -73,7 +76,7 @@ namespace MatchingEngine.Controllers
                 return BadRequest(ModelState);
             }
 
-            var newOrderId = await _service.CreateOrder(request);
+            var newOrderId = await _tradingService.CreateOrder(request);
             return Ok(new CreateOrderResult { Id = newOrderId });
         }
 
@@ -87,8 +90,15 @@ namespace MatchingEngine.Controllers
         [HttpDelete("{isBid}/{orderId}")] // Obsolete
         public async Task<CancelOrderResponse> Delete(Guid orderId)
         {
-            var response = await _service.DeleteOrder(orderId);
+            var response = await _tradingService.DeleteOrder(orderId);
             return response;
+        }
+
+        [HttpPost("send-active-to-marketdata")]
+        public async Task<IActionResult> SendActiveOrdersToMarketData()
+        {
+            await _matchingPoolsHandler.SendActiveOrdersToMarketData();
+            return Ok();
         }
 
         [HttpPost("resend-to-marketdata")]

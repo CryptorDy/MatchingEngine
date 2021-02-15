@@ -24,7 +24,7 @@ namespace MatchingEngine.Services
         private readonly ConcurrentDictionary<string, MatchingPool> _matchingPools =
             new ConcurrentDictionary<string, MatchingPool>();
 
-        private Object _poolsCreationLock = new object();
+        private object _poolsCreationLock = new object();
 
         public MatchingPoolsHandler(
             IServiceScopeFactory serviceScopeFactory,
@@ -102,6 +102,14 @@ namespace MatchingEngine.Services
             var matchingPool = _provider.CreateInstance<MatchingPool>(currencyPairCode, activeOrders);
             Task.Factory.StartNew(() => matchingPool.StartAsync(new CancellationTokenSource().Token));
             return matchingPool;
+        }
+
+        public async Task SendActiveOrdersToMarketData()
+        {
+            await Task.WhenAll(_matchingPools.Values.Select(async pool =>
+            {
+                pool.SendOrdersToMarketData();
+            }));
         }
     }
 }
