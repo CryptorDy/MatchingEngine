@@ -3,6 +3,7 @@ using MatchingEngine.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -11,7 +12,7 @@ namespace Stock.Trading.Controllers
     [Route("api/liquidityimport")]
     public class LiquidityImportController : Controller
     {
-        private readonly MatchingPool _matchingPool;
+        private readonly MatchingPoolsHandler _matchingPoolsHandler;
         private readonly LiquidityExpireWatcher _liquidityExpireWatcher;
         private readonly ILogger _logger;
 
@@ -19,7 +20,7 @@ namespace Stock.Trading.Controllers
             SingletonsAccessor singletonsAccessor,
             ILogger<LiquidityImportController> logger)
         {
-            _matchingPool = singletonsAccessor.MatchingPool;
+            _matchingPoolsHandler = singletonsAccessor.MatchingPoolsHandler;
             _liquidityExpireWatcher = singletonsAccessor.LiquidityExpireWatcher;
             _logger = logger;
         }
@@ -27,42 +28,73 @@ namespace Stock.Trading.Controllers
         [HttpPost("trade-result")]
         public async Task<SaveExternalOrderResult> ApplyTradeResult([FromBody] ExternalCreatedOrder createdOrder)
         {
-            var result = await _matchingPool.UpdateExternalOrder(createdOrder);
+            var result = await _matchingPoolsHandler.GetPool(createdOrder.CurrencyPairCode)
+                .UpdateExternalOrder(createdOrder);
             return result;
         }
 
+        [Obsolete("For LiquidityMain versions <= 1.0.291")]
         [HttpPost("orders-update")]
         public async Task SaveLiquidityImportUpdate([FromBody] ImportUpdateDto dto)
         {
-            // check that there is no local orders
-            var localOrders = dto.OrdersToAdd.Union(dto.OrdersToUpdate).Union(dto.OrdersToDelete)
-                .Where(_ => _.Exchange == Exchange.Local).ToList();
-            if (localOrders.Count > 0)
-            {
-                Console.WriteLine($"SaveLiquidityImportUpdate() has local orders: \n{string.Join("\n", localOrders.Select(_ => _.GetOrder()))}");
-                throw new Exception($"SaveLiquidityImportUpdate() has local orders");
-            }
+            var groupsToAdd = dto.OrdersToAdd.GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _.ToList());
+            var groupsToUpdate = dto.OrdersToUpdate.GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _.ToList());
+            var groupsToDelete = dto.OrdersToDelete.GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _.ToList());
+            var pairCodes = groupsToAdd.Keys.ToList().Union(groupsToUpdate.Keys).Union(groupsToDelete.Keys)
+                .Distinct().ToList();
 
-            await _matchingPool.SaveLiquidityImportUpdate(dto);
+            if (new Random().Next(50) == 0)
+                _logger.LogInformation($"Used obsolete /orders-update with {pairCodes.Count} pairs");
+
+            var separateDtos = new List<ImportUpdateDto>();
+            foreach (var pairCode in pairCodes)
+            {
+                separateDtos.Add(new ImportUpdateDto
+                {
+                    CurrencyPairCode = pairCode,
+                    OrdersToAdd = groupsToAdd.GetValueOrDefault(pairCode, new()),
+                    OrdersToUpdate = groupsToUpdate.GetValueOrDefault(pairCode, new()),
+                    OrdersToDelete = groupsToDelete.GetValueOrDefault(pairCode, new()),
+                });
+            }
+            await SaveLiquidityImportUpdates(separateDtos);
+        }
+
+        [HttpPost("orders-updates")]
+        public async Task SaveLiquidityImportUpdates([FromBody] List<ImportUpdateDto> dtos)
+        {
+            await Task.WhenAll(dtos.Select(async dto =>
+            {
+                // temporary check that there is no local orders
+                if (dto.OrdersToAdd.Any(_ => _.Exchange == Exchange.Local) ||
+                    dto.OrdersToUpdate.Any(_ => _.Exchange == Exchange.Local) ||
+                    dto.OrdersToDelete.Any(_ => _.Exchange == Exchange.Local)
+                )
+                {
+                    throw new Exception($"SaveLiquidityImportUpdate() has local orders");
+                }
+
+                _matchingPoolsHandler.GetPool(dto.CurrencyPairCode).SaveLiquidityImportUpdate(dto);
+            }));
         }
 
         /// <summary>
         /// Notify that liquidity import is working
         /// </summary>
-        [HttpGet("ping/{exchange}/{curPairCode}")]
-        public async Task<IActionResult> Ping(Exchange exchange, string curPairCode)
+        [HttpGet("ping/{exchange}/{currencyPairCode}")]
+        public async Task<IActionResult> Ping(Exchange exchange, string currencyPairCode)
         {
             if (exchange == Exchange.Local)
             {
                 return BadRequest();
             }
 
-            _liquidityExpireWatcher.UpdateExpirationDate(exchange, curPairCode);
+            _liquidityExpireWatcher.UpdateExpirationDate(exchange, currencyPairCode);
             return Ok();
         }
 
-        [HttpDelete("orders/{exchange}/{currencyPairId}")]
-        public async Task<IActionResult> DeleteOrders(Exchange exchange, string currencyPairId)
+        [HttpDelete("orders/{exchange}/{currencyPairCode}")]
+        public async Task<IActionResult> DeleteOrders(Exchange exchange, string currencyPairCode)
         {
             try
             {
@@ -71,7 +103,7 @@ namespace Stock.Trading.Controllers
                     return BadRequest();
                 }
 
-                _matchingPool.RemoveLiquidityOrderbook(exchange, currencyPairId);
+                _matchingPoolsHandler.GetPool(currencyPairCode).RemoveLiquidityOrderbook(exchange);
                 return Ok();
             }
             catch (Exception e)

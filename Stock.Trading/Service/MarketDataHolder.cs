@@ -1,33 +1,39 @@
 using MatchingEngine.Models;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace MatchingEngine.Services
 {
     public class MarketDataHolder
     {
-        private ConcurrentQueue<bool> _updateMarketData = new ConcurrentQueue<bool>();
-        private ConcurrentQueue<Order> _orders = new ConcurrentQueue<Order>();
+        private readonly ConcurrentDictionary<string, object> _pairsForSend =
+            new ConcurrentDictionary<string, object>();
+        private readonly ConcurrentDictionary<string, ConcurrentQueue<Order>> _orders =
+            new ConcurrentDictionary<string, ConcurrentQueue<Order>>();
 
-        public void SendOrders(List<Order> orders)
+        public void SetOrders(string pairCode, List<Order> orders)
         {
-            _orders = new ConcurrentQueue<Order>(orders);
-            _updateMarketData.Enqueue(true);
+            _orders[pairCode] = new ConcurrentQueue<Order>(orders);
+            _pairsForSend.TryAdd(pairCode, new object());
         }
 
-        public List<Order> GetOrders()
+        public List<Order> GetOrders(string pairCode)
         {
-            return new List<Order>(_orders); // copy list to prevent concurrency error
+            return new List<Order>(_orders[pairCode]); // copy list to prevent concurrency error
         }
 
-        public void ClearFlags()
+        public List<string> DequeueAllPairsForSend()
         {
-            while (_updateMarketData.TryDequeue(out _)) { } // Dequeue all
+            var pairs = _pairsForSend.Keys.ToList();
+            foreach (string pair in pairs)
+                _pairsForSend.TryRemove(pair, out _);
+            return pairs;
         }
 
-        public bool RefreshMarketData()
+        public bool NeedsUpdate()
         {
-            return _updateMarketData.Count > 0;
+            return _pairsForSend.Count > 0;
         }
     }
 }

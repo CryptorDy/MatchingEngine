@@ -41,6 +41,9 @@ namespace MatchingEngine.Data
                 .ValueGeneratedOnAdd().HasDefaultValueSql("current_timestamp"); // set curent date
             builder.Entity<OrderEvent>().Property(_ => _.EventType)
                 .HasConversion(new EnumToStringConverter<OrderEventType>()); // save enum as string
+
+            builder.Entity<Deal>().HasIndex(_ => _.IsSentToDealEnding);
+            builder.Entity<Deal>().HasIndex(_ => _.FromInnerTradingBot);
         }
 
         public async Task LogDealExists(Guid dealId, string place)
@@ -66,8 +69,8 @@ namespace MatchingEngine.Data
                 Asks.Add((Ask)trackedOrder);
             }
 
-            OrderEvents.Add(OrderEvent.Create(_mapper, trackedOrder, eventType));
             _logger.LogInformation($"AddOrder() toSave:{toSave}, eventType:{eventType}, order:{order}");
+            OrderEvents.Add(OrderEvent.Create(_mapper, trackedOrder, eventType));
             if (toSave)
             {
                 await SaveChangesAsync();
@@ -86,6 +89,7 @@ namespace MatchingEngine.Data
                 Asks.Update((Ask)order);
             }
 
+            _logger.LogInformation($"UpdateOrder() toSave:{toSave}, eventType:{eventType}, order:{order}");
             OrderEvents.Add(OrderEvent.Create(_mapper, order, eventType, dealIds));
 
             if (toSave)
@@ -102,7 +106,7 @@ namespace MatchingEngine.Data
             string userId, OrderStatusRequest status,
             DateTimeOffset? from, DateTimeOffset? to)
         {
-            var query = source.Include(_ => _.DealList).Where(_ => 
+            var query = source.Include(_ => _.DealList).Where(_ =>
                 (string.IsNullOrWhiteSpace(currencyPairCode) || _.CurrencyPairCode == currencyPairCode)
                 && (string.IsNullOrWhiteSpace(userId) || _.UserId == userId)
                 && (status == OrderStatusRequest.All
@@ -135,11 +139,9 @@ namespace MatchingEngine.Data
         {
             var bidIds = orders.Where(_ => _.IsBid).Select(_ => _.Id).ToList();
             var askIds = orders.Where(_ => !_.IsBid).Select(_ => _.Id).ToList();
-            var dbOrders = await Bids.Where(_ => bidIds.Contains(_.Id))
-                .Cast<Order>()
-                .Union(Asks.Where(_ => askIds.Contains(_.Id)))
-                .ToListAsync();
-            return dbOrders;
+            var dbBids = await Bids.Where(_ => bidIds.Contains(_.Id)).ToListAsync();
+            var dbAsks = await Asks.Where(_ => askIds.Contains(_.Id)).ToListAsync();
+            return dbBids.Cast<Order>().Union(dbAsks).ToList();
         }
 
         public async Task<Order> GetOrder(Guid orderId, bool? isBid = null)

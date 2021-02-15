@@ -55,7 +55,7 @@ namespace MatchingEngine.Controllers
         [HttpGet("{id}")]
         public async Task<Order> GetOrder(Guid id, bool? isBid = null)
         {
-            var order = await _service.GetOrder(id, isBid);
+            var order = await _context.GetOrder(id, isBid);
             return order;
         }
 

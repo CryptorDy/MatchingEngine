@@ -10,6 +10,8 @@ namespace MatchingEngine.Models.LiquidityImport
     {
         public Guid OrderId { get; set; }
 
-        public DateTime DateBlocked { get; set; }
+        public string CurrencyPairCode { get; set; }
+
+        public DateTimeOffset DateBlocked { get; set; }
     }
 }

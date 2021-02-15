@@ -1,4 +1,8 @@
+using MatchingEngine.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace MatchingEngine.Data
 {
@@ -11,22 +15,29 @@ namespace MatchingEngine.Data
             _dbContext = dbContext;
         }
 
-        public void Seed()
+        public async Task Init()
         {
             _dbContext.Database.Migrate();
+
+            await LiquidityUnblockAllDbOrders();
         }
 
-        public void Init()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        private async Task LiquidityUnblockAllDbOrders()
         {
-            _dbContext.Database.EnsureDeleted();
-            _dbContext.Database.Migrate();
+            var blockedBids = await _dbContext.Bids.Where(_ => _.Blocked > 0).ToListAsync();
+            var blockedAsks = await _dbContext.Asks.Where(_ => _.Blocked > 0).ToListAsync();
+            foreach (Order order in blockedBids.Cast<Order>().Union(blockedAsks))
+                order.Blocked = 0;
+            await _dbContext.SaveChangesAsync();
         }
     }
 
     public interface IDbInitializer
     {
-        void Seed();
-
-        void Init();
+        Task Init();
     }
 }

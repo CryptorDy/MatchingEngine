@@ -12,40 +12,22 @@ namespace MatchingEngine.Services
     public class TradingService
     {
         private readonly TradingDbContext _context;
+        private readonly MatchingPoolsHandler _matchingPoolsHandler;
         private readonly ICurrenciesService _currenciesService;
-        private readonly MatchingPool _matchingPool;
         private readonly ILogger _logger;
 
         public TradingService(TradingDbContext context,
-            ICurrenciesService currenciesService,
             SingletonsAccessor singletonsAccessor,
+            ICurrenciesService currenciesService,
             ILogger<TradingService> logger)
         {
             _context = context;
+            _matchingPoolsHandler = singletonsAccessor.MatchingPoolsHandler;
             _currenciesService = currenciesService;
-            _matchingPool = singletonsAccessor.MatchingPool;
             _logger = logger;
         }
 
         #region GET-requests
-
-        public async Task<Order> GetOrder(Guid orderId, bool? isBid = null)
-        {
-            try
-            {
-                var order = _matchingPool.GetPoolOrder(orderId);
-                if (order == null)
-                {
-                    order = await _context.GetOrder(orderId, isBid);
-                }
-                return order;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("0", ex);
-                return null;
-            }
-        }
 
         public async Task<List<Deal>> GetDeals(string currencyPairCode, int? lastNum, string userId,
             DateTimeOffset? sinceDate = null, DateTimeOffset? toDate = null, List<string> dealIds = null)
@@ -124,7 +106,7 @@ namespace MatchingEngine.Services
                 await _context.AddOrder(order, true, OrderEventType.Create);
             }
 
-            _matchingPool.AppendOrder(order);
+            _matchingPoolsHandler.GetPool(request.CurrencyPairCode).AppendOrder(order);
 
             return order.Id;
         }
@@ -133,14 +115,18 @@ namespace MatchingEngine.Services
         {
             try
             {
-                Console.WriteLine($"DeleteOrder() start. id:{orderId}");
-                var order = await GetOrder(orderId);
-                if (order == null)
+                _logger.LogDebug($"DeleteOrder() start. id:{orderId}");
+                var dbOrder = await _context.GetOrder(orderId);
+                if (dbOrder == null)
                 {
-                    Console.WriteLine("DeleteOrder() Not found.");
+                    _logger.LogDebug("DeleteOrder() Not found.");
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
                 }
-                Console.WriteLine($"DeleteOrder() {order}");
+
+                var pool = _matchingPoolsHandler.GetPool(dbOrder.CurrencyPairCode);
+                var order = pool.GetPoolOrder(orderId);
+                _logger.LogDebug($"DeleteOrder() {dbOrder}");
+
                 if (order.Blocked > 0)
                 {
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked, Order = order };
@@ -154,15 +140,15 @@ namespace MatchingEngine.Services
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled, Order = order };
                 }
 
-                order = await _context.GetOrder(orderId);
-                order.IsCanceled = true;
-                await _context.UpdateOrder(order, true, OrderEventType.Cancel);
-                await _matchingPool.RemoveOrder(orderId);
-                return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = order };
+                pool.RemoveOrder(orderId);
+                dbOrder = await _context.GetOrder(orderId); // reload order from db after it was removed from pool
+                dbOrder.IsCanceled = true;
+                await _context.UpdateOrder(dbOrder, true, OrderEventType.Cancel);
+                return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = dbOrder };
             }
             catch (Exception ex)
             {
-                _logger.LogError("Delete order error", ex);
+                _logger.LogError($"Delete order {orderId} error", ex);
                 return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
             }
         }

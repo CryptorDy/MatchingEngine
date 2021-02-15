@@ -36,18 +36,20 @@ namespace MatchingEngine.Services
             {
                 try
                 {
-                    if (_marketDataHolder.RefreshMarketData())
+                    if (_marketDataHolder.NeedsUpdate())
                     {
-                        _marketDataHolder.ClearFlags();
-
-                        var orders = _marketDataHolder.GetOrders();
-                        RemoveLiquidityOrderIntersections(orders);
-                        await _marketDataService.SendActiveOrders(orders);
+                        var pairs = _marketDataHolder.DequeueAllPairsForSend();
+                        await Task.WhenAll(pairs.Select(async pairCode =>
+                        {
+                            var orders = _marketDataHolder.GetOrders(pairCode);
+                            RemoveLiquidityOrderIntersections(orders);
+                            await _marketDataService.SendActiveOrders(pairCode, orders);
+                        }));
                         await SendDbOrderEvents();
                     }
                     else
                     {
-                        await Task.Delay(100);
+                        await Task.Delay(100, cancellationToken).ContinueWith(task => { });
                     }
                 }
                 catch (Exception ex)
@@ -88,32 +90,25 @@ namespace MatchingEngine.Services
 
         private void RemoveLiquidityOrderIntersections(List<Order> orders)
         {
-            var currencyPairs = orders.Select(_ => _.CurrencyPairCode).Distinct().ToList();
-            foreach (string currencyPair in currencyPairs)
+            if (!orders.Any())
+                return;
+            var pairCode = orders.First().CurrencyPairCode;
+            decimal maxBidPrice = orders.Where(_ => _.IsBid && _.ClientType == ClientType.LiquidityBot)
+                .Select(_ => _.Price).DefaultIfEmpty().Max();
+            if (maxBidPrice > 0)
             {
-                decimal maxBidPrice = orders.Where(_ => _.CurrencyPairCode == currencyPair && _.IsBid && _.ClientType == ClientType.LiquidityBot)
-                    .Select(_ => _.Price).DefaultIfEmpty().Max();
-                if (maxBidPrice > 0)
-                {
-                    int deleted = orders.RemoveAll(_ => _.CurrencyPairCode == currencyPair && !_.IsBid
-                        && _.ClientType == ClientType.LiquidityBot && _.Price <= maxBidPrice);
-                    if (deleted > 0)
-                    {
-                        Console.WriteLine($"RemoveOrderbookIntersections() removed {deleted} {currencyPair} asks");
-                    }
-                }
+                int deleted = orders.RemoveAll(_ => !_.IsBid && _.ClientType == ClientType.LiquidityBot && _.Price <= maxBidPrice);
+                if (deleted > 0)
+                    _logger.LogInformation($"RemoveOrderbookIntersections() removed {deleted} {pairCode} asks");
+            }
 
-                decimal minAskPrice = orders.Where(_ => _.CurrencyPairCode == currencyPair && !_.IsBid && _.ClientType == ClientType.LiquidityBot)
-                    .Select(_ => _.Price).DefaultIfEmpty().Min();
-                if (minAskPrice > 0)
-                {
-                    int deleted = orders.RemoveAll(_ => _.CurrencyPairCode == currencyPair && _.IsBid
-                        && _.ClientType == ClientType.LiquidityBot && _.Price >= minAskPrice);
-                    if (deleted > 0)
-                    {
-                        Console.WriteLine($"RemoveOrderbookIntersections() removed {deleted} {currencyPair} bids");
-                    }
-                }
+            decimal minAskPrice = orders.Where(_ => !_.IsBid && _.ClientType == ClientType.LiquidityBot)
+                .Select(_ => _.Price).DefaultIfEmpty().Min();
+            if (minAskPrice > 0)
+            {
+                int deleted = orders.RemoveAll(_ => _.IsBid && _.ClientType == ClientType.LiquidityBot && _.Price >= minAskPrice);
+                if (deleted > 0)
+                    _logger.LogInformation($"RemoveOrderbookIntersections() removed {deleted} {pairCode} bids");
             }
         }
     }
