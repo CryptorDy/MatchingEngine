@@ -30,9 +30,8 @@ namespace MatchingEngine.Services
         {
             try
             {
-                _logger.LogInformation($"SaveOrdersFromEvents() events:{events.Count}");
+                _logger.LogInformation($"SaveOrdersFromEvents() sending events:{events.Count}");
                 await _gatewayHttpClient.PostJsonAsync($"marketdata/orders/order-events", events);
-                _logger.LogInformation($"SaveOrdersFromEvents() events:{events.Count} end");
                 return true;
             }
             catch (Exception e)

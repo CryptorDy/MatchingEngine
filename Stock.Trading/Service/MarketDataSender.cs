@@ -65,26 +65,26 @@ namespace MatchingEngine.Services
             {
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
 
-                var newEvents = await context.OrderEvents.Where(_ => !_.IsSavedInMarketData).ToListAsync();
-                if (newEvents.Count == 0)
+                const int batchSize = 1000;
+                while (true)
                 {
-                    return;
-                }
+                    var newEvents = await context.OrderEvents.Where(_ => !_.IsSavedInMarketData)
+                        .Take(batchSize).ToListAsync();
 
-                // select last unsent event for each order to create/update order in MarketData
-                var eventsForSend = newEvents
-                    .GroupBy(_ => _.Id).Select(g => g.OrderByDescending(_ => _.EventDate).First()).ToList();
-                bool isSuccess = await _marketDataService.SaveOrdersFromEvents(eventsForSend);
-                if (!isSuccess)
-                {
-                    return;
-                }
+                    // select last unsent event for each order to create/update order in MarketData
+                    var eventsForSend = newEvents
+                        .GroupBy(_ => _.Id).Select(g => g.OrderByDescending(_ => _.EventDate).First()).ToList();
+                    bool isSuccess = await _marketDataService.SaveOrdersFromEvents(eventsForSend);
+                    if (!isSuccess)
+                        break;
 
-                foreach (var newEvent in newEvents)
-                {
-                    newEvent.IsSavedInMarketData = true;
+                    foreach (var newEvent in newEvents)
+                        newEvent.IsSavedInMarketData = true;
+                    await context.SaveChangesAsync();
+
+                    if (newEvents.Count < batchSize)
+                        break;
                 }
-                await context.SaveChangesAsync();
             }
         }
 
