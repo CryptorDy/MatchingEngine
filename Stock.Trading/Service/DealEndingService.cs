@@ -23,7 +23,7 @@ namespace MatchingEngine.Services
         private readonly GatewayHttpClient _gatewayHttpClient;
         private readonly ILogger _logger;
 
-        private const int _batchSize = 5;
+        private const int _batchSize = 20;
 
         public DealEndingService(
             IServiceScopeFactory serviceScopeFactory,
