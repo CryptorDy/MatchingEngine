@@ -33,6 +33,7 @@ namespace MatchingEngine
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
+                .UseKestrel(options => { options.Limits.MaxRequestBodySize = 500_000_000; })
                 .UseUrls("http://0.0.0.0:6101/")
                 .Build();
     }
