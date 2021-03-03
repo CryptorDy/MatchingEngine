@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using TLabs.ExchangeSdk.Currencies;
 using Xunit;
 
 namespace Stock.Trading.Tests
@@ -287,7 +288,7 @@ namespace Stock.Trading.Tests
                 .Callback(liquidityImportServiceCallback);
 
             services.AddTransient<SingletonsAccessor>();
-            services.AddTransient<ICurrenciesService, CurrenciesService>(_ => GetCurrenciesServiceMock());
+            services.AddSingleton<CurrenciesCache>();
 
             services.AddSingleton<IHostedService, MatchingPoolsHandler>(); // if not singleton then mulitple instances are created
             services.AddTransient<TradingService>();
@@ -299,22 +300,25 @@ namespace Stock.Trading.Tests
 
             var provider = services.AddLogging(config => config.AddConsole())
                 .BuildServiceProvider();
+
+            InitCurrenciesCache(provider.GetRequiredService<CurrenciesCache>());
+
             return (provider,
                 provider.GetRequiredService<SingletonsAccessor>().MatchingPoolsHandler,
                 provider.GetRequiredService<TradingService>());
         }
 
-        private CurrenciesService GetCurrenciesServiceMock()
+        private void InitCurrenciesCache(CurrenciesCache currenciesCache)
         {
             const int digits = 8;
-            var currenciesService = new TestCurrenciesService();
-            currenciesService.SetValues(new List<Currency> {
+            currenciesCache.SetCurrencies(new List<Currency> {
                 new Currency { Code = "BTC", Digits = digits },
                 new Currency { Code = "ETH", Digits = digits },
-            }, new List<CurrencyPair> {
-                new CurrencyPair { Code = "ETH_BTC", CurrencyToId = "ETH", CurrencyFromId = "BTC", DigitsAmount = digits, DigitsPrice = digits },
             });
-            return currenciesService;
+
+            currenciesCache.SetCurrencyPairs(new List<CurrencyPair> {
+                new CurrencyPair { CurrencyToId = "ETH", CurrencyFromId = "BTC", DigitsAmount = digits, DigitsPrice = digits },
+            });
         }
     }
 }

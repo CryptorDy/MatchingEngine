@@ -3,8 +3,6 @@ using MatchingEngine.Helpers;
 using MatchingEngine.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -12,13 +10,14 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using TLabs.ExchangeSdk.Currencies;
 
 namespace MatchingEngine.Services
 {
     public class MatchingPoolsHandler : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
-        private readonly ICurrenciesService _currenciesService;
+        private readonly CurrenciesCache _currenciesCache;
         private readonly IServiceProvider _provider;
 
         private readonly ConcurrentDictionary<string, MatchingPool> _matchingPools =
@@ -28,11 +27,11 @@ namespace MatchingEngine.Services
 
         public MatchingPoolsHandler(
             IServiceScopeFactory serviceScopeFactory,
-            ICurrenciesService currenciesService,
+            CurrenciesCache currenciesService,
             IServiceProvider provider)
         {
             _scopeFactory = serviceScopeFactory;
-            _currenciesService = currenciesService;
+            _currenciesCache = currenciesService;
             _provider = provider;
         }
 
@@ -67,7 +66,7 @@ namespace MatchingEngine.Services
                 foreach (var pair in activeOrdersByPair.Keys)
                     _matchingPools[pair] = CreatePool(pair, activeOrdersByPair[pair]); // initialize pools with active orders
 
-                var allPairs = _currenciesService.GetCurrencyPairs();
+                var allPairs = _currenciesCache.GetCurrencyPairs();
                 if (allPairs != null)
                 {
                     foreach (var pair in allPairs.Select(_ => _.Code).Except(activeOrdersByPair.Keys))

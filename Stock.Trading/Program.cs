@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Reflection;
+using TLabs.ExchangeSdk.Currencies;
 
 namespace MatchingEngine
 {
@@ -15,7 +16,7 @@ namespace MatchingEngine
             Console.WriteLine($"Version: {Assembly.GetExecutingAssembly().GetName().Version}");
             IWebHost host = BuildWebHost(args);
 
-            host.Services.GetRequiredService<ICurrenciesService>().LoadData().Wait(); // load currencies and currency pairs
+            host.Services.GetRequiredService<CurrenciesCache>().LoadData().Wait(); // load currencies and currency pairs
             using (var scope = host.Services.CreateScope())
             {
                 var dbInitializer = scope.ServiceProvider.GetService<IDbInitializer>();

@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using TLabs.ExchangeSdk.Currencies;
 
 namespace MatchingEngine.Services
 {
@@ -24,7 +25,7 @@ namespace MatchingEngine.Services
         private readonly List<Order> _orders = new List<Order>();
 
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly ICurrenciesService _currenciesService;
+        private readonly CurrenciesCache _currenciesCache;
         private readonly OrdersMatcher _ordersMatcher;
         private readonly MarketDataHolder _marketDataHolder;
         private readonly IDealEndingService _dealEndingService;
@@ -35,7 +36,7 @@ namespace MatchingEngine.Services
 
         public MatchingPool(
             IServiceScopeFactory serviceScopeFactory,
-            ICurrenciesService currenciesService,
+            CurrenciesCache currenciesService,
             OrdersMatcher ordersMatcher,
             MarketDataHolder marketDataHolder,
             IDealEndingService dealEndingService,
@@ -47,7 +48,7 @@ namespace MatchingEngine.Services
             List<Order> activeOrders)
         {
             _serviceScopeFactory = serviceScopeFactory;
-            _currenciesService = currenciesService;
+            _currenciesCache = currenciesService;
             _ordersMatcher = ordersMatcher;
             _marketDataHolder = marketDataHolder;
             _dealEndingService = dealEndingService;
@@ -190,7 +191,8 @@ namespace MatchingEngine.Services
         public async Task<SaveExternalOrderResult> UpdateExternalOrder(ExternalCreatedOrder createdOrder)
         {
             _logger.LogInformation($"UpdateExternalOrder() start: {createdOrder}");
-            createdOrder.Fulfilled = Math.Round(createdOrder.Fulfilled, _currenciesService.GetAmountDigits(createdOrder.CurrencyPairCode));
+            if (_currenciesCache.GetCurrencyPair(createdOrder.CurrencyPairCode) != null)
+                createdOrder.Fulfilled = Math.Round(createdOrder.Fulfilled, _currenciesCache.GetAmountDigits(createdOrder.CurrencyPairCode));
             var modifiedOrders = new List<Order>();
             var newDeals = new List<Deal>();
 

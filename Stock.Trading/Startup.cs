@@ -17,6 +17,7 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Swagger;
 using System.IO;
+using TLabs.ExchangeSdk.Currencies;
 
 namespace MatchingEngine
 {
@@ -67,7 +68,7 @@ namespace MatchingEngine
             services.AddSingleton<GatewayHttpClient>();
             services.AddTransient<SingletonsAccessor>();
 
-            services.AddSingleton<ICurrenciesService, CurrenciesService>();
+            services.AddSingleton<CurrenciesCache>();
 
             services.AddHostedService<MatchingPoolsHandler>();
             services.AddSingleton<OrdersMatcher>();

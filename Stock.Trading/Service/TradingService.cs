@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TLabs.ExchangeSdk.Currencies;
 
 namespace MatchingEngine.Services
 {
@@ -13,17 +14,17 @@ namespace MatchingEngine.Services
     {
         private readonly TradingDbContext _context;
         private readonly MatchingPoolsHandler _matchingPoolsHandler;
-        private readonly ICurrenciesService _currenciesService;
+        private readonly CurrenciesCache _currenciesCache;
         private readonly ILogger _logger;
 
         public TradingService(TradingDbContext context,
             SingletonsAccessor singletonsAccessor,
-            ICurrenciesService currenciesService,
+            CurrenciesCache currenciesService,
             ILogger<TradingService> logger)
         {
             _context = context;
             _matchingPoolsHandler = singletonsAccessor.MatchingPoolsHandler;
-            _currenciesService = currenciesService;
+            _currenciesCache = currenciesService;
             _logger = logger;
         }
 
@@ -97,8 +98,11 @@ namespace MatchingEngine.Services
 
         public async Task<Guid> CreateOrder(OrderCreateRequest request)
         {
-            request.Price = Math.Round(request.Price, _currenciesService.GetPriceDigits(request.CurrencyPairCode));
-            request.Amount = Math.Round(request.Amount, _currenciesService.GetAmountDigits(request.CurrencyPairCode));
+            if (_currenciesCache.GetCurrencyPair(request.CurrencyPairCode) != null)
+            {
+                request.Price = Math.Round(request.Price, _currenciesCache.GetPriceDigits(request.CurrencyPairCode));
+                request.Amount = Math.Round(request.Amount, _currenciesCache.GetAmountDigits(request.CurrencyPairCode));
+            }
             var order = request.GetOrder();
 
             if (order.ClientType != ClientType.DealsBot)

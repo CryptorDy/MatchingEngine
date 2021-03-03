@@ -1,17 +1,17 @@
-using MatchingEngine.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
+using TLabs.ExchangeSdk.Currencies;
 
 namespace MatchingEngine.Controllers
 {
     [Route("api/currencies")]
     public class CurrenciesController : Controller
     {
-        private readonly ICurrenciesService _currenciesService;
+        private readonly CurrenciesCache _currenciesCache;
 
-        public CurrenciesController(ICurrenciesService currenciesService)
+        public CurrenciesController(CurrenciesCache currenciesService)
         {
-            _currenciesService = currenciesService;
+            _currenciesCache = currenciesService;
         }
 
         /// <summary>
@@ -20,7 +20,7 @@ namespace MatchingEngine.Controllers
         [HttpPost("reload")]
         public async Task Reload()
         {
-            await _currenciesService.LoadData();
+            await _currenciesCache.LoadData();
         }
     }
 }
