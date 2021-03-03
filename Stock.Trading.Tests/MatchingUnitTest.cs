@@ -202,7 +202,7 @@ namespace Stock.Trading.Tests
             // starting match with imported order
             await AddOrder(bid, tradingService, matchingPool);
             await AddOrder(ask, tradingService, matchingPool);
-            await Task.Delay(100);
+            await Task.Delay(1000);
             // check correct blocked value, local order updated in db, call to liquidity
             var context = provider.GetRequiredService<TradingDbContext>();
             var savedBid = context.Bids.Single();
