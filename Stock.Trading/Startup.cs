@@ -17,6 +17,7 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Swagger;
 using System.IO;
+using TLabs.DotnetHelpers;
 using TLabs.ExchangeSdk.Currencies;
 
 namespace MatchingEngine
@@ -45,6 +46,7 @@ namespace MatchingEngine
         public void ConfigureServices(IServiceCollection services)
         {
             services.Configure<AppSettings>(Configuration);
+            var settings = Configuration.Get<AppSettings>();
 
             services.AddRouting(options => options.LowercaseUrls = true);
             services.AddControllers()
@@ -59,6 +61,8 @@ namespace MatchingEngine
             services.AddSwaggerGenNewtonsoftSupport();
 
             services.AddAutoMapper(typeof(Startup));
+
+            services.InitFlurl(settings.GatewayServiceUrl);
 
             services.AddDbContext<TradingDbContext>(options =>
                 options.UseNpgsql(Configuration["ConnectionStrings:DefaultConnection"]),
