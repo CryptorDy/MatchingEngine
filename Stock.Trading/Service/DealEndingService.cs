@@ -62,11 +62,9 @@ namespace MatchingEngine.Services
                     {
                         try
                         {
-                            await context.LogDealExists(deal.DealId, "SendDeals before");
                             await SendDeal(deal);
                             deal.IsSentToDealEnding = true;
                             await context.SaveChangesAsync();
-                            await context.LogDealExists(deal.DealId, "SendDeals after");
                         }
                         catch (Exception ex)
                         {
