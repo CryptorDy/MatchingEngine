@@ -24,6 +24,7 @@ namespace MatchingEngine.Services
         private readonly ILogger _logger;
 
         private const int _batchSize = 100;
+        private bool _isSending = false;
 
         public DealEndingService(
             IServiceScopeFactory serviceScopeFactory,
@@ -42,43 +43,52 @@ namespace MatchingEngine.Services
 
         public async Task SendDeals()
         {
+            if (_isSending)
+                return;
             try
             {
-                using (var scope = _scopeFactory.CreateScope())
+                _isSending = true;
+                while (true)
                 {
-                    var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-
-                    var unprocessedDeals = await context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
-                        .Where(_ => !_.IsSentToDealEnding && !_.FromInnerTradingBot)
-                        .OrderByDescending(_ => _.DateCreated)
-                        .Take(_batchSize)
-                        .ToListAsync();
-                    if (unprocessedDeals.Count == 0)
-                        return;
-                    _logger.LogInformation($"SendDeals() unprocessed:{unprocessedDeals.Count}");
-
-                    int errorsCount = 0;
-                    foreach (var deal in unprocessedDeals)
+                    using (var scope = _scopeFactory.CreateScope())
                     {
-                        try
+                        var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+
+                        var unprocessedDeals = await context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
+                            .Where(_ => !_.IsSentToDealEnding && !_.FromInnerTradingBot)
+                            .OrderByDescending(_ => _.DateCreated)
+                            .Take(_batchSize)
+                            .ToListAsync();
+                        if (unprocessedDeals.Count == 0)
+                            break;
+                        _logger.LogInformation($"SendDeals() unprocessed:{unprocessedDeals.Count}");
+
+                        int errorsCount = 0;
+                        foreach (var deal in unprocessedDeals)
                         {
-                            await SendDeal(deal);
-                            deal.IsSentToDealEnding = true;
-                            await context.SaveChangesAsync();
+                            try
+                            {
+                                await SendDeal(deal);
+                                deal.IsSentToDealEnding = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, $"Error sending to DealEnding: {deal}");
+                                errorsCount++;
+                            }
                         }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, $"Error sending to DealEnding: {deal}");
-                            errorsCount++;
-                        }
+                        await context.SaveChangesAsync();
+                        _logger.LogInformation($"SendDeals() end. processed:{unprocessedDeals.Count}, with errors: {errorsCount}");
                     }
-                    _logger.LogInformation($"SendDeals() end. processed:{unprocessedDeals.Count}, with errors: {errorsCount}");
+                    await Task.Delay(200);
                 }
+                
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "");
             }
+            _isSending = false;
         }
     }
 }
