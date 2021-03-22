@@ -70,6 +70,8 @@ namespace MatchingEngine.Services
                             {
                                 await SendDeal(deal);
                                 deal.IsSentToDealEnding = true;
+                                await context.SaveChangesAsync();
+                                _logger.LogInformation($"SendDeals() sent: {deal.DealId}");
                             }
                             catch (Exception ex)
                             {
@@ -77,7 +79,6 @@ namespace MatchingEngine.Services
                                 errorsCount++;
                             }
                         }
-                        await context.SaveChangesAsync();
                         _logger.LogInformation($"SendDeals() end. processed:{unprocessedDeals.Count}, with errors: {errorsCount}");
                     }
                     await Task.Delay(200);
