@@ -24,7 +24,7 @@ namespace MatchingEngine.Services
         private readonly ILogger _logger;
 
         private const int _batchSize = 100;
-        private bool _isSending = false;
+        private static bool _isSending = false;
 
         public DealEndingService(
             IServiceScopeFactory serviceScopeFactory,
