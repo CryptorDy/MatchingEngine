@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TLabs.DotnetHelpers;
 using TLabs.ExchangeSdk.Currencies;
 
 namespace MatchingEngine.Services
@@ -30,12 +31,13 @@ namespace MatchingEngine.Services
 
         #region GET-requests
 
-        public async Task<List<Deal>> GetDeals(string currencyPairCode, int? lastNum, string userId,
+        public async Task<List<Deal>> GetDeals(string currencyPairCode, int? lastNum, List<string> userIds = null, 
             DateTimeOffset? sinceDate = null, DateTimeOffset? toDate = null, List<string> dealIds = null)
         {
             try
             {
-                var deals = await _context.Deals
+                userIds = userIds?.Where(_ => _.HasValue()).ToList(); // remove empty values
+                var query = _context.Deals
                     .Include(m => m.Ask)
                     .Include(m => m.Bid)
                     .Where(_ =>
@@ -45,14 +47,14 @@ namespace MatchingEngine.Services
                         &&
                         (string.IsNullOrWhiteSpace(currencyPairCode) || (_.Bid != null && _.Bid.CurrencyPairCode == currencyPairCode))
                         &&
-                        (string.IsNullOrWhiteSpace(userId) || (_.Bid != null && _.Bid.UserId == userId) || (_.Ask != null && _.Ask.UserId == userId))
-                        &&
                         (dealIds == null || dealIds.Count == 0 || dealIds.Contains(_.DealId.ToString()))
-                        )
-                    .OrderByDescending(m => m.DateCreated)
+                        );
+                if (userIds?.Count > 0)
+                    query = query.Where(_ => userIds.Contains(_.Bid.UserId) || userIds.Contains(_.Ask.UserId));
+
+                var deals = await query.OrderByDescending(m => m.DateCreated)
                     .Take(lastNum ?? int.MaxValue)
                     .ToListAsync();
-
                 return deals;
             }
             catch (Exception ex)

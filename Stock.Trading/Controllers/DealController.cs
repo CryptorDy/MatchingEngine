@@ -51,22 +51,26 @@ namespace Stock.Trading.Controllers
             return _service.GetDealResponse(id);
         }
 
-        /// <summary>
-        /// Get all deals
-        /// </summary>
-        /// <param name="currencyPairId"></param>
-        /// <param name="count">Count</param>
-        /// <param name="userId"></param>
-        /// <param name="sinceDate"></param>
-        /// <param name="toDate"></param>
-        /// <param name="dealIds"></param>
+        /// <summary>Get deals</summary>
         /// <returns>Deals list</returns>
         [HttpGet("deals")]
         public async Task<List<Deal>> GetDeals(string currencyPairId = null, int? count = null, string userId = null,
             DateTime? sinceDate = null, DateTimeOffset? toDate = null, List<string> dealIds = null)
         {
-            var result = await _service.GetDeals(currencyPairId, count, userId, sinceDate, toDate, dealIds);
+            var result = await _service.GetDeals(currencyPairId, count, new List<string> { userId }, sinceDate, toDate, dealIds);
             return result;
+        }
+
+        /// <summary>Get deal responses for list of users</summary>
+        /// <returns>Deals list</returns>
+        [HttpPost("responses")]
+        public async Task<List<DealResponse>> GetDealResponses([FromBody] List<string> userIds,
+            string currencyPairId = null, int? count = null,
+            DateTime? sinceDate = null, DateTimeOffset? toDate = null)
+        {
+            var deals = await _service.GetDeals(currencyPairId, count, userIds, sinceDate, toDate);
+            var responses = deals.Select(_ => _.GetDealResponse()).ToList();
+            return responses;
         }
 
         [HttpPost("marketdata/resend")]
