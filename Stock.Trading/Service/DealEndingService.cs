@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using TLabs.DotnetHelpers;
+using TLabs.ExchangeSdk.Currencies;
 
 namespace MatchingEngine.Services
 {
@@ -122,44 +123,42 @@ namespace MatchingEngine.Services
             _logger.LogWarning($"DeleteDeals deals:{deals.Count}, lastDealDate:{deals.Last()?.DateCreated}, " +
                 $"bids:{bids.Count}, asks:{asks.Count}, userIds:{userIds.Count}");
 
-            await SendAirdrops(userIds); // Depository add 100 C3 and 100 OTON
-
-            return;
+            //await SendAirdrops(userIds); // already sent
 
             // for each bid update depository Blocking txs, then update Amount & Fullfilled
-            foreach (var bid in bids)
+            foreach (var order in bids)
             {
-                decimal amountToRemove = deals.Where(_ => _.BidId == bid.Id).Sum(_ => _.Volume * _.Price);
-                decimal newAmount = bid.Amount - amountToRemove;
+                decimal amountToRemove = deals.Where(_ => _.BidId == order.Id)
+                    .Sum(_ => _.Volume * _.Price).RoundDown(CurrenciesCache.Digits);
+                decimal newAmount = order.Amount - amountToRemove;
+                _logger.LogInformation($"DeleteDeals bid {order.Id} amount: {order.Amount} -> {newAmount}");
+                // TODO Depository set newAmount to OrderingBegin, OrderingEnd txs
 
-                // Depository set newAmount to OrderingBegin, OrderingEnd txs
-
-                // Matching edit orders
+                // TODO Matching edit orders
                 //bid.Fulfilled -= amountToRemove;
                 //bid.Amount -= amountToRemove;
 
             }
-            foreach (var ask in asks)
+            foreach (var order in asks)
             {
-                decimal amountToRemove = deals.Where(_ => _.AskId == ask.Id).Sum(_ => _.Volume);
+                decimal amountToRemove = deals.Where(_ => _.AskId == order.Id)
+                    .Sum(_ => _.Volume).RoundDown(CurrenciesCache.Digits);
+                decimal newAmount = order.Amount - amountToRemove;
+                _logger.LogInformation($"DeleteDeals ask {order.Id} amount: {order.Amount} -> {newAmount}");
+                // TODO Depository set newAmount to OrderingBegin, OrderingEnd txs
 
-                // Depository edit OrderingBegin, OrderingEnd txs for ask.Id
-
-                // Matching edit orders
-                //ask.Fulfilled -= amountToRemove;
-                //ask.Amount -= amountToRemove;
+                // TODO Matching edit orders
+                //bid.Fulfilled -= amountToRemove;
+                //bid.Amount -= amountToRemove;
             }
 
-            // Marketdata send order updates
+            // TODO Marketdata send order updates
 
-            foreach (var deal in deals)
-            {
-                // Depository delete txs with ActionId == deal.DealId
-            }
+            // TODO Depository delete txs with ActionId == deal.DealId
 
             //context.Deals.RemoveRange(deals);
 
-            // Marketdata delete deals
+            // TODO Marketdata delete deals
 
         }
 
