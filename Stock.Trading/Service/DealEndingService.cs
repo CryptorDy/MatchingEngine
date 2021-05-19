@@ -1,3 +1,4 @@
+using Flurl.Http;
 using MatchingEngine.Data;
 using MatchingEngine.HttpClients;
 using MatchingEngine.Models;
@@ -125,6 +126,11 @@ namespace MatchingEngine.Services
 
             //await SendAirdrops(userIds); // already sent
 
+            // Delete deal transactions
+            var dealTxActionIds = deals.SelectMany(_ =>
+                new List<string> { _.DealId.ToString(), _.DealId.ToString() + "_ask" }).ToList();
+            await DepositoryDeleteTxsByActionIds(dealTxActionIds);
+
             // for each bid update depository Blocking txs, then update Amount & Fullfilled
             foreach (var order in bids)
             {
@@ -153,8 +159,6 @@ namespace MatchingEngine.Services
             }
 
             // TODO Marketdata send order updates
-
-            // TODO Depository delete txs with ActionId == deal.DealId
 
             //context.Deals.RemoveRange(deals);
 
@@ -186,6 +190,13 @@ namespace MatchingEngine.Services
             var response = await "cashrefill/crypto/airdrop-refill".InternalApi()
                 .PostJsonAsync<string>(airdrop);
             _logger.LogInformation($"SendAirdrop() response:{response}");
+        }
+
+        private async Task DepositoryDeleteTxsByActionIds(List<string> actionIds)
+        {
+            var response = await "depository/transaction/delete".InternalApi()
+                .PostJsonAsync(actionIds);
+            _logger.LogInformation($"DepositoryDeleteTxsByActionIds() response:{response}");
         }
     }
 }
