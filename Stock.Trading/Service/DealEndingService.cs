@@ -184,7 +184,7 @@ namespace MatchingEngine.Services
         private async Task SendAirdrop(Airdrop airdrop)
         {
             _logger.LogInformation($"SendAirdrop() start {airdrop}");
-            var response = await "refill/crypto/airdrop-refill".InternalApi()
+            var response = await "cashrefill/crypto/airdrop-refill".InternalApi()
                 .PostJsonAsync<string>(airdrop);
             _logger.LogInformation($"SendAirdrop() response:{response}");
         }
