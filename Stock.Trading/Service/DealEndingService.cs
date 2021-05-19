@@ -112,6 +112,7 @@ namespace MatchingEngine.Services
                .Include(m => m.Bid).Include(m => m.Ask)
                .OrderBy(_ => _.DateCreated)
                .ToListAsync();
+            var dealIds = deals.Select(_ => _.DealId).ToList();
 
             // find bids and asks of deleted deals
             var bids = deals.Select(_ => _.Bid).GroupBy(_ => _.Id).Select(_ => _.First()).ToList();
@@ -127,8 +128,8 @@ namespace MatchingEngine.Services
             //await SendAirdrops(userIds); // already sent
 
             // Delete deal transactions
-            var dealTxActionIds = deals.SelectMany(_ =>
-                new List<string> { _.DealId.ToString(), _.DealId.ToString() + "_ask" }).ToList();
+            var dealTxActionIds = dealIds.SelectMany(_ =>
+                new List<string> { _.ToString(), _.ToString() + "_ask" }).ToList();
             await DepositoryDeleteTxsByActionIds(dealTxActionIds);
 
             // for each bid update depository Blocking txs, then update Amount & Fullfilled
@@ -158,11 +159,12 @@ namespace MatchingEngine.Services
                 //bid.Amount -= amountToRemove;
             }
 
-            // TODO Marketdata send order updates
-
             //context.Deals.RemoveRange(deals);
+            //context.DealCopies.RemoveRange(await context.DealCopies
+            //    .Where(_ => dealIds.Contains(_.DealId)).ToListAsync());
+            //await context.SaveChangesAsync();
 
-            // TODO Marketdata delete deals
+            // TODO Marketdata send orders/deals changes
 
         }
 
