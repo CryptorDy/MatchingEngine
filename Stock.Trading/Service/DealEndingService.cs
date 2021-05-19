@@ -125,12 +125,16 @@ namespace MatchingEngine.Services
             _logger.LogWarning($"DeleteDeals deals:{deals.Count}, lastDealDate:{deals.Last()?.DateCreated}, " +
                 $"bids:{bids.Count}, asks:{asks.Count}, userIds:{userIds.Count}");
 
-            //await SendAirdrops(userIds); // already sent
+            //await SendAirdrops(userIds); // Already sent
 
             // Delete deal transactions
             var dealTxActionIds = dealIds.SelectMany(_ =>
                 new List<string> { _.ToString(), _.ToString() + "_ask" }).ToList();
-            await DepositoryDeleteTxsByActionIds(dealTxActionIds);
+            //await DepositoryDeleteTxsByActionIds(dealTxActionIds); // Already sent
+
+            var orderIds = bids.Select(_ => _.Id.ToString())
+                .Union(asks.Select(_ => _.Id.ToString())).ToList();
+            await DepositoryDeleteTxsByActionIds(orderIds);
 
             // for each bid update depository Blocking txs, then update Amount & Fullfilled
             foreach (var order in bids)
@@ -139,7 +143,6 @@ namespace MatchingEngine.Services
                     .Sum(_ => _.Volume).RoundDown(CurrenciesCache.Digits);
                 decimal newAmount = order.Amount - amountToRemove;
                 _logger.LogInformation($"DeleteDeals bid {order.Id} amount: {order.Amount} -> {newAmount}");
-                // TODO Depository set newAmount to OrderingBegin, OrderingEnd txs
 
                 // TODO Matching edit orders
                 //bid.Fulfilled -= amountToRemove;
@@ -152,12 +155,13 @@ namespace MatchingEngine.Services
                     .Sum(_ => _.Volume).RoundDown(CurrenciesCache.Digits);
                 decimal newAmount = order.Amount - amountToRemove;
                 _logger.LogInformation($"DeleteDeals ask {order.Id} amount: {order.Amount} -> {newAmount}");
-                // TODO Depository set newAmount to OrderingBegin, OrderingEnd txs
 
                 // TODO Matching edit orders
                 //bid.Fulfilled -= amountToRemove;
                 //bid.Amount -= amountToRemove;
             }
+
+            // TODO Depository send odrers changes
 
             //context.Deals.RemoveRange(deals);
             //context.DealCopies.RemoveRange(await context.DealCopies
