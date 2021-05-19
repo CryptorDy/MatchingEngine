@@ -122,7 +122,7 @@ namespace MatchingEngine.Services
             _logger.LogWarning($"DeleteDeals deals:{deals.Count}, lastDealDate:{deals.Last()?.DateCreated}, " +
                 $"bids:{bids.Count}, asks:{asks.Count}, userIds:{userIds.Count}");
 
-            //await SendAirdrops(userIds); // Depository add 100 C3 and 100 OTON
+            await SendAirdrops(userIds); // Depository add 100 C3 and 100 OTON
 
             return;
 
