@@ -129,7 +129,7 @@ namespace MatchingEngine.Services
             foreach (var order in bids)
             {
                 decimal amountToRemove = deals.Where(_ => _.BidId == order.Id)
-                    .Sum(_ => _.Volume / _.Price).RoundDown(CurrenciesCache.Digits);
+                    .Sum(_ => _.Volume * _.Price).RoundDown(CurrenciesCache.Digits);
                 decimal newAmount = order.Amount - amountToRemove;
                 _logger.LogInformation($"DeleteDeals bid {order.Id} amount: {order.Amount} -> {newAmount}");
                 // TODO Depository set newAmount to OrderingBegin, OrderingEnd txs
