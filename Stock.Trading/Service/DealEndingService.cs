@@ -1,12 +1,15 @@
 using MatchingEngine.Data;
 using MatchingEngine.HttpClients;
 using MatchingEngine.Models;
+using MatchingEngine.Models.Brokerage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TLabs.DotnetHelpers;
 
 namespace MatchingEngine.Services
 {
@@ -15,6 +18,8 @@ namespace MatchingEngine.Services
         Task SendDeal(Deal deal);
 
         Task SendDeals();
+
+        Task DeleteDeals(string currencyPairCode, DateTimeOffset from, DateTimeOffset to);
     }
 
     public class DealEndingService : IDealEndingService
@@ -90,6 +95,98 @@ namespace MatchingEngine.Services
                 _logger.LogError(ex, "");
             }
             _isSending = false;
+        }
+
+
+        public async Task DeleteDeals(string currencyPairCode, DateTimeOffset from, DateTimeOffset to)
+        {
+            _logger.LogWarning($"DeleteDeals currencyPair:{currencyPairCode}, from:{from:s}, to:{to:s}");
+
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+
+            var deals = await context.Deals.Where(_ => _.Bid.CurrencyPairCode == currencyPairCode
+               && _.DateCreated >= from && _.DateCreated < to)
+               .Include(m => m.Bid).Include(m => m.Ask)
+               .OrderBy(_ => _.DateCreated)
+               .ToListAsync();
+
+            // find bids and asks of deleted deals
+            var bids = deals.Select(_ => _.Bid).GroupBy(_ => _.Id).Select(_ => _.First()).ToList();
+            var asks = deals.Select(_ => _.Ask).GroupBy(_ => _.Id).Select(_ => _.First()).ToList();
+
+            // pay all users whose orders were in deleted deals
+            var userIds = bids.Select(_ => _.UserId).Union(asks.Select(_ => _.UserId)).Distinct().ToList();
+            userIds = userIds.Where(id => Guid.TryParse(id, out _)).ToList(); // remove bots
+
+            _logger.LogWarning($"DeleteDeals deals:{deals.Count}, lastDealDate:{deals.Last()?.DateCreated}, " +
+                $"bids:{bids.Count}, asks:{asks.Count}, userIds:{userIds.Count}");
+
+            //await SendAirdrops(userIds); // Depository add 100 C3 and 100 OTON
+
+            return;
+
+            // for each bid update depository Blocking txs, then update Amount & Fullfilled
+            foreach (var bid in bids)
+            {
+                decimal amountToRemove = deals.Where(_ => _.BidId == bid.Id).Sum(_ => _.Volume * _.Price);
+                decimal newAmount = bid.Amount - amountToRemove;
+
+                // Depository set newAmount to OrderingBegin, OrderingEnd txs
+
+                // Matching edit orders
+                //bid.Fulfilled -= amountToRemove;
+                //bid.Amount -= amountToRemove;
+
+            }
+            foreach (var ask in asks)
+            {
+                decimal amountToRemove = deals.Where(_ => _.AskId == ask.Id).Sum(_ => _.Volume);
+
+                // Depository edit OrderingBegin, OrderingEnd txs for ask.Id
+
+                // Matching edit orders
+                //ask.Fulfilled -= amountToRemove;
+                //ask.Amount -= amountToRemove;
+            }
+
+            // Marketdata send order updates
+
+            foreach (var deal in deals)
+            {
+                // Depository delete txs with ActionId == deal.DealId
+            }
+
+            //context.Deals.RemoveRange(deals);
+
+            // Marketdata delete deals
+
+        }
+
+        private async Task SendAirdrops(List<string> userIds)
+        {
+            await SendAirdrop(new Airdrop
+            {
+                Id = "500000",
+                CurrencyCode = "C3",
+                Amount = 100,
+                UserIds = userIds,
+            });
+            await SendAirdrop(new Airdrop
+            {
+                Id = "500001",
+                CurrencyCode = "OTON",
+                Amount = 100,
+                UserIds = userIds,
+            });
+        }
+
+        private async Task SendAirdrop(Airdrop airdrop)
+        {
+            _logger.LogInformation($"SendAirdrop() start {airdrop}");
+            var response = await "refill/crypto/airdrop-refill".InternalApi()
+                .PostJsonAsync<string>(airdrop);
+            _logger.LogInformation($"SendAirdrop() response:{response}");
         }
     }
 }

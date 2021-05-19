@@ -76,15 +76,11 @@ namespace MatchingEngine.Services
 
                 modifiedOrders.Add(poolOrder);
                 if (newOrder.AvailableAmount <= 0)
-                {
                     break; // if new order is completely fulfilled/blocked, there's no reason to iterate further
-                }
             }
 
             if (modifiedOrders.Count > 0)
-            {
                 modifiedOrders.Add(newOrder);
-            }
 
             return (modifiedOrders, newDeals);
         }

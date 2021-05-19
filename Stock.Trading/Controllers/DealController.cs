@@ -17,16 +17,19 @@ namespace Stock.Trading.Controllers
         private readonly TradingDbContext _context;
         private readonly TradingService _service;
         private readonly MarketDataService _marketDataService;
+        private readonly IDealEndingService _dealEndingService;
         private readonly ILogger _logger;
 
         public DealController(TradingDbContext context,
             TradingService service,
             MarketDataService marketDataService,
+            IDealEndingService dealEndingService,
             ILogger<DealController> logger)
         {
             _context = context;
             _service = service;
             _marketDataService = marketDataService;
+            _dealEndingService = dealEndingService;
             _logger = logger;
         }
 
@@ -110,6 +113,13 @@ namespace Stock.Trading.Controllers
             }
             _logger.LogInformation($"ResaveOldDeals() added {addedCounter}, dealResponses:{dealResponses.Count}, dbDealIds:{dbDealIds.Count}");
             await _context.SaveChangesAsync();
+            return Ok();
+        }
+
+        [HttpDelete("")]
+        public async Task<IActionResult> DeleteDeals(string currencyPairCode, DateTimeOffset from, DateTimeOffset to)
+        {
+            await _dealEndingService.DeleteDeals(currencyPairCode, from, to);
             return Ok();
         }
     }
