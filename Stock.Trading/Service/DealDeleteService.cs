@@ -12,30 +12,28 @@ using System.Linq;
 using System.Threading.Tasks;
 using TLabs.DotnetHelpers;
 using TLabs.ExchangeSdk.Currencies;
+using TLabs.ExchangeSdk.Depository;
 
 namespace MatchingEngine.Services
 {
     public class DealDeleteService
     {
         private readonly TradingDbContext _context;
-        private readonly GatewayHttpClient _gatewayHttpClient;
         private readonly TradingService _tradingService;
-        private readonly MatchingPoolsHandler _matchingPoolsHandler;
         private readonly MarketDataService _marketDataService;
+        private readonly DepositoryClient _depositoryClient;
         private readonly ILogger _logger;
 
         public DealDeleteService(TradingDbContext context,
-            GatewayHttpClient gatewayHttpClient,
             TradingService tradingService,
-            SingletonsAccessor singletonsAccessor,
             MarketDataService marketDataService,
+            DepositoryClient depositoryClient,
             ILogger<DealDeleteService> logger)
         {
             _context = context;
-            _gatewayHttpClient = gatewayHttpClient;
             _tradingService = tradingService;
-            _matchingPoolsHandler = singletonsAccessor.MatchingPoolsHandler;
             _marketDataService = marketDataService;
+            _depositoryClient = depositoryClient;
             _logger = logger;
         }
 
@@ -72,17 +70,23 @@ namespace MatchingEngine.Services
                 .Union(asks.Select(_ => _.Id.ToString())).ToList();
             //await DepositoryDeleteTxsByActionIds(orderIds); // Already sent
 
-            // for each bid update depository Blocking txs, then update Amount & Fullfilled
+            List<Order> emptyOrders = new(), notEmptyOrders = new();
+            // for each order update Amount & Fullfilled
             foreach (var order in bids)
             {
                 decimal amountToRemove = deals.Where(_ => _.BidId == order.Id)
                     .Sum(_ => _.Volume).RoundDown(CurrenciesCache.Digits);
                 decimal newAmount = order.Amount - amountToRemove;
                 _logger.LogInformation($"DeleteDeals bid {order.Id} amount: {order.Amount} -> {newAmount}");
+                if (newAmount < 0)
+                    throw new Exception($"Negative amount");
+                else if (newAmount == 0)
+                    emptyOrders.Add(order);
+                else
+                    notEmptyOrders.Add(order);
 
-                // TODO Matching edit orders
-                //bid.Fulfilled -= amountToRemove;
-                //bid.Amount -= amountToRemove;
+                order.Fulfilled -= amountToRemove;
+                order.Amount -= amountToRemove;
 
             }
             foreach (var order in asks)
@@ -91,13 +95,24 @@ namespace MatchingEngine.Services
                     .Sum(_ => _.Volume).RoundDown(CurrenciesCache.Digits);
                 decimal newAmount = order.Amount - amountToRemove;
                 _logger.LogInformation($"DeleteDeals ask {order.Id} amount: {order.Amount} -> {newAmount}");
+                if (newAmount < 0)
+                    throw new Exception($"Negative amount");
+                else if (newAmount == 0)
+                    emptyOrders.Add(order);
+                else
+                    notEmptyOrders.Add(order);
 
-                // TODO Matching edit orders
-                //bid.Fulfilled -= amountToRemove;
-                //bid.Amount -= amountToRemove;
+                order.Fulfilled -= amountToRemove;
+                order.Amount -= amountToRemove;
             }
+            //await _context.SaveChangesAsync();
 
-            // TODO Depository send odrers changes
+            _logger.LogWarning($"DeleteDeals() DealIds:\n{string.Join(",", dealIds.Select(_ => $"'{_}'"))}");
+            _logger.LogWarning($"DeleteDeals() emptyOrders:\n{string.Join(",", emptyOrders.Select(_ => $"'{_.Id}'"))}");
+            _logger.LogWarning($"DeleteDeals() notEmptyOrders:\n{string.Join(",", notEmptyOrders.Select(_ => $"'{_.Id}'"))}");
+
+            await DepositoryRecreateOrderTxs(notEmptyOrders);
+
 
             //_context.Deals.RemoveRange(deals);
             //_context.DealCopies.RemoveRange(await context.DealCopies
@@ -139,6 +154,42 @@ namespace MatchingEngine.Services
             var response = await "depository/transaction/delete".InternalApi()
                 .PostJsonAsync(actionIds);
             _logger.LogInformation($"DepositoryDeleteTxsByActionIds() response:{response}");
+        }
+
+        private async Task DepositoryRecreateOrderTxs(List<Order> orders)
+        {
+            List<TxCommandDto> orderTxCommands = new();
+            foreach (var order in orders)
+            {
+                string userCurrencyCode = order.IsBid
+                    ? CurrencyPair.GetCurrencyFromId(order.CurrencyPairCode)
+                    : CurrencyPair.GetCurrencyToId(order.CurrencyPairCode);
+                decimal blockAmount = order.IsBid
+                    ? (order.Amount * order.Price).RoundDown(CurrenciesCache.Digits)
+                    : order.Amount.RoundDown(CurrenciesCache.Digits);
+                orderTxCommands.Add(new TxCommandDto
+                {
+                    TxTypeCode = TransactionType.OrderingBegin.Code,
+                    CurrencyCode = userCurrencyCode,
+                    Amount = blockAmount,
+                    UserId = order.UserId,
+                    ActionId = order.Id.ToString(),
+                });
+                orderTxCommands.Add(new TxCommandDto
+                {
+                    TxTypeCode = TransactionType.OrderingEnd.Code,
+                    CurrencyCode = userCurrencyCode,
+                    Amount = blockAmount,
+                    UserId = order.UserId,
+                    ActionId = order.Id.ToString(),
+                });
+            }
+
+            foreach (var command in orderTxCommands)
+                _logger.LogInformation($"OrderTx: {command}");
+
+            var orderTxsResult = await _depositoryClient.SendTxCommands(orderTxCommands, false);
+            //_logger.LogWarning($"DeleteDeals() orderTxsResult: {orderTxsResult}");
         }
     }
 }
