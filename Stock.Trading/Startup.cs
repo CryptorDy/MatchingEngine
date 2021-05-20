@@ -19,6 +19,7 @@ using Swashbuckle.AspNetCore.Swagger;
 using System.IO;
 using TLabs.DotnetHelpers;
 using TLabs.ExchangeSdk.Currencies;
+using TLabs.ExchangeSdk.Depository;
 
 namespace MatchingEngine
 {
@@ -73,6 +74,7 @@ namespace MatchingEngine
             services.AddTransient<SingletonsAccessor>();
 
             services.AddSingleton<CurrenciesCache>();
+            services.AddTransient<DepositoryClient>();
 
             services.AddHostedService<MatchingPoolsHandler>();
             services.AddSingleton<OrdersMatcher>();
