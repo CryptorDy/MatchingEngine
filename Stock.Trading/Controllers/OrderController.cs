@@ -102,13 +102,16 @@ namespace MatchingEngine.Controllers
         }
 
         [HttpPost("resend-to-marketdata")]
-        public async Task<IActionResult> ResendAllOrdersToMarketData()
+        public async Task<IActionResult> ResendAllOrdersToMarketData(DateTimeOffset? from = null)
         {
+            if (from == null)
+                from = DateTimeOffset.MinValue;
+
             int page = 0, pageSize = 1000;
             while (true)
             {
                 var orders = (await _context.Bids.OrderBy(_ => _.DateCreated)
-                    .Where(_ => _.ClientType != ClientType.DealsBot)
+                    .Where(_ => _.ClientType != ClientType.DealsBot && _.DateCreated > from)
                     .Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
                 if (orders.Count == 0)
                     break;
@@ -120,7 +123,7 @@ namespace MatchingEngine.Controllers
             while (true)
             {
                 var orders = (await _context.Asks.OrderBy(_ => _.DateCreated)
-                    .Where(_ => _.ClientType != ClientType.DealsBot)
+                    .Where(_ => _.ClientType != ClientType.DealsBot && _.DateCreated > from)
                     .Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
                 if (orders.Count == 0)
                     break;
