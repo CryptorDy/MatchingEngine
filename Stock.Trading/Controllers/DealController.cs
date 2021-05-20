@@ -17,19 +17,19 @@ namespace Stock.Trading.Controllers
         private readonly TradingDbContext _context;
         private readonly TradingService _service;
         private readonly MarketDataService _marketDataService;
-        private readonly IDealEndingService _dealEndingService;
+        private readonly DealDeleteService _dealDeleteService;
         private readonly ILogger _logger;
 
         public DealController(TradingDbContext context,
             TradingService service,
             MarketDataService marketDataService,
-            IDealEndingService dealEndingService,
+            DealDeleteService dealDeleteService,
             ILogger<DealController> logger)
         {
             _context = context;
             _service = service;
             _marketDataService = marketDataService;
-            _dealEndingService = dealEndingService;
+            _dealDeleteService = dealDeleteService;
             _logger = logger;
         }
 
@@ -119,7 +119,7 @@ namespace Stock.Trading.Controllers
         [HttpDelete("")]
         public async Task<IActionResult> DeleteDeals(string currencyPairCode, DateTimeOffset from, DateTimeOffset to)
         {
-            await _dealEndingService.DeleteDeals(currencyPairCode, from, to);
+            await _dealDeleteService.DeleteDeals(currencyPairCode, from, to);
             return Ok();
         }
     }

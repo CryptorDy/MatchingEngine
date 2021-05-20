@@ -80,6 +80,7 @@ namespace MatchingEngine
 
             services.AddTransient<IDealEndingService, DealEndingService>();
             services.AddHostedService<DealEndingSender>();
+            services.AddTransient<DealDeleteService>();
 
             services.AddSingleton<MarketDataHolder>();
             services.AddHostedService<MarketDataSender>();
