@@ -49,8 +49,10 @@ namespace MatchingEngine.Services
             var dealIds = deals.Select(_ => _.DealId).ToList();
 
             // find bids and asks of deleted deals
-            var bids = deals.Select(_ => _.Bid).GroupBy(_ => _.Id).Select(_ => _.First()).ToList();
-            var asks = deals.Select(_ => _.Ask).GroupBy(_ => _.Id).Select(_ => _.First()).ToList();
+            var bidIds = deals.Select(_ => _.Bid).GroupBy(_ => _.Id).Select(_ => _.Key).ToList();
+            var askIds = deals.Select(_ => _.Ask).GroupBy(_ => _.Id).Select(_ => _.Key).ToList();
+            var bids = await _context.Bids.Where(_ => bidIds.Contains(_.Id)).ToListAsync();
+            var asks = await _context.Asks.Where(_ => askIds.Contains(_.Id)).ToListAsync();
 
             // pay all users whose orders were in deleted deals
             var userIds = bids.Select(_ => _.UserId).Union(asks.Select(_ => _.UserId)).Distinct().ToList();
@@ -78,16 +80,21 @@ namespace MatchingEngine.Services
                     .Sum(_ => _.Volume).RoundDown(CurrenciesCache.Digits);
                 decimal newAmount = order.Amount - amountToRemove;
                 _logger.LogInformation($"DeleteDeals bid {order.Id} amount: {order.Amount} -> {newAmount}");
-                if (newAmount < 0)
-                    throw new Exception($"Negative amount");
-                else if (newAmount == 0)
-                    emptyOrders.Add(order);
-                else
-                    notEmptyOrders.Add(order);
 
                 order.Fulfilled -= amountToRemove;
                 order.Amount -= amountToRemove;
 
+                if (newAmount < 0)
+                    throw new Exception($"Negative amount");
+                else if (newAmount == 0)
+                {
+                    emptyOrders.Add(order);
+                    _context.Bids.Remove(order);
+                }
+                else
+                {
+                    notEmptyOrders.Add(order);
+                }
             }
             foreach (var order in asks)
             {
@@ -95,15 +102,21 @@ namespace MatchingEngine.Services
                     .Sum(_ => _.Volume).RoundDown(CurrenciesCache.Digits);
                 decimal newAmount = order.Amount - amountToRemove;
                 _logger.LogInformation($"DeleteDeals ask {order.Id} amount: {order.Amount} -> {newAmount}");
-                if (newAmount < 0)
-                    throw new Exception($"Negative amount");
-                else if (newAmount == 0)
-                    emptyOrders.Add(order);
-                else
-                    notEmptyOrders.Add(order);
 
                 order.Fulfilled -= amountToRemove;
                 order.Amount -= amountToRemove;
+
+                if (newAmount < 0)
+                    throw new Exception($"Negative amount");
+                else if (newAmount == 0)
+                {
+                    emptyOrders.Add(order);
+                    _context.Asks.Remove(order);
+                }
+                else
+                {
+                    notEmptyOrders.Add(order);
+                }
             }
             //await _context.SaveChangesAsync();
 
