@@ -202,7 +202,7 @@ namespace MatchingEngine.Services
                 _logger.LogInformation($"OrderTx: {command}");
 
             var orderTxsResult = await _depositoryClient.SendTxCommands(orderTxCommands, false);
-            //_logger.LogWarning($"DeleteDeals() orderTxsResult: {orderTxsResult}");
+            _logger.LogWarning($"DeleteDeals() orderTxsResult: {orderTxsResult}");
         }
     }
 }
