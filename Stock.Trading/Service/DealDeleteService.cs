@@ -118,22 +118,19 @@ namespace MatchingEngine.Services
                     notEmptyOrders.Add(order);
                 }
             }
-            //await _context.SaveChangesAsync();
+            //await DepositoryRecreateOrderTxs(notEmptyOrders);
+
+            _context.Deals.RemoveRange(deals);
+            _context.DealCopies.RemoveRange(await _context.DealCopies
+                .Where(_ => dealIds.Contains(_.DealId)).ToListAsync());
+            await _context.SaveChangesAsync();
 
             _logger.LogWarning($"DeleteDeals() DealIds:\n{string.Join(",", dealIds.Select(_ => $"'{_}'"))}");
             _logger.LogWarning($"DeleteDeals() emptyOrders:\n{string.Join(",", emptyOrders.Select(_ => $"'{_.Id}'"))}");
             _logger.LogWarning($"DeleteDeals() notEmptyOrders:\n{string.Join(",", notEmptyOrders.Select(_ => $"'{_.Id}'"))}");
 
-            await DepositoryRecreateOrderTxs(notEmptyOrders);
-
-
-            //_context.Deals.RemoveRange(deals);
-            //_context.DealCopies.RemoveRange(await context.DealCopies
-            //    .Where(_ => dealIds.Contains(_.DealId)).ToListAsync());
-            //await _context.SaveChangesAsync();
 
             // TODO Marketdata send orders/deals changes
-
         }
 
         private async Task SendAirdrops(List<string> userIds)
