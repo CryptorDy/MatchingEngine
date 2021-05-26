@@ -57,11 +57,10 @@ namespace MatchingEngine.Services
             // pay all users whose orders were in deleted deals
             var userIds = bids.Select(_ => _.UserId).Union(asks.Select(_ => _.UserId)).Distinct().ToList();
             userIds = userIds.Where(id => Guid.TryParse(id, out _)).ToList(); // remove bots
+            //await SendAirdrops(userIds); // Already sent
 
             _logger.LogWarning($"DeleteDeals deals:{deals.Count}, lastDealDate:{deals.Last()?.DateCreated}, " +
                 $"bids:{bids.Count}, asks:{asks.Count}, userIds:{userIds.Count}");
-
-            //await SendAirdrops(userIds); // Already sent
 
             // Delete deal transactions
             var dealTxActionIds = dealIds.SelectMany(_ =>
@@ -118,7 +117,7 @@ namespace MatchingEngine.Services
                     notEmptyOrders.Add(order);
                 }
             }
-            //await DepositoryRecreateOrderTxs(notEmptyOrders);
+            //await DepositoryRecreateOrderTxs(notEmptyOrders); // already sent
 
             _context.Deals.RemoveRange(deals);
             _context.DealCopies.RemoveRange(await _context.DealCopies
@@ -128,9 +127,6 @@ namespace MatchingEngine.Services
             _logger.LogWarning($"DeleteDeals() DealIds:\n{string.Join(",", dealIds.Select(_ => $"'{_}'"))}");
             _logger.LogWarning($"DeleteDeals() emptyOrders:\n{string.Join(",", emptyOrders.Select(_ => $"'{_.Id}'"))}");
             _logger.LogWarning($"DeleteDeals() notEmptyOrders:\n{string.Join(",", notEmptyOrders.Select(_ => $"'{_.Id}'"))}");
-
-
-            // TODO Marketdata send orders/deals changes
         }
 
         private async Task SendAirdrops(List<string> userIds)
