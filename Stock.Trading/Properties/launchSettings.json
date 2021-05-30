@@ -1,9 +1,8 @@
-﻿{
+{
   "profiles": {
-    "Stock.Trading": {
+    "MatchingEngine": {
       "commandName": "Project",
       "launchBrowser": false,
-      "launchUrl": "api/ping",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
