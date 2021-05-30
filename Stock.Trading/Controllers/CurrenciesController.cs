@@ -14,9 +14,7 @@ namespace MatchingEngine.Controllers
             _currenciesCache = currenciesService;
         }
 
-        /// <summary>
-        /// Reload currencies and currency pairs
-        /// </summary>
+        /// <summary>Reload currencies and currency pairs</summary>
         [HttpPost("reload")]
         public async Task Reload()
         {
