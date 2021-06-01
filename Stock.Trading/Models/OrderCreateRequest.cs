@@ -25,6 +25,9 @@ namespace MatchingEngine.Models
         /// </summary>
         public Exchange Exchange { get; set; } = Exchange.Local;
 
+        public override string ToString() => $"{nameof(OrderCreateRequest)}({(IsBid ? "Bid" : "Ask")}, " +
+            $"{ActionId}, {CurrencyPairCode}, amount:{Amount}, price:{Price}, {ClientType} {UserId})";
+
         public Order GetOrder()
         {
             return new Order

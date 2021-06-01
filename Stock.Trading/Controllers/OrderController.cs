@@ -41,7 +41,7 @@ namespace MatchingEngine.Controllers
         /// Get orders list
         /// </summary>
         [HttpGet]
-        public async Task<List<Order>> GetOrders(bool? isBid = null, string currencyPairId = null, int? count = Constants.DefaultRequestOrdersCount,
+        public async Task<List<Order>> GetOrders(bool? isBid = null, string currencyPairId = null, int? count = Models.Constants.DefaultRequestOrdersCount,
             string userId = null, OrderStatusRequest status = OrderStatusRequest.Active,
             DateTimeOffset? from = null, DateTimeOffset? to = null)
         {
