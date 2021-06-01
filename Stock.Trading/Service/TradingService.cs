@@ -131,6 +131,8 @@ namespace MatchingEngine.Services
 
                 var pool = _matchingPoolsHandler.GetPool(dbOrder.CurrencyPairCode);
                 var order = pool.GetPoolOrder(orderId);
+                if (order == null)
+                    order = dbOrder;
                 _logger.LogDebug($"DeleteOrder() {dbOrder}");
 
                 if (order.Blocked > 0)
