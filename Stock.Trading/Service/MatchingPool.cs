@@ -305,28 +305,26 @@ namespace MatchingEngine.Services
         private async Task Process(Order newOrder)
         {
             _logger.LogDebug("Detected new order, Matching process started");
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
-                var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                List<Order> modifiedOrders;
-                List<Deal> newDeals;
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+            List<Order> modifiedOrders;
+            List<Deal> newDeals;
 
-                lock (_orders) //no access to pool (for removing) while matching is performed
+            lock (_orders) //no access to pool (for removing) while matching is performed
+            {
+                DateTime start = DateTime.UtcNow;
+                (modifiedOrders, newDeals) = _ordersMatcher.Match(_orders, newOrder);
+                if (newOrder.IsActive)
                 {
-                    DateTime start = DateTime.UtcNow;
-                    (modifiedOrders, newDeals) = _ordersMatcher.Match(_orders, newOrder);
-                    if (newOrder.IsActive)
-                    {
-                        _orders.Add(newOrder);
-                    }
-                    _orders.RemoveAll(o => !o.IsActive);
-                    _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
-                        $"Orders in pool: {_orders.Count};");
-                    CheckOrderbookIntersection(newOrder);
-                    UpdateDatabase(context, modifiedOrders, newDeals).Wait();
+                    _orders.Add(newOrder);
                 }
-                await ReportData(context, modifiedOrders, newDeals);
+                _orders.RemoveAll(o => !o.IsActive);
+                _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
+                    $"Orders in pool: {_orders.Count};");
+                CheckOrderbookIntersection(newOrder);
+                UpdateDatabase(context, modifiedOrders, newDeals).Wait();
             }
+            await ReportData(context, modifiedOrders, newDeals);
         }
 
         public void AppendOrder(Order order)
