@@ -1,5 +1,6 @@
 using AutoMapper;
 using FluentValidation.AspNetCore;
+using Flurl.Http;
 using MatchingEngine.Data;
 using MatchingEngine.Helpers;
 using MatchingEngine.HttpClients;
@@ -25,23 +26,26 @@ namespace MatchingEngine
 {
     public class Startup
     {
-        public Startup(IWebHostEnvironment env)
+        public Startup(IWebHostEnvironment env, ILogger<FlurlCall> flurlLogger)
         {
             var basePath = env.EnvironmentName == "Testing"
                 ? Path.Combine(env.ContentRootPath, "..\\..\\..")
                 : env.ContentRootPath;
 
-            var builder = new ConfigurationBuilder();
-            builder
+            var builder = new ConfigurationBuilder()
                 .SetBasePath(basePath)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
                 .AddEnvironmentVariables();
 
             Configuration = builder.Build();
+            CurrentEnvironment = env;
+            _flurlLogger = flurlLogger;
         }
 
         public IConfigurationRoot Configuration { get; }
+        public IWebHostEnvironment CurrentEnvironment { get; }
+        private readonly ILogger<FlurlCall> _flurlLogger;
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -56,24 +60,24 @@ namespace MatchingEngine
 
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "MatchingEngine", Version = "v1" });
-                c.IncludeXmlComments(Path.Combine(PlatformServices.Default.Application.ApplicationBasePath, "MatchingEngine.xml"));
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = CurrentEnvironment.ApplicationName, Version = "v1" });
+                c.IncludeXmlComments(Path.Combine(PlatformServices.Default.Application.ApplicationBasePath,
+                    $"{CurrentEnvironment.ApplicationName}.xml"));
             });
             services.AddSwaggerGenNewtonsoftSupport();
 
             services.AddAutoMapper(typeof(Startup));
 
             services.InitFlurl(settings.GatewayServiceUrl);
+            services.AddSingleton<GatewayHttpClient>();
+            services.AddSingleton<CurrenciesCache>();
 
             services.AddDbContext<TradingDbContext>(options =>
                 options.UseNpgsql(Configuration["ConnectionStrings:DefaultConnection"]),
                 ServiceLifetime.Transient);
             services.AddScoped<IDbInitializer, DbInitializer>();
 
-            services.AddSingleton<GatewayHttpClient>();
             services.AddTransient<SingletonsAccessor>();
-
-            services.AddSingleton<CurrenciesCache>();
             services.AddTransient<DepositoryClient>();
 
             services.AddHostedService<MatchingPoolsHandler>();
@@ -109,7 +113,7 @@ namespace MatchingEngine
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "MatchingEngine V1");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{CurrentEnvironment.ApplicationName} V1");
             });
 
             mapper.ConfigurationProvider.AssertConfigurationIsValid();
