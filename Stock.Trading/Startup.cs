@@ -68,7 +68,7 @@ namespace MatchingEngine
 
             services.AddAutoMapper(typeof(Startup));
 
-            services.InitFlurl(settings.GatewayServiceUrl);
+            services.InitFlurl(settings.GatewayServiceUrl, _flurlLogger);
             services.AddSingleton<GatewayHttpClient>();
             services.AddSingleton<CurrenciesCache>();
 
