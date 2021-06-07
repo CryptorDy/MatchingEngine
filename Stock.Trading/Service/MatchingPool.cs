@@ -345,25 +345,22 @@ namespace MatchingEngine.Services
                     _logger.LogDebug("DeleteOrder() Not found.");
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
                 }
-
-                var order = GetPoolOrder(orderId);
-                if (order == null)
-                    order = dbOrder;
                 _logger.LogDebug($"DeleteOrder() {dbOrder}");
 
-                if (order.Blocked > 0)
+                if (dbOrder.Blocked > 0)
                 {
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked, Order = order };
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked, Order = dbOrder };
                 }
-                if (order.IsCanceled)
+                if (dbOrder.IsCanceled)
                 {
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyCanceled, Order = order };
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyCanceled, Order = dbOrder };
                 }
-                if (order.Fulfilled >= order.Amount)
+                if (dbOrder.Fulfilled >= dbOrder.Amount)
                 {
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled, Order = order };
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled, Order = dbOrder };
                 }
 
+                var order = GetPoolOrder(orderId);
                 _orders.Remove(order);
                 SendOrdersToMarketData();
 
