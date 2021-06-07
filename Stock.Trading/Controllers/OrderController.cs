@@ -142,7 +142,7 @@ namespace MatchingEngine.Controllers
             while (true)
             {
                 var orders = (await _context.Bids.OrderBy(_ => _.DateCreated)
-                    .Where(_ => _.IsCanceled && _.ClientType != ClientType.DealsBot
+                    .Where(_ => _.ClientType != ClientType.DealsBot
                         && (from == null || _.DateCreated > from) && (to == null || _.DateCreated < to))
                     .Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
                 if (orders.Count == 0)
@@ -155,7 +155,7 @@ namespace MatchingEngine.Controllers
             while (true)
             {
                 var orders = (await _context.Asks.OrderBy(_ => _.DateCreated)
-                    .Where(_ => _.IsCanceled && _.ClientType != ClientType.DealsBot
+                    .Where(_ => _.ClientType != ClientType.DealsBot
                         && (from == null || _.DateCreated > from) && (to == null || _.DateCreated < to))
                     .Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
                 if (orders.Count == 0)
