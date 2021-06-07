@@ -332,16 +332,41 @@ namespace MatchingEngine.Services
             _newOrdersBuffer.Post(order);
         }
 
-        public void RemoveOrder(Guid id)
+        public CancelOrderResponse CancelOrder(Guid orderId)
         {
+            _logger.LogDebug($"DeleteOrder() start. id:{orderId}");
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
             lock (_orders)
             {
-                var order = _orders.FirstOrDefault(_ => _.Id == id);
-                if (order != null)
+                var dbOrder = context.GetOrder(orderId).Result;
+                if (dbOrder == null)
                 {
-                    _orders.Remove(order);
-                    SendOrdersToMarketData();
+                    _logger.LogDebug("DeleteOrder() Not found.");
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
                 }
+                _logger.LogDebug($"DeleteOrder() {dbOrder}");
+
+                if (dbOrder.Blocked > 0)
+                {
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked, Order = dbOrder };
+                }
+                if (dbOrder.IsCanceled)
+                {
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyCanceled, Order = dbOrder };
+                }
+                if (dbOrder.Fulfilled >= dbOrder.Amount)
+                {
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled, Order = dbOrder };
+                }
+
+                var order = GetPoolOrder(orderId);
+                _orders.Remove(order);
+                SendOrdersToMarketData();
+
+                dbOrder.IsCanceled = true;
+                context.UpdateOrder(dbOrder, true, OrderEventType.Cancel).Wait();
+                return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = dbOrder };
             }
         }
 
