@@ -332,16 +332,44 @@ namespace MatchingEngine.Services
             _newOrdersBuffer.Post(order);
         }
 
-        public void RemoveOrder(Guid id)
+        public CancelOrderResponse CancelOrder(Guid orderId)
         {
+            _logger.LogDebug($"DeleteOrder() start. id:{orderId}");
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
             lock (_orders)
             {
-                var order = _orders.FirstOrDefault(_ => _.Id == id);
-                if (order != null)
+                var dbOrder = context.GetOrder(orderId).Result;
+                if (dbOrder == null)
                 {
-                    _orders.Remove(order);
-                    SendOrdersToMarketData();
+                    _logger.LogDebug("DeleteOrder() Not found.");
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
                 }
+
+                var order = GetPoolOrder(orderId);
+                if (order == null)
+                    order = dbOrder;
+                _logger.LogDebug($"DeleteOrder() {dbOrder}");
+
+                if (order.Blocked > 0)
+                {
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked, Order = order };
+                }
+                if (order.IsCanceled)
+                {
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyCanceled, Order = order };
+                }
+                if (order.Fulfilled >= order.Amount)
+                {
+                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled, Order = order };
+                }
+
+                _orders.Remove(order);
+                SendOrdersToMarketData();
+
+                dbOrder.IsCanceled = true;
+                context.UpdateOrder(dbOrder, true, OrderEventType.Cancel).Wait();
+                return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = dbOrder };
             }
         }
 

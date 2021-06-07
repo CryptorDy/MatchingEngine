@@ -117,42 +117,14 @@ namespace MatchingEngine.Services
             return order.Id;
         }
 
-        public async Task<CancelOrderResponse> DeleteOrder(Guid orderId)
+        public async Task<CancelOrderResponse> CancelOrder(Guid orderId)
         {
             try
             {
-                _logger.LogDebug($"DeleteOrder() start. id:{orderId}");
                 var dbOrder = await _context.GetOrder(orderId);
-                if (dbOrder == null)
-                {
-                    _logger.LogDebug("DeleteOrder() Not found.");
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
-                }
-
                 var pool = _matchingPoolsHandler.GetPool(dbOrder.CurrencyPairCode);
-                var order = pool.GetPoolOrder(orderId);
-                if (order == null)
-                    order = dbOrder;
-                _logger.LogDebug($"DeleteOrder() {dbOrder}");
-
-                if (order.Blocked > 0)
-                {
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked, Order = order };
-                }
-                if (order.IsCanceled)
-                {
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyCanceled, Order = order };
-                }
-                if (order.Fulfilled >= order.Amount)
-                {
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled, Order = order };
-                }
-
-                pool.RemoveOrder(orderId);
-                dbOrder = await _context.GetOrder(orderId); // reload order from db after it was removed from pool
-                dbOrder.IsCanceled = true;
-                await _context.UpdateOrder(dbOrder, true, OrderEventType.Cancel);
-                return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = dbOrder };
+                var result = pool.CancelOrder(orderId);
+                return result;
             }
             catch (Exception ex)
             {
