@@ -1,3 +1,4 @@
+using Flurl.Http;
 using MatchingEngine.Data;
 using MatchingEngine.HttpClients;
 using MatchingEngine.Models;
@@ -9,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TLabs.DotnetHelpers;
 
 namespace MatchingEngine.Controllers
 {
@@ -135,10 +137,12 @@ namespace MatchingEngine.Controllers
         }
 
         [HttpPost("recancel-in-depository")]
-        public async Task<IActionResult> RecancelAllOrdersInDepository(DateTimeOffset? from = null, DateTimeOffset? to = null)
+        public async Task<IActionResult> RecancelAllOrdersInDepository(DateTimeOffset? from = null,
+            DateTimeOffset? to = null, bool editCancelAmounts = false)
         {
             int page = 0, pageSize = 1000;
-            string url = "depository/deal/check-canceled-orders";
+            var request = "depository/deal/check-canceled-orders".InternalApi()
+                .SetQueryParam(nameof(editCancelAmounts), editCancelAmounts);
             while (true)
             {
                 var orders = (await _context.Bids.OrderBy(_ => _.DateCreated)
@@ -149,7 +153,7 @@ namespace MatchingEngine.Controllers
                     break;
                 _logger.LogInformation($"RecancelAllOrdersInDepository() bids, page {page}, count:{orders.Count}, " +
                     $"firstDate:{orders.First().DateCreated:o}");
-                await _gatewayHttpClient.PostJsonAsync(url, orders);
+                await request.PostJsonAsync(orders);
             }
             page = 0;
             while (true)
@@ -162,7 +166,7 @@ namespace MatchingEngine.Controllers
                     break;
                 _logger.LogInformation($"RecancelAllOrdersInDepository() asks, page {page}, count:{orders.Count}, " +
                     $"firstDate:{orders.First().DateCreated:o}");
-                await _gatewayHttpClient.PostJsonAsync(url, orders);
+                await request.PostJsonAsync(orders);
             }
             return Ok();
         }
