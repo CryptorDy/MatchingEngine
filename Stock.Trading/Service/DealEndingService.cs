@@ -66,7 +66,7 @@ namespace MatchingEngine.Services
                             .ToListAsync();
                         if (unprocessedDeals.Count == 0)
                             break;
-                        _logger.LogInformation($"SendDeals() unprocessed:{unprocessedDeals.Count}");
+                        _logger.LogDebug($"SendDeals() unprocessed:{unprocessedDeals.Count}");
 
                         int errorsCount = 0;
                         foreach (var deal in unprocessedDeals)
@@ -76,7 +76,7 @@ namespace MatchingEngine.Services
                                 await SendDeal(deal);
                                 deal.IsSentToDealEnding = true;
                                 await context.SaveChangesAsync();
-                                _logger.LogInformation($"SendDeals() sent: {deal.DealId}");
+                                _logger.LogDebug($"SendDeals() sent: {deal.DealId}");
                             }
                             catch (Exception ex)
                             {
@@ -84,7 +84,8 @@ namespace MatchingEngine.Services
                                 errorsCount++;
                             }
                         }
-                        _logger.LogInformation($"SendDeals() end. processed:{unprocessedDeals.Count}, with errors: {errorsCount}");
+                        if (errorsCount > 0)
+                            _logger.LogInformation($"SendDeals() end. processed:{unprocessedDeals.Count}, with errors: {errorsCount}");
                     }
                     await Task.Delay(200);
                 }

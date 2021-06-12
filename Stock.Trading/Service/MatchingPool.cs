@@ -437,7 +437,7 @@ namespace MatchingEngine.Services
 
                 var date4 = DateTimeOffset.UtcNow;
                 if (dto.OrdersToAdd.Count > 100 || new Random().Next(100) == 0)
-                    _logger.LogInformation($"SaveLiquidityImportUpdate()  Orders came:{dto.OrdersToAdd.Count}/{dto.OrdersToUpdate.Count}/{dto.OrdersToDelete.Count}. " +
+                    _logger.LogDebug($"SaveLiquidityImportUpdate()  Orders came:{dto.OrdersToAdd.Count}/{dto.OrdersToUpdate.Count}/{dto.OrdersToDelete.Count}. " +
                         $"Dates: {date1:HH:mm:ss.fff} {date2:HH:mm:ss.fff} {date3:HH:mm:ss.fff} {date4:HH:mm:ss.fff}. Orders in memory:{_orders.Count}");
             }
         }
