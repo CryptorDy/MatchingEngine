@@ -77,7 +77,7 @@ namespace MatchingEngine.Services
 
             if (modifiedOrders.Count > 0)
             {
-                _logger.LogInformation($"Updating {modifiedOrders.Count} orders");
+                _logger.LogDebug($"Updating {modifiedOrders.Count} orders");
                 var dbOrdersDict = (await context.LoadDbOrders(modifiedOrders)).ToDictionary(_ => _.Id, _ => _);
 
                 foreach (var order in modifiedOrders)
@@ -134,7 +134,7 @@ namespace MatchingEngine.Services
 
             if (newDeals.Count > 0)
             {
-                _logger.LogInformation($"Saved {newDeals.Count} new deals: \n{string.Join("\n", newDeals)}");
+                _logger.LogDebug($"Saved {newDeals.Count} new deals: \n{string.Join("\n", newDeals)}");
                 context.Deals.AddRange(newDeals);
                 context.DealCopies.AddRange(newDeals.Select(_ => new DealCopy(_)));
             }
