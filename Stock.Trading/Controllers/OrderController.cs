@@ -183,7 +183,7 @@ namespace MatchingEngine.Controllers
         public async Task<IActionResult> FixOrdersFullfilled(DateTimeOffset? from = null,
             DateTimeOffset? to = null, bool editFullfilled = false)
         {
-            int page = 0, pageSize = 1000;
+            int page = 0, pageSize = 10000;
             while (true)
             {
                 var orders = await _context.Bids.OrderBy(_ => _.DateCreated)
@@ -212,6 +212,28 @@ namespace MatchingEngine.Controllers
             page = 0;
             while (true)
             {
+                var orders = await _context.Asks.OrderBy(_ => _.DateCreated)
+                    .Where(_ => _.ClientType != ClientType.DealsBot
+                        && (from == null || _.DateCreated > from) && (to == null || _.DateCreated < to))
+                    .Skip(page++ * pageSize).Take(pageSize)
+                    .Include(_ => _.DealList).ToListAsync();
+                if (orders.Count == 0)
+                    break;
+
+                _logger.LogInformation($"FixOrdersFullfilled() asks, page {page}, count:{orders.Count}, " +
+                    $"firstDate:{orders.First().DateCreated:o}");
+                foreach (var order in orders)
+                {
+                    decimal dealsFullfilled = order.DealList.Select(_ => _.Volume).DefaultIfEmpty(0).Sum();
+                    if (order.Fulfilled == dealsFullfilled)
+                        continue;
+                    _logger.LogWarning($"FixOrdersFullfilled() Fulfilled needs to change:" +
+                        $"{order.Fulfilled} -> {dealsFullfilled} for {order}");
+                    if (editFullfilled)
+                        order.Fulfilled = dealsFullfilled;
+                }
+                if (editFullfilled)
+                    await _context.SaveChangesAsync();
             }
             return Ok();
         }
