@@ -114,7 +114,9 @@ namespace MatchingEngine.Controllers
             {
                 var orders = (await _context.Bids.OrderBy(_ => _.DateCreated)
                     .Where(_ => _.ClientType != ClientType.DealsBot && _.DateCreated > from)
-                    .Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
+                    .Skip(page++ * pageSize).Take(pageSize)
+                    .ToListAsync())
+                    .Cast<Order>().ToList();
                 if (orders.Count == 0)
                     break;
                 _logger.LogInformation($"SendAllOrdersToMarketData() bids, page {page}, count:{orders.Count}, " +
@@ -126,7 +128,9 @@ namespace MatchingEngine.Controllers
             {
                 var orders = (await _context.Asks.OrderBy(_ => _.DateCreated)
                     .Where(_ => _.ClientType != ClientType.DealsBot && _.DateCreated > from)
-                    .Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
+                    .Skip(page++ * pageSize).Take(pageSize)
+                    .ToListAsync())
+                    .Cast<Order>().ToList();
                 if (orders.Count == 0)
                     break;
                 _logger.LogInformation($"SendAllOrdersToMarketData() asks, page {page}, count:{orders.Count}, " +
@@ -148,7 +152,9 @@ namespace MatchingEngine.Controllers
                 var orders = (await _context.Bids.OrderBy(_ => _.DateCreated)
                     .Where(_ => _.ClientType != ClientType.DealsBot
                         && (from == null || _.DateCreated > from) && (to == null || _.DateCreated < to))
-                    .Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
+                    .Skip(page++ * pageSize).Take(pageSize)
+                    .ToListAsync())
+                    .Cast<Order>().ToList();
                 if (orders.Count == 0)
                     break;
                 _logger.LogInformation($"RecancelAllOrdersInDepository() bids, page {page}, count:{orders.Count}, " +
@@ -161,12 +167,51 @@ namespace MatchingEngine.Controllers
                 var orders = (await _context.Asks.OrderBy(_ => _.DateCreated)
                     .Where(_ => _.ClientType != ClientType.DealsBot
                         && (from == null || _.DateCreated > from) && (to == null || _.DateCreated < to))
-                    .Skip(page++ * pageSize).Take(pageSize).ToListAsync()).Cast<Order>().ToList();
+                    .Skip(page++ * pageSize).Take(pageSize)
+                    .ToListAsync())
+                    .Cast<Order>().ToList();
                 if (orders.Count == 0)
                     break;
                 _logger.LogInformation($"RecancelAllOrdersInDepository() asks, page {page}, count:{orders.Count}, " +
                     $"firstDate:{orders.First().DateCreated:o}");
                 await request.PostJsonAsync(orders);
+            }
+            return Ok();
+        }
+
+        [HttpPost("fix-fullfilled")]
+        public async Task<IActionResult> FixOrdersFullfilled(DateTimeOffset? from = null,
+            DateTimeOffset? to = null, bool editFullfilled = false)
+        {
+            int page = 0, pageSize = 1000;
+            while (true)
+            {
+                var orders = await _context.Bids.OrderBy(_ => _.DateCreated)
+                    .Where(_ => _.ClientType != ClientType.DealsBot
+                        && (from == null || _.DateCreated > from) && (to == null || _.DateCreated < to))
+                    .Skip(page++ * pageSize).Take(pageSize)
+                    .Include(_ => _.DealList).ToListAsync();
+                if (orders.Count == 0)
+                    break;
+
+                _logger.LogInformation($"FixOrdersFullfilled() bids, page {page}, count:{orders.Count}, " +
+                    $"firstDate:{orders.First().DateCreated:o}");
+                foreach (var order in orders)
+                {
+                    decimal dealsFullfilled = order.DealList.Select(_ => _.Volume).DefaultIfEmpty(0).Sum();
+                    if (order.Fulfilled == dealsFullfilled)
+                        continue;
+                    _logger.LogWarning($"FixOrdersFullfilled() Fulfilled needs to change:" +
+                        $"{order.Fulfilled} -> {dealsFullfilled} for {order}");
+                    if (editFullfilled)
+                        order.Fulfilled = dealsFullfilled;
+                }
+                if (editFullfilled)
+                    await _context.SaveChangesAsync();
+            }
+            page = 0;
+            while (true)
+            {
             }
             return Ok();
         }
