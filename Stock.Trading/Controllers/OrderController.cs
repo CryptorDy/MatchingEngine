@@ -140,6 +140,16 @@ namespace MatchingEngine.Controllers
             return Ok();
         }
 
+        [HttpGet("ids")]
+        public async Task<IEnumerable<Guid>> GetAllOrderIds()
+        {
+            var bidIds = await _context.Bids.Where(_ => _.ClientType != ClientType.DealsBot)
+                .Select(_ => _.Id).ToListAsync();
+            var askIds = await _context.Asks.Where(_ => _.ClientType != ClientType.DealsBot)
+                .Select(_ => _.Id).ToListAsync();
+            return bidIds.Union(askIds);
+        }
+
         [HttpPost("recancel-in-depository")]
         public async Task<IActionResult> RecancelAllOrdersInDepository(DateTimeOffset? from = null,
             DateTimeOffset? to = null, bool editCancelAmounts = false)
