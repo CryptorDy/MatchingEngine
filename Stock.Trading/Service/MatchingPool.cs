@@ -542,7 +542,7 @@ namespace MatchingEngine.Services
 
                     var newOrder = await _newOrdersBuffer.ReceiveAsync(cancellationToken);
 
-                    if (!newOrder.IsLocal && _liquidityDeletedOrdersKeeper.Contains(newOrder.Id))
+                    if (_liquidityDeletedOrdersKeeper.Contains(newOrder.Id))
                     {
                         _logger.LogInformation($"Skipped order processing (already deleted): {newOrder}");
                     }
