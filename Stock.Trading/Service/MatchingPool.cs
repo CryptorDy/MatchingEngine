@@ -362,6 +362,7 @@ namespace MatchingEngine.Services
 
                 var order = GetPoolOrder(orderId);
                 _orders.Remove(order);
+                _liquidityDeletedOrdersKeeper.AddRange(new List<Guid> { orderId });
                 SendOrdersToMarketData();
 
                 dbOrder.IsCanceled = true;
