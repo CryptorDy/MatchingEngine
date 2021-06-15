@@ -304,7 +304,7 @@ namespace MatchingEngine.Services
 
         private async Task Process(Order newOrder)
         {
-            _logger.LogDebug("Detected new order, Matching process started");
+            _logger.LogDebug($"Process() started {newOrder}");
             using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
             List<Order> modifiedOrders;
@@ -320,7 +320,7 @@ namespace MatchingEngine.Services
                 }
                 _orders.RemoveAll(o => !o.IsActive);
                 _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
-                    $"Orders in pool: {_orders.Count};");
+                    $"new order: {newOrder}, Orders in pool: {_orders.Count};");
                 CheckOrderbookIntersection(newOrder);
                 UpdateDatabase(context, modifiedOrders, newDeals).Wait();
             }
@@ -334,7 +334,7 @@ namespace MatchingEngine.Services
 
         public CancelOrderResponse CancelOrder(Guid orderId)
         {
-            _logger.LogDebug($"DeleteOrder() start. id:{orderId}");
+            _logger.LogDebug($"CancelOrder() start. id:{orderId}");
             using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
             lock (_orders)
@@ -342,10 +342,10 @@ namespace MatchingEngine.Services
                 var dbOrder = context.GetOrder(orderId).Result;
                 if (dbOrder == null)
                 {
-                    _logger.LogDebug("DeleteOrder() Not found.");
+                    _logger.LogDebug("CancelOrder() Not found.");
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
                 }
-                _logger.LogDebug($"DeleteOrder() {dbOrder}");
+                _logger.LogDebug($"CancelOrder() {dbOrder}");
 
                 if (dbOrder.Blocked > 0)
                 {
@@ -367,6 +367,7 @@ namespace MatchingEngine.Services
 
                 dbOrder.IsCanceled = true;
                 context.UpdateOrder(dbOrder, true, OrderEventType.Cancel).Wait();
+                _logger.LogDebug($"CancelOrder() finished {orderId}");
                 return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = dbOrder };
             }
         }
