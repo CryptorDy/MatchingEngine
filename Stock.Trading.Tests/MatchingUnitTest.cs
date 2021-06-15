@@ -135,7 +135,7 @@ namespace Stock.Trading.Tests
         }
 
         [Fact]
-        public async Task LiquidityDeletedOrdersDoNotGetProcessed()
+        public async Task DeletedOrdersDoNotGetProcessed()
         {
             async Task<int> TestProcessingWithDeletedIds(List<Order> poolOrders, List<Guid> deletedIds)
             {
@@ -162,17 +162,17 @@ namespace Stock.Trading.Tests
             };
             var orders = new List<Order> { bid, ask };
 
-            // ask is skipped because it's in _liquidityDeletedOrderIds
+            // Binance ask is skipped because it's in _liquidityDeletedOrderIds
             int matchesWithDeletedAsk = await TestProcessingWithDeletedIds(orders, new List<Guid> { ask.Id });
             Assert.Equal(0, matchesWithDeletedAsk);
+
+            // local bid is skipped too
+            int matchesWithNotDeletedBid = await TestProcessingWithDeletedIds(orders, new List<Guid> { bid.Id });
+            Assert.Equal(0, matchesWithNotDeletedBid);
 
             // nothing should be skipped
             int matchesWithNotDeletedAsk = await TestProcessingWithDeletedIds(orders, new List<Guid> { Guid.NewGuid() });
             Assert.Equal(1, matchesWithNotDeletedAsk);
-
-            // bid is local, should not be skipped
-            int matchesWithNotDeletedBid = await TestProcessingWithDeletedIds(orders, new List<Guid> { bid.Id });
-            Assert.Equal(1, matchesWithNotDeletedBid);
         }
 
         [Fact]
