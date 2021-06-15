@@ -1,4 +1,5 @@
 using MatchingEngine.Models;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,9 +13,9 @@ namespace MatchingEngine.Services
         private readonly ConcurrentDictionary<string, ConcurrentQueue<Order>> _orders =
             new ConcurrentDictionary<string, ConcurrentQueue<Order>>();
 
-        public void SetOrders(string pairCode, List<Order> orders)
+        public void SetOrders(string pairCode, ConcurrentDictionary<Guid, Order> orders)
         {
-            _orders[pairCode] = new ConcurrentQueue<Order>(orders);
+            _orders[pairCode] = new ConcurrentQueue<Order>(orders.Values);
             _pairsForSend.TryAdd(pairCode, new object());
         }
 

@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -22,7 +23,7 @@ namespace MatchingEngine.Services
     {
         public readonly string _pairCode;
         private readonly BufferBlock<Order> _newOrdersBuffer = new BufferBlock<Order>();
-        private readonly List<Order> _orders = new List<Order>();
+        private readonly ConcurrentDictionary<Guid, Order> _orders = new();
 
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly CurrenciesCache _currenciesCache;
@@ -59,13 +60,13 @@ namespace MatchingEngine.Services
 
             _pairCode = currencyPairCode;
 
-            _orders = activeOrders;
+            activeOrders.ForEach(order => { _orders[order.Id] = order; });
             SendOrdersToMarketData();
         }
 
         public Order GetPoolOrder(Guid id)
         {
-            return _orders.FirstOrDefault(_ => _.Id == id);
+            return _orders.GetValueOrDefault(id, null);
         }
 
         private async Task UpdateDatabase(TradingDbContext context, List<Order> modifiedOrders, List<Deal> newDeals)
@@ -196,8 +197,8 @@ namespace MatchingEngine.Services
                 Order bid, ask;
                 lock (_orders)
                 {
-                    bid = _orders.FirstOrDefault(x => x.Id == Guid.Parse(createdOrder.TradingBidId));
-                    ask = _orders.FirstOrDefault(x => x.Id == Guid.Parse(createdOrder.TradingAskId));
+                    bid = _orders.GetValueOrDefault(Guid.Parse(createdOrder.TradingBidId), null);
+                    ask = _orders.GetValueOrDefault(Guid.Parse(createdOrder.TradingAskId), null);
                 }
                 if (bid == null)
                 {
@@ -222,6 +223,7 @@ namespace MatchingEngine.Services
                         $"order is wrong Or total fullfilled {matchedLocalOrder.Fulfilled + createdOrder.Fulfilled} is bigger than amount");
                     isFullfillmentError = true;
                 }
+                Order newImportedOrder = null;
                 // Update matched orders
                 lock (_orders)
                 {
@@ -234,34 +236,32 @@ namespace MatchingEngine.Services
                         matchedLocalOrder.Fulfilled += createdOrder.Fulfilled;
                     }
                     modifiedOrders.Add(matchedLocalOrder);
-                    _orders.RemoveAll(o => !o.IsActive);
-                }
+                    RemoveNotActivePoolOrders();
 
-                Order newImportedOrder = null;
-                if (createdOrder.Fulfilled > 0 && !isFullfillmentError)
-                {
-                    // Create a separate completed order for the matched part of the imported order
-                    newImportedOrder = new Order()
+                    if (createdOrder.Fulfilled > 0 && !isFullfillmentError)
                     {
-                        Id = Guid.NewGuid(),
-                        IsBid = !createdOrder.IsBid,
-                        CurrencyPairCode = createdOrder.CurrencyPairCode,
-                        DateCreated = matchedImportedOrder?.DateCreated ?? DateTimeOffset.UtcNow,
-                        Exchange = createdOrder.Exchange,
-                        Price = createdOrder.MatchingEngineDealPrice,
-                        Amount = createdOrder.Fulfilled,
-                        Fulfilled = createdOrder.Fulfilled,
-                        ClientType = ClientType.LiquidityBot,
-                        UserId = $"{createdOrder.Exchange}_matched"
-                    };
-                    modifiedOrders.Add(newImportedOrder);
+                        // Create a separate completed order for the matched part of the imported order
+                        newImportedOrder = new Order()
+                        {
+                            Id = Guid.NewGuid(),
+                            IsBid = !createdOrder.IsBid,
+                            CurrencyPairCode = createdOrder.CurrencyPairCode,
+                            DateCreated = matchedImportedOrder?.DateCreated ?? DateTimeOffset.UtcNow,
+                            Exchange = createdOrder.Exchange,
+                            Price = createdOrder.MatchingEngineDealPrice,
+                            Amount = createdOrder.Fulfilled,
+                            Fulfilled = createdOrder.Fulfilled,
+                            ClientType = ClientType.LiquidityBot,
+                            UserId = $"{createdOrder.Exchange}_matched"
+                        };
+                        modifiedOrders.Add(newImportedOrder);
 
-                    // Create deal
-                    newDeals.Add(new Deal(matchedLocalOrder, newImportedOrder,
-                        createdOrder.MatchingEngineDealPrice, createdOrder.Fulfilled));
+                        // Create deal
+                        newDeals.Add(new Deal(matchedLocalOrder, newImportedOrder,
+                            createdOrder.MatchingEngineDealPrice, createdOrder.Fulfilled));
+                    }
+                    UpdateDatabase(db, modifiedOrders, newDeals).Wait();
                 }
-
-                await UpdateDatabase(db, modifiedOrders, newDeals);
                 await ReportData(db, modifiedOrders, newDeals);
 
                 var result = new SaveExternalOrderResult
@@ -290,11 +290,9 @@ namespace MatchingEngine.Services
         {
             try
             {
-                using (var scope = _serviceScopeFactory.CreateScope())
-                {
-                    var marketDataService = scope.ServiceProvider.GetRequiredService<MarketDataService>();
-                    await marketDataService.SendNewDeal(deal.GetDealResponse());
-                }
+                using var scope = _serviceScopeFactory.CreateScope();
+                var marketDataService = scope.ServiceProvider.GetRequiredService<MarketDataService>();
+                await marketDataService.SendNewDeal(deal.GetDealResponse());
             }
             catch (Exception ex)
             {
@@ -313,12 +311,12 @@ namespace MatchingEngine.Services
             lock (_orders) //no access to pool (for removing) while matching is performed
             {
                 DateTime start = DateTime.UtcNow;
-                (modifiedOrders, newDeals) = _ordersMatcher.Match(_orders, newOrder);
+                (modifiedOrders, newDeals) = _ordersMatcher.Match(_orders.Values, newOrder);
                 if (newOrder.IsActive)
                 {
-                    _orders.Add(newOrder);
+                    _orders[newOrder.Id] = newOrder;
                 }
-                _orders.RemoveAll(o => !o.IsActive);
+                RemoveNotActivePoolOrders();
                 _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
                     $"new order: {newOrder}, Orders in pool: {_orders.Count};");
                 CheckOrderbookIntersection(newOrder);
@@ -337,9 +335,10 @@ namespace MatchingEngine.Services
             _logger.LogDebug($"CancelOrder() start. id:{orderId}");
             using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+            Order dbOrder;
             lock (_orders)
             {
-                var dbOrder = context.GetOrder(orderId).Result;
+                dbOrder = context.GetOrder(orderId).Result;
                 if (dbOrder == null)
                 {
                     _logger.LogDebug("CancelOrder() Not found.");
@@ -348,28 +347,51 @@ namespace MatchingEngine.Services
                 _logger.LogDebug($"CancelOrder() {dbOrder}");
 
                 if (dbOrder.Blocked > 0)
-                {
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked, Order = dbOrder };
-                }
                 if (dbOrder.IsCanceled)
-                {
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyCanceled, Order = dbOrder };
-                }
                 if (dbOrder.Fulfilled >= dbOrder.Amount)
-                {
                     return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled, Order = dbOrder };
-                }
 
                 var order = GetPoolOrder(orderId);
-                _orders.Remove(order);
+                _orders.TryRemove(order.Id, out _);
                 _liquidityDeletedOrdersKeeper.AddRange(new List<Guid> { orderId });
-                SendOrdersToMarketData();
 
                 dbOrder.IsCanceled = true;
                 context.UpdateOrder(dbOrder, true, OrderEventType.Cancel).Wait();
-                _logger.LogDebug($"CancelOrder() finished {orderId}");
-                return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = dbOrder };
             }
+            SendOrdersToMarketData();
+            _logger.LogDebug($"CancelOrder() finished {dbOrder}");
+            return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = dbOrder };
+        }
+
+        /// <summary>Remove orders from pool and notify MarketData</summary>
+        /// <param name="ids">ids to remove</param>
+        /// <param name="clientType">optionally check that only certain clientType is removed</param>
+        public void RemovePoolOrders(IEnumerable<Guid> ids, ClientType? clientType = null)
+        {
+            _liquidityDeletedOrdersKeeper.AddRange(ids);
+            int countDeleted = 0;
+            lock (_orders)
+            {
+                foreach (Guid id in ids)
+                {
+                    if (_orders.TryRemove(id, out var order))
+                    {
+                        countDeleted++;
+                        if (clientType.HasValue && order.ClientType != clientType.Value)
+                            throw new ArgumentException($"Invalid clientType, expected {clientType}: {order}");
+                    }
+                }
+            }
+            if (countDeleted > 0)
+                SendOrdersToMarketData();
+        }
+
+        private void RemoveNotActivePoolOrders()
+        {
+            var ids = _orders.Values.Where(_ => !_.IsActive).Select(_ => _.Id).ToList();
+            RemovePoolOrders(ids);
         }
 
         #region Liquidity
@@ -377,32 +399,30 @@ namespace MatchingEngine.Services
         public async Task UnblockOrders(List<Guid> orderIds)
         {
             if (orderIds?.Count == 0)
-            {
                 return;
-            }
-            List<Order> ordersToUnblock;
+            List<Order> ordersToUnblock = new();
             lock (_orders)
             {
-                ordersToUnblock = _orders.Where(_ => orderIds.Contains(_.Id) && _.Blocked > 0).ToList();
-                ordersToUnblock.ForEach(_ => _.Blocked = 0);
-            }
-
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
+                foreach (var id in orderIds)
+                {
+                    var order = GetPoolOrder(id);
+                    if (order == null || order.Blocked == 0)
+                        continue;
+                    order.Blocked = 0;
+                    ordersToUnblock.Add(order);
+                }
+                using var scope = _serviceScopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                await UpdateDatabase(context, ordersToUnblock, new List<Deal>());
+                UpdateDatabase(context, ordersToUnblock, new List<Deal>()).Wait();
             }
-            lock (_orders)
-            {
-                SendOrdersToMarketData();
-            }
+            SendOrdersToMarketData();
         }
 
         public void SaveLiquidityImportUpdate(ImportUpdateDto dto)
         {
             var date1 = DateTimeOffset.UtcNow;
             // delete
-            RemoveOrders(dto.OrdersToDelete.Select(_ => Guid.Parse(_.ActionId)).ToList());
+            RemovePoolOrders(dto.OrdersToDelete.Select(_ => Guid.Parse(_.ActionId)).ToList(), ClientType.LiquidityBot);
 
             var date2 = DateTimeOffset.UtcNow;
             // update
@@ -410,17 +430,13 @@ namespace MatchingEngine.Services
             {
                 foreach (var order in dto.OrdersToUpdate)
                 {
-                    var o = _orders.FirstOrDefault(_ => _.Id == Guid.Parse(order.ActionId));
-                    if (o != null)
-                    {
-                        if (o.IsLocal)
-                        {
-                            throw new ArgumentException($"Local exchange changes are forbidden. {o}");
-                        }
-
-                        o.Amount = order.Amount;
-                        o.DateCreated = order.DateCreated;
-                    }
+                    var o = _orders.GetValueOrDefault(Guid.Parse(order.ActionId), null);
+                    if (o == null)
+                        continue;
+                    if (o.IsLocal)
+                        throw new ArgumentException($"Local exchange changes are forbidden. {o}");
+                    o.Amount = order.Amount;
+                    o.DateCreated = order.DateCreated;
                 }
             }
 
@@ -429,83 +445,45 @@ namespace MatchingEngine.Services
             var ordersToAdd = dto.OrdersToAdd.Select(_ => _.GetOrder()).ToList();
             ordersToAdd.ForEach(_ => AppendOrder(_));
 
-            lock (_orders)
+            if (_pairCode == Constants.DebugCurrencyPair)
             {
-                var bidPrice = _orders.Where(_ => _.IsBid && _.CurrencyPairCode == Constants.DebugCurrencyPair)
-                    .OrderByDescending(_ => _.Price).FirstOrDefault()?.Price;
+                var bidPrice = _orders.Values.Where(_ => _.IsBid).OrderByDescending(_ => _.Price).FirstOrDefault()?.Price;
                 _logger.LogDebug($"SaveLiquidityImportUpdate() top {Constants.DebugCurrencyPair} bid: {bidPrice}");
-
-                SendOrdersToMarketData();
-
                 var date4 = DateTimeOffset.UtcNow;
                 if (dto.OrdersToAdd.Count > 100 || new Random().Next(100) == 0)
                     _logger.LogDebug($"SaveLiquidityImportUpdate()  Orders came:{dto.OrdersToAdd.Count}/{dto.OrdersToUpdate.Count}/{dto.OrdersToDelete.Count}. " +
                         $"Dates: {date1:HH:mm:ss.fff} {date2:HH:mm:ss.fff} {date3:HH:mm:ss.fff} {date4:HH:mm:ss.fff}. Orders in memory:{_orders.Count}");
             }
-        }
-
-        public void RemoveOrders(IEnumerable<Guid> ids)
-        {
-            _liquidityDeletedOrdersKeeper.AddRange(ids);
-            lock (_orders)
-            {
-                var ordersToRemove = _orders.Where(_ => ids.Contains(_.Id)).ToList();
-                if (ordersToRemove.Any(_ => _.IsLocal))
-                {
-                    throw new ArgumentException("Local exchange changes are forbidden");
-                }
-
-                int removedOrdersCount = _orders.RemoveAll(_ => ids.Contains(_.Id));
-                if (removedOrdersCount > 0)
-                {
-                    SendOrdersToMarketData();
-                }
-            }
+            SendOrdersToMarketData();
         }
 
         public void RemoveLiquidityOrderbook(Exchange exchange)
         {
             if (exchange == Exchange.Local)
-            {
                 throw new ArgumentException("Local exchange changes are forbidden");
-            }
-
-            lock (_orders)
-            {
-                int removedOrdersCount = _orders.RemoveAll(_ => _.Exchange == exchange);
-                if (removedOrdersCount > 0)
-                {
-                    SendOrdersToMarketData();
-                }
-            }
+            var ids = _orders.Values.Where(_ => _.Exchange == exchange).Select(_ => _.Id).ToList();
+            RemovePoolOrders(ids, ClientType.LiquidityBot);
         }
 
         public void RemoveLiquidityOldOrders()
         {
-            lock (_orders)
-            {
-                var minDate = DateTimeOffset.UtcNow.AddMinutes(-_settings.Value.ImportedOrdersExpirationMinutes);
-                int removedOrdersCount = _orders.RemoveAll(_ => !_.IsLocal && _.Blocked == 0 && _.DateCreated < minDate);
-                if (removedOrdersCount > 0)
-                {
-                    _logger.LogInformation($"RemoveLiquidityOldOrders() expired {removedOrdersCount} orders");
-                    SendOrdersToMarketData();
-                }
-            }
+            var minDate = DateTimeOffset.UtcNow.AddMinutes(-_settings.Value.ImportedOrdersExpirationMinutes);
+            var ids = _orders.Values.Where(_ => !_.IsLocal && _.Blocked == 0 && _.DateCreated < minDate)
+                .Select(_ => _.Id).ToList();
+            if (ids.Count == 0)
+                return;
+            _logger.LogInformation($"RemoveLiquidityOldOrders() expired {ids.Count} orders");
+            RemovePoolOrders(ids, ClientType.LiquidityBot);
         }
 
         #endregion Liquidity
 
         public void RemoveOldInnerBotOrders()
         {
-            lock (_orders)
-            {
-                int removedOrdersCount = _orders.RemoveAll(_ => _.ClientType == ClientType.DealsBot && _.DateCreated < DateTimeOffset.UtcNow.AddSeconds(-50));
-                if (removedOrdersCount > 0)
-                {
-                    SendOrdersToMarketData();
-                }
-            }
+            var minDate = DateTimeOffset.UtcNow.AddSeconds(-50);
+            var ids = _orders.Values.Where(_ => _.ClientType == ClientType.DealsBot && _.DateCreated < minDate)
+                .Select(_ => _.Id).ToList();
+            RemovePoolOrders(ids, ClientType.DealsBot);
         }
 
         private long _orderbookIntersectionLogsCounter = 0;
@@ -516,13 +494,9 @@ namespace MatchingEngine.Services
         private void CheckOrderbookIntersection(Order newOrder)
         {
             if (_orderbookIntersectionLogsCounter++ % 100 != 0) // only show 1 in 100 logs
-            {
                 return;
-            }
-
-            var currencyPairOrders = _orders.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode);
-            var biggestBid = currencyPairOrders.Where(o => o.IsBid).OrderByDescending(_ => _.Price).FirstOrDefault();
-            var lowestAsk = currencyPairOrders.Where(o => !o.IsBid).OrderBy(_ => _.Price).FirstOrDefault();
+            var biggestBid = _orders.Values.Where(o => o.IsBid).OrderByDescending(_ => _.Price).FirstOrDefault();
+            var lowestAsk = _orders.Values.Where(o => !o.IsBid).OrderBy(_ => _.Price).FirstOrDefault();
             if (biggestBid != null && lowestAsk != null && biggestBid.Price > lowestAsk.Price)
             {
                 _logger.LogError($"\n!!!!!!! bids are bigger than asks.");
