@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -245,6 +246,57 @@ namespace Stock.Trading.Tests
             }
 
             await matchingPool.StopAsync(new CancellationToken());
+        }
+
+        [Fact]
+        public async Task DeletedOrdersInParallelDoNotGetProcessed()
+        {
+            // should be even numbers, to make all non-canceled orders to fully match
+            const int ordersCount = 20, ordersCanceledCount = 4;
+
+            var guidsAll = Enumerable.Range(0, ordersCount).Select(_ => Guid.NewGuid()).ToList();
+            var guidsForCancel = guidsAll.OrderBy(_ => _).Take(ordersCanceledCount).ToList();
+
+            var (provider, matchingPoolsHandler, _) =
+                CreateServiceProvider((resultBid, resultAsk) => { });
+            var matchingPool = matchingPoolsHandler.GetPool(_currencyPairCode);
+
+            // add bids and asks to queue
+            Parallel.For(0, guidsAll.Count, i => 
+            {
+                var order = _cheapBid.Clone();
+                order.Id = guidsAll[i];
+                order.IsBid = i % 2 == 0;
+                var tradingService = provider.GetRequiredService<TradingService>();
+                _ = AddOrder(order, tradingService, null);
+            });
+
+            // cancel some of them while they are in queue
+            foreach (var guid in guidsForCancel) 
+            {
+                var tradingService = provider.GetRequiredService<TradingService>();
+                var response = tradingService.CancelOrder(guid).Result;
+            }
+            await Task.Delay(2000);
+            var context = provider.GetRequiredService<TradingDbContext>();
+
+            // check canceled orders
+            foreach (var guid in guidsForCancel)
+            {
+                var order = matchingPool.GetPoolOrder(guid);
+                Assert.Null(order); // order should not be in pool at this point
+                var dbOrder = context.GetOrder(guid).Result;
+                Debug.WriteLine($"Canceled order in pool:{order}, in db:{dbOrder}");
+                Assert.True((dbOrder.AvailableAmount == 0 && !dbOrder.IsCanceled) // order could be filled fully or canceled
+                    || (dbOrder.AvailableAmount > 0 && dbOrder.IsCanceled)
+                );
+            }
+
+            // check not canceled orders
+            var orderNotCanceled = await context.GetOrder(guidsAll.Except(guidsForCancel).First());
+            Debug.WriteLine($"orderNotCanceled in db:{orderNotCanceled}");
+            Assert.False(orderNotCanceled.IsCanceled);
+            Assert.Equal(0, orderNotCanceled.AvailableAmount);
         }
 
         private async Task AddOrder(Order order, TradingService tradingService,
