@@ -14,7 +14,7 @@ namespace MatchingEngine.Services
             _liquidityImportService = liquidityImportService;
         }
 
-        private bool AreOpposite(Order order1, Order order2) => order1.IsBid != order2.IsBid;
+        private bool AreOnDifferentSidesOfOrderbook(Order order1, Order order2) => order1.IsBid != order2.IsBid;
 
         private bool CanBeFilled(Order order) => order.IsActive && order.AvailableAmount > 0;
 
@@ -33,7 +33,7 @@ namespace MatchingEngine.Services
             var newDeals = new List<Deal>();
 
             var poolOrdersQuery = pool.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode
-                && AreOpposite(o, newOrder) && CanBeFilled(o)
+                && AreOnDifferentSidesOfOrderbook(o, newOrder) && CanBeFilled(o)
                 && NotBothImported(o, newOrder)
                 && HaveSameTradingBotFlag(o, newOrder));
             List<Order> poolOrders;
