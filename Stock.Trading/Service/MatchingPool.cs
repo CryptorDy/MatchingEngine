@@ -182,11 +182,11 @@ namespace MatchingEngine.Services
             }
         }
 
-        public async Task<SaveExternalOrderResult> UpdateExternalOrder(ExternalCreatedOrder createdOrder)
+        public async Task<SaveExternalOrderResult> UpdateExternalOrder(ExternalTrade externalTrade)
         {
-            _logger.LogInformation($"UpdateExternalOrder() start: {createdOrder}");
-            if (_currenciesCache.GetCurrencyPair(createdOrder.CurrencyPairCode) != null)
-                createdOrder.Fulfilled = Math.Round(createdOrder.Fulfilled, _currenciesCache.GetAmountDigits(createdOrder.CurrencyPairCode));
+            _logger.LogInformation($"UpdateExternalOrder() start: {externalTrade}");
+            if (_currenciesCache.GetCurrencyPair(externalTrade.CurrencyPairCode) != null)
+                externalTrade.Fulfilled = Math.Round(externalTrade.Fulfilled, _currenciesCache.GetAmountDigits(externalTrade.CurrencyPairCode));
             var modifiedOrders = new List<Order>();
             var newDeals = new List<Deal>();
 
@@ -195,24 +195,29 @@ namespace MatchingEngine.Services
                 // Find previously matched orders
                 var db = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
 
-                Order bid = _orders.GetValueOrDefault(Guid.Parse(createdOrder.TradingBidId), null);
-                Order ask = _orders.GetValueOrDefault(Guid.Parse(createdOrder.TradingAskId), null);
+                Order bid = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingBidId), null);
+                Order ask = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingAskId), null);
                 if (bid == null)
-                    bid = await db.Bids.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingBidId));
+                {
+                    bid = await db.Bids.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(externalTrade.TradingBidId));
+                    _logger.LogWarning($"UpdateExternalOrder() couldn't find bid of {externalTrade} in pool. In DB: {bid}");
+                }
                 if (ask == null)
-                    ask = await db.Asks.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingAskId));
-                // todo handle cases with null bid or ask
+                {
+                    ask = await db.Asks.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(externalTrade.TradingAskId));
+                    _logger.LogWarning($"UpdateExternalOrder() couldn't find ask of {externalTrade} in pool. In DB: {ask}");
+                }
 
-                var (matchedLocalOrder, matchedImportedOrder) = createdOrder.IsBid ? (bid, ask) : (ask, bid);
+                var (matchedLocalOrder, matchedImportedOrder) = externalTrade.IsBid ? (bid, ask) : (ask, bid);
 
                 bool isFullfillmentError = false;
                 if (matchedLocalOrder.IsCanceled
-                    || matchedLocalOrder.Fulfilled + createdOrder.Fulfilled > matchedLocalOrder.Amount
+                    || matchedLocalOrder.Fulfilled + externalTrade.Fulfilled > matchedLocalOrder.Amount
                     || matchedLocalOrder.Exchange != Exchange.Local
-                    || matchedLocalOrder.CurrencyPairCode != createdOrder.CurrencyPairCode)
+                    || matchedLocalOrder.CurrencyPairCode != externalTrade.CurrencyPairCode)
                 {
                     _logger.LogError($"UpdateExternalOrder() error for {matchedLocalOrder}: " +
-                        $"order is wrong Or total fullfilled {matchedLocalOrder.Fulfilled + createdOrder.Fulfilled} is bigger than amount");
+                        $"order is wrong Or total fullfilled {matchedLocalOrder.Fulfilled + externalTrade.Fulfilled} is bigger than amount");
                     isFullfillmentError = true;
                 }
                 Order newImportedOrder = null;
@@ -225,32 +230,32 @@ namespace MatchingEngine.Services
                     matchedLocalOrder.Blocked = 0;
                     if (!isFullfillmentError)
                     {
-                        matchedLocalOrder.Fulfilled += createdOrder.Fulfilled;
+                        matchedLocalOrder.Fulfilled += externalTrade.Fulfilled;
                     }
                     modifiedOrders.Add(matchedLocalOrder);
                     RemoveNotActivePoolOrders();
 
-                    if (createdOrder.Fulfilled > 0 && !isFullfillmentError)
+                    if (externalTrade.Fulfilled > 0 && !isFullfillmentError)
                     {
                         // Create a separate completed order for the matched part of the imported order
                         newImportedOrder = new Order()
                         {
                             Id = Guid.NewGuid(),
-                            IsBid = !createdOrder.IsBid,
-                            CurrencyPairCode = createdOrder.CurrencyPairCode,
+                            IsBid = !externalTrade.IsBid,
+                            CurrencyPairCode = externalTrade.CurrencyPairCode,
                             DateCreated = matchedImportedOrder?.DateCreated ?? DateTimeOffset.UtcNow,
-                            Exchange = createdOrder.Exchange,
-                            Price = createdOrder.MatchingEngineDealPrice,
-                            Amount = createdOrder.Fulfilled,
-                            Fulfilled = createdOrder.Fulfilled,
+                            Exchange = externalTrade.Exchange,
+                            Price = externalTrade.MatchingEngineDealPrice,
+                            Amount = externalTrade.Fulfilled,
+                            Fulfilled = externalTrade.Fulfilled,
                             ClientType = ClientType.LiquidityBot,
-                            UserId = $"{createdOrder.Exchange}_matched"
+                            UserId = $"{externalTrade.Exchange}_matched"
                         };
                         modifiedOrders.Add(newImportedOrder);
 
                         // Create deal
                         newDeals.Add(new Deal(matchedLocalOrder, newImportedOrder,
-                            createdOrder.MatchingEngineDealPrice, createdOrder.Fulfilled));
+                            externalTrade.MatchingEngineDealPrice, externalTrade.Fulfilled));
                     }
                     UpdateDatabase(db, modifiedOrders, newDeals).Wait();
                 }

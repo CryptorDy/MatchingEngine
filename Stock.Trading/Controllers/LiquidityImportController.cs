@@ -26,7 +26,7 @@ namespace Stock.Trading.Controllers
         }
 
         [HttpPost("trade-result")]
-        public async Task<SaveExternalOrderResult> ApplyTradeResult([FromBody] ExternalCreatedOrder createdOrder)
+        public async Task<SaveExternalOrderResult> ApplyTradeResult([FromBody] ExternalTrade createdOrder)
         {
             var result = await _matchingPoolsHandler.GetPool(createdOrder.CurrencyPairCode)
                 .UpdateExternalOrder(createdOrder);

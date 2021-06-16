@@ -1,6 +1,6 @@
 namespace MatchingEngine.Models.LiquidityImport
 {
-    public class ExternalCreatedOrder
+    public class ExternalTrade
     {
         public bool IsBid { get; set; }
 
@@ -21,8 +21,9 @@ namespace MatchingEngine.Models.LiquidityImport
 
         public decimal Fulfilled { get; set; }
 
-        public override string ToString() => $"{nameof(ExternalCreatedOrder)}({Exchange} {(IsBid ? "bid" : "ask")} " +
-            $"{Fulfilled}/{Amount} {CurrencyPairCode}, " +
-            $"{(string.IsNullOrEmpty(ExchangeOrderId) ? "" : $"ExchangeOrder:{ExchangeOrderId}")})";
+        public override string ToString() => $"{nameof(ExternalTrade)}({Exchange} {(IsBid ? "bid" : "ask")} " +
+            $"filled {Fulfilled}/{Amount} {CurrencyPairCode}, " +
+            $"{(string.IsNullOrEmpty(ExchangeOrderId) ? "" : $"ExchangeOrder:{ExchangeOrderId}, ")}" +
+            $"matchingBid:{TradingBidId}, matchingAsk:{TradingAskId})";
     }
 }
