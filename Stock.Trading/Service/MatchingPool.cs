@@ -216,16 +216,14 @@ namespace MatchingEngine.Services
 
                 var (matchedLocalOrder, matchedImportedOrder) = externalTrade.IsBid ? (bid, ask) : (ask, bid);
 
-                bool isFullfillmentError = false;
-                if (matchedLocalOrder.IsCanceled
-                    || matchedLocalOrder.Fulfilled + externalTrade.Fulfilled > matchedLocalOrder.Amount
+                bool isTooMuchExternallyFulfilled =
+                    matchedLocalOrder.Fulfilled + externalTrade.Fulfilled > matchedLocalOrder.Amount;
+
+                bool isFullfillmentError = matchedLocalOrder.IsCanceled
                     || !matchedLocalOrder.IsLocal
-                    || matchedLocalOrder.CurrencyPairCode != externalTrade.CurrencyPairCode)
-                {
-                    _logger.LogError($"UpdateExternalOrder() error for {matchedLocalOrder}: " +
-                        $"order is wrong Or total fullfilled {matchedLocalOrder.Fulfilled + externalTrade.Fulfilled} is bigger than amount");
-                    isFullfillmentError = true;
-                }
+                    || isTooMuchExternallyFulfilled;
+                if (isFullfillmentError)
+                    _logger.LogError($"UpdateExternalOrder() error: invalid {externalTrade} for {matchedLocalOrder}");
                 MatchingOrder newImportedOrder = null;
                 // Update matched orders
                 lock (_orders)
