@@ -364,16 +364,13 @@ namespace MatchingEngine.Services
         {
             _liquidityDeletedOrdersKeeper.AddRange(ids);
             int countDeleted = 0;
-            lock (_orders)
+            foreach (Guid id in ids)
             {
-                foreach (Guid id in ids)
+                if (_orders.TryRemove(id, out var order))
                 {
-                    if (_orders.TryRemove(id, out var order))
-                    {
-                        countDeleted++;
-                        if (clientType.HasValue && order.ClientType != clientType.Value)
-                            throw new ArgumentException($"Invalid clientType, expected {clientType}: {order}");
-                    }
+                    countDeleted++;
+                    if (clientType.HasValue && order.ClientType != clientType.Value)
+                        throw new ArgumentException($"Invalid clientType, expected {clientType}: {order}");
                 }
             }
             if (countDeleted > 0)
