@@ -1,5 +1,6 @@
 using AutoMapper;
 using MatchingEngine.Models;
+using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Helpers
 {
@@ -10,9 +11,10 @@ namespace MatchingEngine.Helpers
     {
         public AutoMapperProfile()
         {
-            CreateMap<Order, Bid>();
-            CreateMap<Order, Ask>();
-            CreateMap<Order, OrderEvent>(MemberList.None);
+            CreateMap<Order, MatchingOrder>(MemberList.None);
+            CreateMap<MatchingOrder, Bid>();
+            CreateMap<MatchingOrder, Ask>();
+            CreateMap<MatchingOrder, OrderEvent>(MemberList.None);
         }
     }
 }

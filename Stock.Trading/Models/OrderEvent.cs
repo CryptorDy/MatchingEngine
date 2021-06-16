@@ -1,6 +1,8 @@
 using MatchingEngine.Models.LiquidityImport;
 using System;
 using System.ComponentModel.DataAnnotations;
+using TLabs.ExchangeSdk;
+using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Models
 {
@@ -83,9 +85,9 @@ namespace MatchingEngine.Models
 
         public override string ToString() => $"Event {EventType} {EventId} for {(IsBid ? "Bid" : "Ask")}({Id} {CurrencyPairCode})";
 
-        public static OrderEvent Create(AutoMapper.IMapper mapper, Order order, OrderEventType type, string dealIds = null)
+        public static OrderEvent Create(AutoMapper.IMapper mapper, MatchingOrder order, OrderEventType type, string dealIds = null)
         {
-            var orderEvent = mapper.Map<Order, OrderEvent>(order);
+            var orderEvent = mapper.Map<MatchingOrder, OrderEvent>(order);
             orderEvent.EventType = type;
             orderEvent.IsSavedInMarketData = false;
             orderEvent.EventDealIds = string.IsNullOrWhiteSpace(dealIds) ? null : dealIds;

@@ -1,5 +1,6 @@
 using FluentValidation;
 using MatchingEngine.Models;
+using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Validators
 {

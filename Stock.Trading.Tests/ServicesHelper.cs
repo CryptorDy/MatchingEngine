@@ -18,7 +18,7 @@ namespace Stock.Trading.Tests
     public static class ServicesHelper
     {
         public static (ServiceProvider, MatchingPoolsHandler, TradingService) CreateServiceProvider(
-            Action<Order, Order> liquidityImportServiceCallback
+            Action<MatchingOrder, MatchingOrder> liquidityImportServiceCallback
         )
         {
             string testId = Guid.NewGuid().ToString(); // every test needs separate DB
@@ -31,7 +31,7 @@ namespace Stock.Trading.Tests
 
             var liquidityImportService = new Mock<ILiquidityImportService>();
             liquidityImportService
-                .Setup(_ => _.CreateTrade(It.IsAny<Order>(), It.IsAny<Order>()))
+                .Setup(_ => _.CreateTrade(It.IsAny<MatchingOrder>(), It.IsAny<MatchingOrder>()))
                 .Callback(liquidityImportServiceCallback);
 
             services.AddTransient<SingletonsAccessor>();

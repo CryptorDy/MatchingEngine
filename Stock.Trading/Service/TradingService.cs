@@ -1,3 +1,4 @@
+using AutoMapper;
 using MatchingEngine.Data;
 using MatchingEngine.Models;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +8,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using TLabs.DotnetHelpers;
+using TLabs.ExchangeSdk;
 using TLabs.ExchangeSdk.Currencies;
+using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Services
 {
@@ -16,16 +19,19 @@ namespace MatchingEngine.Services
         private readonly TradingDbContext _context;
         private readonly MatchingPoolsHandler _matchingPoolsHandler;
         private readonly CurrenciesCache _currenciesCache;
+        private readonly IMapper _mapper;
         private readonly ILogger _logger;
 
         public TradingService(TradingDbContext context,
             SingletonsAccessor singletonsAccessor,
             CurrenciesCache currenciesService,
+            IMapper mapper,
             ILogger<TradingService> logger)
         {
             _context = context;
             _matchingPoolsHandler = singletonsAccessor.MatchingPoolsHandler;
             _currenciesCache = currenciesService;
+            _mapper = mapper;
             _logger = logger;
         }
 
@@ -105,7 +111,7 @@ namespace MatchingEngine.Services
                 request.Price = Math.Round(request.Price, _currenciesCache.GetPriceDigits(request.CurrencyPairCode));
                 request.Amount = Math.Round(request.Amount, _currenciesCache.GetAmountDigits(request.CurrencyPairCode));
             }
-            var order = request.GetOrder();
+            var order = _mapper.Map<MatchingOrder>(request.GetOrder());
 
             if (order.ClientType != ClientType.DealsBot)
             {

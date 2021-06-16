@@ -1,3 +1,4 @@
+using AutoMapper;
 using MatchingEngine.Data;
 using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
@@ -12,7 +13,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using TLabs.ExchangeSdk;
 using TLabs.ExchangeSdk.Currencies;
+using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Services
 {
@@ -22,8 +25,8 @@ namespace MatchingEngine.Services
     public class MatchingPool : BackgroundService
     {
         public readonly string _pairCode;
-        private readonly BufferBlock<Order> _newOrdersBuffer = new BufferBlock<Order>();
-        private readonly ConcurrentDictionary<Guid, Order> _orders = new();
+        private readonly BufferBlock<MatchingOrder> _newOrdersBuffer = new BufferBlock<MatchingOrder>();
+        private readonly ConcurrentDictionary<Guid, MatchingOrder> _orders = new();
 
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly CurrenciesCache _currenciesCache;
@@ -33,6 +36,7 @@ namespace MatchingEngine.Services
         private readonly ILiquidityDeletedOrdersKeeper _liquidityDeletedOrdersKeeper;
         private readonly LiquidityExpireBlocksHandler _liquidityExpireBlocksHandler;
         private readonly IOptions<AppSettings> _settings;
+        private readonly IMapper _mapper;
         private readonly ILogger _logger;
 
         public MatchingPool(
@@ -44,9 +48,10 @@ namespace MatchingEngine.Services
             ILiquidityDeletedOrdersKeeper liquidityDeletedOrdersKeeper,
             LiquidityExpireBlocksHandler liquidityExpireBlocksHandler,
             IOptions<AppSettings> settings,
+            IMapper mapper,
             ILogger<MatchingPool> logger,
             string currencyPairCode,
-            List<Order> activeOrders)
+            List<MatchingOrder> activeOrders)
         {
             _serviceScopeFactory = serviceScopeFactory;
             _currenciesCache = currenciesService;
@@ -56,6 +61,7 @@ namespace MatchingEngine.Services
             _liquidityDeletedOrdersKeeper = liquidityDeletedOrdersKeeper;
             _liquidityExpireBlocksHandler = liquidityExpireBlocksHandler;
             _settings = settings;
+            _mapper = mapper;
             _logger = logger;
 
             _pairCode = currencyPairCode;
@@ -64,12 +70,12 @@ namespace MatchingEngine.Services
             SendOrdersToMarketData();
         }
 
-        public Order GetPoolOrder(Guid id)
+        public MatchingOrder GetPoolOrder(Guid id)
         {
             return _orders.GetValueOrDefault(id, null);
         }
 
-        private async Task UpdateDatabase(TradingDbContext context, List<Order> modifiedOrders, List<Deal> newDeals)
+        private async Task UpdateDatabase(TradingDbContext context, List<MatchingOrder> modifiedOrders, List<Deal> newDeals)
         {
             if (modifiedOrders.Count == 0 && newDeals.Count == 0)
             {
@@ -143,7 +149,7 @@ namespace MatchingEngine.Services
             await context.SaveChangesAsync();
         }
 
-        private async Task ReportData(TradingDbContext context, List<Order> modifiedOrders, List<Deal> newDeals)
+        private async Task ReportData(TradingDbContext context, List<MatchingOrder> modifiedOrders, List<Deal> newDeals)
         {
             try
             {
@@ -187,7 +193,7 @@ namespace MatchingEngine.Services
             _logger.LogInformation($"UpdateExternalOrder() start: {externalTrade}");
             if (_currenciesCache.GetCurrencyPair(externalTrade.CurrencyPairCode) != null)
                 externalTrade.Fulfilled = Math.Round(externalTrade.Fulfilled, _currenciesCache.GetAmountDigits(externalTrade.CurrencyPairCode));
-            var modifiedOrders = new List<Order>();
+            var modifiedOrders = new List<MatchingOrder>();
             var newDeals = new List<Deal>();
 
             using (var scope = _serviceScopeFactory.CreateScope())
@@ -195,8 +201,8 @@ namespace MatchingEngine.Services
                 // Find previously matched orders
                 var db = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
 
-                Order bid = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingBidId), null);
-                Order ask = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingAskId), null);
+                MatchingOrder bid = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingBidId), null);
+                MatchingOrder ask = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingAskId), null);
                 if (bid == null)
                 {
                     bid = await db.Bids.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(externalTrade.TradingBidId));
@@ -213,14 +219,14 @@ namespace MatchingEngine.Services
                 bool isFullfillmentError = false;
                 if (matchedLocalOrder.IsCanceled
                     || matchedLocalOrder.Fulfilled + externalTrade.Fulfilled > matchedLocalOrder.Amount
-                    || matchedLocalOrder.Exchange != Exchange.Local
+                    || !matchedLocalOrder.IsLocal
                     || matchedLocalOrder.CurrencyPairCode != externalTrade.CurrencyPairCode)
                 {
                     _logger.LogError($"UpdateExternalOrder() error for {matchedLocalOrder}: " +
                         $"order is wrong Or total fullfilled {matchedLocalOrder.Fulfilled + externalTrade.Fulfilled} is bigger than amount");
                     isFullfillmentError = true;
                 }
-                Order newImportedOrder = null;
+                MatchingOrder newImportedOrder = null;
                 // Update matched orders
                 lock (_orders)
                 {
@@ -238,7 +244,7 @@ namespace MatchingEngine.Services
                     if (externalTrade.Fulfilled > 0 && !isFullfillmentError)
                     {
                         // Create a separate completed order for the matched part of the imported order
-                        newImportedOrder = new Order()
+                        newImportedOrder = new MatchingOrder()
                         {
                             Id = Guid.NewGuid(),
                             IsBid = !externalTrade.IsBid,
@@ -297,12 +303,12 @@ namespace MatchingEngine.Services
             }
         }
 
-        private async Task Process(Order newOrder)
+        private async Task Process(MatchingOrder newOrder)
         {
             _logger.LogDebug($"Process() started {newOrder}");
             using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-            List<Order> modifiedOrders;
+            List<MatchingOrder> modifiedOrders;
             List<Deal> newDeals;
 
             lock (_orders) //no access to pool (for removing) while matching is performed
@@ -322,7 +328,7 @@ namespace MatchingEngine.Services
             await ReportData(context, modifiedOrders, newDeals);
         }
 
-        public void AppendOrder(Order order)
+        public void AppendOrder(MatchingOrder order)
         {
             _newOrdersBuffer.Post(order);
         }
@@ -332,7 +338,7 @@ namespace MatchingEngine.Services
             _logger.LogDebug($"CancelOrder() start. id:{orderId}");
             using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-            Order dbOrder;
+            MatchingOrder dbOrder;
             lock (_orders)
             {
                 dbOrder = context.GetOrder(orderId).Result;
@@ -394,7 +400,7 @@ namespace MatchingEngine.Services
         {
             if (orderIds?.Count == 0)
                 return;
-            List<Order> ordersToUnblock = new();
+            List<MatchingOrder> ordersToUnblock = new();
             lock (_orders)
             {
                 foreach (var id in orderIds)
@@ -437,7 +443,7 @@ namespace MatchingEngine.Services
             var date3 = DateTimeOffset.UtcNow;
             // add
             var ordersToAdd = dto.OrdersToAdd.Select(_ => _.GetOrder()).ToList();
-            ordersToAdd.ForEach(_ => AppendOrder(_));
+            ordersToAdd.ForEach(_ => AppendOrder(_mapper.Map<MatchingOrder>(_)));
 
             if (_pairCode == Constants.DebugCurrencyPair)
             {
@@ -485,7 +491,7 @@ namespace MatchingEngine.Services
         /// <summary>
         /// Log when bids are bigger than asks
         /// </summary>
-        private void CheckOrderbookIntersection(Order newOrder)
+        private void CheckOrderbookIntersection(MatchingOrder newOrder)
         {
             if (_orderbookIntersectionLogsCounter++ % 100 != 0) // only show 1 in 100 logs
                 return;

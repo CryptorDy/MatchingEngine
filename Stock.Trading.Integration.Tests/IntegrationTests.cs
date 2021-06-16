@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using TLabs.ExchangeSdk.Trading;
 using Xunit;
 
 namespace Stock.Trading.Integration.Tests
@@ -55,7 +56,7 @@ namespace Stock.Trading.Integration.Tests
             response = await _testContext.Client.GetAsync($"/api/order/{isBid}/{id}");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             content = await response.Content.ReadAsStringAsync();
-            var order = JsonConvert.DeserializeObject<Order>(content);
+            var order = JsonConvert.DeserializeObject<MatchingOrder>(content);
             Assert.NotNull(order);
             Assert.Equal(id, order.Id.ToString());
 
@@ -65,7 +66,7 @@ namespace Stock.Trading.Integration.Tests
             response = await _testContext.Client.GetAsync($"/api/order/{isBid}/{id}");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             content = await response.Content.ReadAsStringAsync();
-            order = JsonConvert.DeserializeObject<Order>(content);
+            order = JsonConvert.DeserializeObject<MatchingOrder>(content);
             Assert.NotNull(order);
             Assert.True(order.IsCanceled);
         }

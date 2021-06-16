@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Data
 {
@@ -48,17 +49,17 @@ namespace MatchingEngine.Data
 
         #region Order setters
 
-        public async Task<Order> AddOrder(Order order, bool toSave, OrderEventType eventType)
+        public async Task<MatchingOrder> AddOrder(MatchingOrder order, bool toSave, OrderEventType eventType)
         {
-            Order trackedOrder;
+            MatchingOrder trackedOrder;
             if (order.IsBid)
             {
-                trackedOrder = _mapper.Map<Order, Bid>(order);
+                trackedOrder = _mapper.Map<MatchingOrder, Bid>(order);
                 Bids.Add((Bid)trackedOrder);
             }
             else
             {
-                trackedOrder = _mapper.Map<Order, Ask>(order);
+                trackedOrder = _mapper.Map<MatchingOrder, Ask>(order);
                 Asks.Add((Ask)trackedOrder);
             }
 
@@ -71,7 +72,7 @@ namespace MatchingEngine.Data
             return trackedOrder;
         }
 
-        public async Task UpdateOrder(Order order, bool toSave, OrderEventType eventType, string dealIds = null)
+        public async Task UpdateOrder(MatchingOrder order, bool toSave, OrderEventType eventType, string dealIds = null)
         {
             if (order.IsBid)
             {
@@ -95,7 +96,7 @@ namespace MatchingEngine.Data
 
         #region Order getters
 
-        protected IQueryable<Order> GetOrdersQuery(IQueryable<Order> source, string currencyPairCode, int? count,
+        protected IQueryable<MatchingOrder> GetOrdersQuery(IQueryable<MatchingOrder> source, string currencyPairCode, int? count,
             string userId, OrderStatusRequest status,
             DateTimeOffset? from, DateTimeOffset? to)
         {
@@ -110,11 +111,11 @@ namespace MatchingEngine.Data
             return query;
         }
 
-        public async Task<List<Order>> GetOrders(bool? isBid = null, string currencyPairCode = null, int? count = Constants.DefaultRequestOrdersCount,
+        public async Task<List<MatchingOrder>> GetOrders(bool? isBid = null, string currencyPairCode = null, int? count = Constants.DefaultRequestOrdersCount,
             string userId = null, OrderStatusRequest status = OrderStatusRequest.Active,
             DateTimeOffset? from = null, DateTimeOffset? to = null)
         {
-            List<Order> dbOrders = new List<Order>();
+            List<MatchingOrder> dbOrders = new List<MatchingOrder>();
             if (!isBid.HasValue || isBid.Value)
             {
                 var bids = await GetOrdersQuery(Bids, currencyPairCode, count, userId, status, from, to).ToListAsync();
@@ -128,18 +129,18 @@ namespace MatchingEngine.Data
             return dbOrders;
         }
 
-        public async Task<List<Order>> LoadDbOrders(List<Order> orders)
+        public async Task<List<MatchingOrder>> LoadDbOrders(List<MatchingOrder> orders)
         {
             var bidIds = orders.Where(_ => _.IsBid).Select(_ => _.Id).ToList();
             var askIds = orders.Where(_ => !_.IsBid).Select(_ => _.Id).ToList();
             var dbBids = await Bids.Where(_ => bidIds.Contains(_.Id)).ToListAsync();
             var dbAsks = await Asks.Where(_ => askIds.Contains(_.Id)).ToListAsync();
-            return dbBids.Cast<Order>().Union(dbAsks).ToList();
+            return dbBids.Cast<MatchingOrder>().Union(dbAsks).ToList();
         }
 
-        public async Task<Order> GetOrder(Guid orderId, bool? isBid = null)
+        public async Task<MatchingOrder> GetOrder(Guid orderId, bool? isBid = null)
         {
-            Order order = null;
+            MatchingOrder order = null;
             if (isBid == null || isBid == true)
                 order = await Bids.Include(o => o.DealList).FirstOrDefaultAsync(_ => _.Id == orderId);
             if (isBid == false || (isBid == null && order == null))

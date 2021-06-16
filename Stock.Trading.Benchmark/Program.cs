@@ -11,7 +11,7 @@ namespace Stock.Trading.Benchmark
         private static void TestDeals(int ordersCount = 100)
         {
             Console.WriteLine($"test {ordersCount} orders start");
-            List<Order> orders = new List<Order>();
+            List<MatchingOrder> orders = new List<MatchingOrder>();
             var matcher = new OrdersMatcher(null);
             int deals = 0;
 
@@ -20,7 +20,7 @@ namespace Stock.Trading.Benchmark
 
             for (int i = 0; i < ordersCount; i++)
             {
-                var newOrder = new Order()
+                var newOrder = new MatchingOrder()
                 {
                     Id = new Guid(),
                     IsBid = i < ordersCount / 2,

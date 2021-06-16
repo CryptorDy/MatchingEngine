@@ -11,6 +11,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using TLabs.DotnetHelpers;
+using TLabs.ExchangeSdk;
+using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Controllers
 {
@@ -43,7 +45,7 @@ namespace MatchingEngine.Controllers
         /// Get orders list
         /// </summary>
         [HttpGet]
-        public async Task<List<Order>> GetOrders(bool? isBid = null, string currencyPairId = null, int? count = Models.Constants.DefaultRequestOrdersCount,
+        public async Task<List<MatchingOrder>> GetOrders(bool? isBid = null, string currencyPairId = null, int? count = Models.Constants.DefaultRequestOrdersCount,
             string userId = null, OrderStatusRequest status = OrderStatusRequest.Active,
             DateTimeOffset? from = null, DateTimeOffset? to = null)
         {
@@ -58,7 +60,7 @@ namespace MatchingEngine.Controllers
         /// <param name="isBid"></param>
         /// <returns>Ask</returns>
         [HttpGet("{id}")]
-        public async Task<Order> GetOrder(Guid id, bool? isBid = null)
+        public async Task<MatchingOrder> GetOrder(Guid id, bool? isBid = null)
         {
             var order = await _context.GetOrder(id, isBid);
             return order;
@@ -69,7 +71,7 @@ namespace MatchingEngine.Controllers
         /// </summary>
         /// <param name="request">Order details</param>
         /// <returns>New Order Id</returns>
-        [ProducesResponseType(typeof(CreateOrderResult), 200)]
+        [ProducesResponseType(typeof(OrderCreateResult), 200)]
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] OrderCreateRequest request)
         {
@@ -79,7 +81,7 @@ namespace MatchingEngine.Controllers
             }
 
             var newOrderId = await _tradingService.CreateOrder(request);
-            return Ok(new CreateOrderResult { Id = newOrderId });
+            return Ok(new OrderCreateResult { Id = newOrderId });
         }
 
         /// <summary>
@@ -116,7 +118,7 @@ namespace MatchingEngine.Controllers
                     .Where(_ => _.ClientType != ClientType.DealsBot && _.DateCreated > from)
                     .Skip(page++ * pageSize).Take(pageSize)
                     .ToListAsync())
-                    .Cast<Order>().ToList();
+                    .Cast<MatchingOrder>().ToList();
                 if (orders.Count == 0)
                     break;
                 _logger.LogInformation($"SendAllOrdersToMarketData() bids, page {page}, count:{orders.Count}, " +
@@ -130,7 +132,7 @@ namespace MatchingEngine.Controllers
                     .Where(_ => _.ClientType != ClientType.DealsBot && _.DateCreated > from)
                     .Skip(page++ * pageSize).Take(pageSize)
                     .ToListAsync())
-                    .Cast<Order>().ToList();
+                    .Cast<MatchingOrder>().ToList();
                 if (orders.Count == 0)
                     break;
                 _logger.LogInformation($"SendAllOrdersToMarketData() asks, page {page}, count:{orders.Count}, " +
@@ -164,7 +166,7 @@ namespace MatchingEngine.Controllers
                         && (from == null || _.DateCreated > from) && (to == null || _.DateCreated < to))
                     .Skip(page++ * pageSize).Take(pageSize)
                     .ToListAsync())
-                    .Cast<Order>().ToList();
+                    .Cast<MatchingOrder>().ToList();
                 if (orders.Count == 0)
                     break;
                 _logger.LogInformation($"RecancelAllOrdersInDepository() bids, page {page}, count:{orders.Count}, " +
@@ -179,7 +181,7 @@ namespace MatchingEngine.Controllers
                         && (from == null || _.DateCreated > from) && (to == null || _.DateCreated < to))
                     .Skip(page++ * pageSize).Take(pageSize)
                     .ToListAsync())
-                    .Cast<Order>().ToList();
+                    .Cast<MatchingOrder>().ToList();
                 if (orders.Count == 0)
                     break;
                 _logger.LogInformation($"RecancelAllOrdersInDepository() asks, page {page}, count:{orders.Count}, " +

@@ -71,7 +71,7 @@ namespace MatchingEngine.Services
                 .Union(asks.Select(_ => _.Id.ToString())).ToList();
             //await DepositoryDeleteTxsByActionIds(orderIds); // Already sent
 
-            List<Order> emptyOrders = new(), notEmptyOrders = new();
+            List<MatchingOrder> emptyOrders = new(), notEmptyOrders = new();
             // for each order update Amount & Fullfilled
             foreach (var order in bids)
             {
@@ -162,7 +162,7 @@ namespace MatchingEngine.Services
             _logger.LogInformation($"DepositoryDeleteTxsByActionIds() response:{response}");
         }
 
-        private async Task DepositoryRecreateOrderTxs(List<Order> orders)
+        private async Task DepositoryRecreateOrderTxs(List<MatchingOrder> orders)
         {
             List<TxCommandDto> orderTxCommands = new();
             foreach (var order in orders)

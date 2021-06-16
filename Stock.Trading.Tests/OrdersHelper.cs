@@ -3,6 +3,7 @@ using MatchingEngine.Services;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using TLabs.ExchangeSdk.Trading;
 
 namespace Stock.Trading.Tests
 {
@@ -10,19 +11,19 @@ namespace Stock.Trading.Tests
     {
         public const string CurrencyPairCode = "ETH_BTC";
 
-        public static Order CheapBid = new Order(true, CurrencyPairCode, 3, 10) { Id = Guid.NewGuid() };
-        public static Order CheapBidWithFulfilled = new Order(true, CurrencyPairCode, 3, 10) { Fulfilled = 2 };
-        public static Order CheapBidWithBlocked = new Order(true, CurrencyPairCode, 3, 10) { Blocked = 1 };
-        public static Order CheapBidWithFulfilledBlocked = new Order(true, CurrencyPairCode, 3, 10) { Fulfilled = 3, Blocked = 1 };
+        public static MatchingOrder CheapBid = new MatchingOrder(true, CurrencyPairCode, 3, 10) { Id = Guid.NewGuid() };
+        public static MatchingOrder CheapBidWithFulfilled = new MatchingOrder(true, CurrencyPairCode, 3, 10) { Fulfilled = 2 };
+        public static MatchingOrder CheapBidWithBlocked = new MatchingOrder(true, CurrencyPairCode, 3, 10) { Blocked = 1 };
+        public static MatchingOrder CheapBidWithFulfilledBlocked = new MatchingOrder(true, CurrencyPairCode, 3, 10) { Fulfilled = 3, Blocked = 1 };
 
-        public static Order CheapAsk = new Order(false, CurrencyPairCode, 2, 10) { Fulfilled = 3, Blocked = 1 };
-        public static Order CheapAskWithFulfilled = new Order(false, CurrencyPairCode, 2, 10) { Fulfilled = 2 };
-        public static Order CheapAskWithBlocked = new Order(false, CurrencyPairCode, 2, 10) { Blocked = 1 };
-        public static Order CheapAskWithFulfilledBlocked = new Order(false, CurrencyPairCode, 2, 10) { Fulfilled = 3, Blocked = 1 };
+        public static MatchingOrder CheapAsk = new MatchingOrder(false, CurrencyPairCode, 2, 10) { Fulfilled = 3, Blocked = 1 };
+        public static MatchingOrder CheapAskWithFulfilled = new MatchingOrder(false, CurrencyPairCode, 2, 10) { Fulfilled = 2 };
+        public static MatchingOrder CheapAskWithBlocked = new MatchingOrder(false, CurrencyPairCode, 2, 10) { Blocked = 1 };
+        public static MatchingOrder CheapAskWithFulfilledBlocked = new MatchingOrder(false, CurrencyPairCode, 2, 10) { Fulfilled = 3, Blocked = 1 };
 
-        public static Order ExpensiveAsk = new Order(false, CurrencyPairCode, 5, 10) { Fulfilled = 4, Blocked = 1 };
+        public static MatchingOrder ExpensiveAsk = new MatchingOrder(false, CurrencyPairCode, 5, 10) { Fulfilled = 4, Blocked = 1 };
 
-        public static async Task CreateOrder(Order order, TradingService tradingService,
+        public static async Task CreateOrder(MatchingOrder order, TradingService tradingService,
             MatchingPool matchingPool)
         {
             if (order.IsLocal)

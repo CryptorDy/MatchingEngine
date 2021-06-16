@@ -61,7 +61,7 @@ namespace MatchingEngine.Services
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
                 var bids = context.Bids.AsNoTracking().Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount).ToList();  // todo use IsActive field
                 var asks = context.Asks.AsNoTracking().Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount).ToList();
-                var activeOrdersByPair = bids.Cast<Order>().Union(asks)
+                var activeOrdersByPair = bids.Cast<MatchingOrder>().Union(asks)
                     .GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _.ToList());
 
                 foreach (var pair in activeOrdersByPair.Keys)
@@ -88,13 +88,13 @@ namespace MatchingEngine.Services
 
             lock (_poolsCreationLock)
             {
-                var orders = new List<Order>(); // if pool wasn't created in InitPools() then it has no active orders
+                var orders = new List<MatchingOrder>(); // if pool wasn't created in InitPools() then it has no active orders
                 var newPool = _matchingPools.GetOrAdd(currencyPairCode, (code) => CreatePool(code, orders));
                 return newPool;
             }
         }
 
-        private MatchingPool CreatePool(string currencyPairCode, List<Order> activeOrders)
+        private MatchingPool CreatePool(string currencyPairCode, List<MatchingOrder> activeOrders)
         {
             if (string.IsNullOrWhiteSpace(currencyPairCode))
                 throw new ArgumentException($"Invalid currencyPairCode '{currencyPairCode}'");

@@ -4,12 +4,13 @@ using MatchingEngine.Models.LiquidityImport;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
+using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Services
 {
     public interface ILiquidityImportService
     {
-        Task CreateTrade(Order bid, Order ask);
+        Task CreateTrade(MatchingOrder bid, MatchingOrder ask);
 
         Task RemoveOrderbook(Exchange exchange, string currencyPairCode);
     }
@@ -26,7 +27,7 @@ namespace MatchingEngine.Services
             _logger = logger;
         }
 
-        public async Task CreateTrade(Order bid, Order ask)
+        public async Task CreateTrade(MatchingOrder bid, MatchingOrder ask)
         {
             try
             {

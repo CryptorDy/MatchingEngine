@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using TLabs.DotnetHelpers;
 using TLabs.ExchangeSdk.Currencies;
+using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Services
 {

@@ -40,12 +40,10 @@ namespace MatchingEngine
 
             Configuration = builder.Build();
             CurrentEnvironment = env;
-            _flurlLogger = flurlLogger;
         }
 
         public IConfigurationRoot Configuration { get; }
         public IWebHostEnvironment CurrentEnvironment { get; }
-        private readonly ILogger<FlurlCall> _flurlLogger;
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -68,7 +66,7 @@ namespace MatchingEngine
 
             services.AddAutoMapper(typeof(Startup));
 
-            services.InitFlurl(settings.GatewayServiceUrl, _flurlLogger);
+            services.InitFlurl(settings.GatewayServiceUrl);
             services.AddSingleton<GatewayHttpClient>();
             services.AddSingleton<CurrenciesCache>();
 

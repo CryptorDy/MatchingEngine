@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using TLabs.ExchangeSdk.Trading;
 using Xunit;
 
 namespace Stock.Trading.Tests
@@ -19,7 +20,7 @@ namespace Stock.Trading.Tests
         public void EmptyDataReturnEmptyResult()
         {
             var service = new OrdersMatcher(null);
-            var (modifiedOrders, newDeals) = service.Match(new List<Order>(), OrdersHelper.CheapBid.Clone());
+            var (modifiedOrders, newDeals) = service.Match(new List<MatchingOrder>(), OrdersHelper.CheapBid.Clone());
 
             Assert.Empty(modifiedOrders);
             Assert.Empty(newDeals);
@@ -28,7 +29,7 @@ namespace Stock.Trading.Tests
         [Fact]
         public void UnmatchableOrdersDontMatch()
         {
-            var pool = new List<Order> { OrdersHelper.CheapBid.Clone() };
+            var pool = new List<MatchingOrder> { OrdersHelper.CheapBid.Clone() };
 
             var service = new OrdersMatcher(null);
             var (modifiedOrders, newDeals) = service.Match(pool, OrdersHelper.ExpensiveAsk.Clone());
@@ -40,7 +41,7 @@ namespace Stock.Trading.Tests
         [Fact]
         public void CorrectMatchFor2OrdersReturnOneDeal()
         {
-            var ordersToMatch = new List<Order> {
+            var ordersToMatch = new List<MatchingOrder> {
                 OrdersHelper.CheapBid, OrdersHelper.CheapAsk,
                 OrdersHelper.CheapBidWithFulfilled, OrdersHelper.CheapAskWithFulfilled,
                 OrdersHelper.CheapBidWithBlocked, OrdersHelper.CheapAskWithBlocked,
@@ -49,8 +50,8 @@ namespace Stock.Trading.Tests
             for (int i = 0; i < ordersToMatch.Count; i += 2)
             {
                 Console.WriteLine($"Test Match for orders pair {i / 2}");
-                Order bid = ordersToMatch[0], ask = ordersToMatch[1];
-                var pool = new List<Order> { bid.Clone() };
+                MatchingOrder bid = ordersToMatch[0], ask = ordersToMatch[1];
+                var pool = new List<MatchingOrder> { bid.Clone() };
 
                 var service = new OrdersMatcher(null);
                 var (modifiedOrders, newDeals) = service.Match(pool, ask.Clone());
@@ -61,7 +62,7 @@ namespace Stock.Trading.Tests
                 Assert.Equal(expectedDealVolume, newDeals.First().Volume);
                 Assert.Equal(expectedDealPrice, newDeals.First().Price);
 
-                Order resultBid = modifiedOrders.Single(_ => _.IsBid),
+                MatchingOrder resultBid = modifiedOrders.Single(_ => _.IsBid),
                     resultAsk = modifiedOrders.Single(_ => !_.IsBid);
                 Assert.Equal(bid.AvailableAmount - expectedDealVolume, resultBid.AvailableAmount);
                 Assert.Equal(ask.AvailableAmount - expectedDealVolume, resultAsk.AvailableAmount);
@@ -75,7 +76,7 @@ namespace Stock.Trading.Tests
         [Fact]
         public void CorrectMatchFor3Orders()
         {
-            var pool = new List<Order>
+            var pool = new List<MatchingOrder>
             {
                 OrdersHelper.CheapAskWithFulfilled.Clone(),
                 OrdersHelper.CheapAskWithBlocked.Clone()
@@ -86,7 +87,7 @@ namespace Stock.Trading.Tests
 
             Assert.Equal(2, newDeals.Count);
             Assert.Equal(3, modifiedOrders.Count);
-            Order resultBid = modifiedOrders.Single(_ => _.IsBid);
+            MatchingOrder resultBid = modifiedOrders.Single(_ => _.IsBid);
             Assert.Equal(0, resultBid.AvailableAmount);
             Assert.True(resultBid.Fulfilled == resultBid.Amount);
             Assert.True(!resultBid.IsActive);
@@ -95,7 +96,7 @@ namespace Stock.Trading.Tests
         [Fact]
         public async Task DeletedOrdersDoNotGetProcessed()
         {
-            async Task<int> TestProcessingWithDeletedIds(List<Order> poolOrders, List<Guid> deletedIds)
+            async Task<int> TestProcessingWithDeletedIds(List<MatchingOrder> poolOrders, List<Guid> deletedIds)
             {
                 int liquidityCallbackCounter = 0;
                 var (provider, matchingPoolsHandler, tradingService) =
@@ -113,12 +114,12 @@ namespace Stock.Trading.Tests
             }
 
             var bid = OrdersHelper.CheapBid.Clone();
-            var ask = new Order(false, OrdersHelper.CurrencyPairCode, 2.5m, bid.Amount)
+            var ask = new MatchingOrder(false, OrdersHelper.CurrencyPairCode, 2.5m, bid.Amount)
             {
                 Id = Guid.NewGuid(),
                 Exchange = Exchange.Binance,
             };
-            var orders = new List<Order> { bid, ask };
+            var orders = new List<MatchingOrder> { bid, ask };
 
             // Binance ask is skipped because it's in _liquidityDeletedOrderIds
             int matchesWithDeletedAsk = await TestProcessingWithDeletedIds(orders, new List<Guid> { ask.Id });

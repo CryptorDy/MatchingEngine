@@ -10,18 +10,18 @@ namespace MatchingEngine.Services
     {
         private readonly ConcurrentDictionary<string, object> _pairsForSend =
             new ConcurrentDictionary<string, object>();
-        private readonly ConcurrentDictionary<string, ConcurrentQueue<Order>> _orders =
-            new ConcurrentDictionary<string, ConcurrentQueue<Order>>();
+        private readonly ConcurrentDictionary<string, ConcurrentQueue<MatchingOrder>> _orders =
+            new ConcurrentDictionary<string, ConcurrentQueue<MatchingOrder>>();
 
-        public void SetOrders(string pairCode, ConcurrentDictionary<Guid, Order> orders)
+        public void SetOrders(string pairCode, ConcurrentDictionary<Guid, MatchingOrder> orders)
         {
-            _orders[pairCode] = new ConcurrentQueue<Order>(orders.Values);
+            _orders[pairCode] = new ConcurrentQueue<MatchingOrder>(orders.Values);
             _pairsForSend.TryAdd(pairCode, new object());
         }
 
-        public List<Order> GetOrders(string pairCode)
+        public List<MatchingOrder> GetOrders(string pairCode)
         {
-            return new List<Order>(_orders[pairCode]); // copy list to prevent concurrency error
+            return new List<MatchingOrder>(_orders[pairCode]); // copy list to prevent concurrency error
         }
 
         public List<string> DequeueAllPairsForSend()

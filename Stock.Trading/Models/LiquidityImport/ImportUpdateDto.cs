@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Models.LiquidityImport
 {

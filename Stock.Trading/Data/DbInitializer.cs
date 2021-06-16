@@ -30,7 +30,7 @@ namespace MatchingEngine.Data
         {
             var blockedBids = await _dbContext.Bids.Where(_ => _.Blocked > 0).ToListAsync();
             var blockedAsks = await _dbContext.Asks.Where(_ => _.Blocked > 0).ToListAsync();
-            foreach (Order order in blockedBids.Cast<Order>().Union(blockedAsks))
+            foreach (MatchingOrder order in blockedBids.Cast<MatchingOrder>().Union(blockedAsks))
                 order.Blocked = 0;
             await _dbContext.SaveChangesAsync();
         }

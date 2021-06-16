@@ -1,3 +1,5 @@
+using TLabs.ExchangeSdk.Trading;
+
 namespace MatchingEngine.Models.LiquidityImport
 {
     public class ExternalTrade

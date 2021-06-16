@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using TLabs.ExchangeSdk.Trading;
 using Xunit;
 
 namespace Stock.Trading.Integration.Tests

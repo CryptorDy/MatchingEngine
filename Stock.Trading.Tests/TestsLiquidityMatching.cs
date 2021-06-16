@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using TLabs.ExchangeSdk.Trading;
 using Xunit;
 
 namespace Stock.Trading.Tests
@@ -19,7 +20,7 @@ namespace Stock.Trading.Tests
         public async Task CorrectMatchOfImportedOrder()
         {
             var bid = OrdersHelper.CheapBid.Clone();
-            var ask = new Order(false, OrdersHelper.CurrencyPairCode, 2.5m, bid.Amount)
+            var ask = new MatchingOrder(false, OrdersHelper.CurrencyPairCode, 2.5m, bid.Amount)
             {
                 Id = Guid.NewGuid(),
                 Exchange = Exchange.Binance,
@@ -27,10 +28,10 @@ namespace Stock.Trading.Tests
             var liquidityImportService = new Mock<ILiquidityImportService>();
             int liquidityCallbackCounter = 0;
             liquidityImportService
-                .Setup(_ => _.CreateTrade(It.IsAny<Order>(), It.IsAny<Order>()))
-                .Callback<Order, Order>((resultBid, resultAsk) => { liquidityCallbackCounter++; });
+                .Setup(_ => _.CreateTrade(It.IsAny<MatchingOrder>(), It.IsAny<MatchingOrder>()))
+                .Callback<MatchingOrder, MatchingOrder>((resultBid, resultAsk) => { liquidityCallbackCounter++; });
             var ordersMatcher = new OrdersMatcher(liquidityImportService.Object);
-            var (modifiedOrders, newDeals) = ordersMatcher.Match(new List<Order> { bid.Clone() }, ask.Clone());
+            var (modifiedOrders, newDeals) = ordersMatcher.Match(new List<MatchingOrder> { bid.Clone() }, (MatchingOrder)ask.Clone());
 
             Assert.Empty(newDeals);
             Assert.Equal(1, liquidityCallbackCounter);
@@ -46,7 +47,7 @@ namespace Stock.Trading.Tests
         {
             var bid = OrdersHelper.CheapBid.Clone();
             decimal totalAmount = bid.Amount;
-            var ask = new Order(false, OrdersHelper.CurrencyPairCode, 2.5m, totalAmount)
+            var ask = new MatchingOrder(false, OrdersHelper.CurrencyPairCode, 2.5m, totalAmount)
             {
                 Id = Guid.NewGuid(),
                 Exchange = Exchange.Binance,
@@ -58,7 +59,7 @@ namespace Stock.Trading.Tests
             }
         }
 
-        private async Task SimulateExternalTrade(Order bid, Order ask, decimal fulfilled)
+        private async Task SimulateExternalTrade(MatchingOrder bid, MatchingOrder ask, decimal fulfilled)
         {
             int liquidityCallbackCounter = 0;
             var (provider, matchingPoolsHandler, tradingService) =

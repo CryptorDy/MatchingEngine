@@ -2,6 +2,7 @@ using MatchingEngine.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Services
 {
@@ -14,29 +15,21 @@ namespace MatchingEngine.Services
             _liquidityImportService = liquidityImportService;
         }
 
-        private bool AreOnDifferentSidesOfOrderbook(Order order1, Order order2) => order1.IsBid != order2.IsBid;
+        private bool CanBeFilled(MatchingOrder order) => order.IsActive && order.AvailableAmount > 0;
 
-        private bool CanBeFilled(Order order) => order.IsActive && order.AvailableAmount > 0;
+        private bool NotBothImported(MatchingOrder order1, MatchingOrder order2) => order1.IsLocal || order2.IsLocal;
 
-        private bool NotBothImported(Order order1, Order order2) => order1.IsLocal || order2.IsLocal;
-
-        private bool HaveSameTradingBotFlag(Order order1, Order order2)
+        public (List<MatchingOrder> modifiedOrders, List<Deal> newDeals) Match(IEnumerable<MatchingOrder> pool, MatchingOrder newOrder)
         {
-            bool isOrder1FromDealsBot = order1.ClientType == ClientType.DealsBot;
-            bool isOrder2FromDealsBot = order2.ClientType == ClientType.DealsBot;
-            return isOrder1FromDealsBot == isOrder2FromDealsBot;
-        }
-
-        public (List<Order> modifiedOrders, List<Deal> newDeals) Match(IEnumerable<Order> pool, Order newOrder)
-        {
-            var modifiedOrders = new List<Order>();
+            var modifiedOrders = new List<MatchingOrder>();
             var newDeals = new List<Deal>();
 
-            var poolOrdersQuery = pool.Where(o => o.CurrencyPairCode == newOrder.CurrencyPairCode
-                && AreOnDifferentSidesOfOrderbook(o, newOrder) && CanBeFilled(o)
+            var poolOrdersQuery = pool.Where(o => o.HasSameCurrencyPair(newOrder)
+                && !o.HasSameOrderbookSide(newOrder)
+                && CanBeFilled(o)
                 && NotBothImported(o, newOrder)
-                && HaveSameTradingBotFlag(o, newOrder));
-            List<Order> poolOrders;
+                && o.HasSameTradingBotFlag(newOrder));
+            List<MatchingOrder> poolOrders;
             if (newOrder.IsBid)
             {
                 poolOrders = poolOrdersQuery.Where(o => o.Price <= newOrder.Price).OrderBy(o => o.Price).ToList();
