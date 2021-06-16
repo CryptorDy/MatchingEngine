@@ -194,21 +194,13 @@ namespace MatchingEngine.Services
             {
                 // Find previously matched orders
                 var db = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                Order bid, ask;
-                lock (_orders)
-                {
-                    bid = _orders.GetValueOrDefault(Guid.Parse(createdOrder.TradingBidId), null);
-                    ask = _orders.GetValueOrDefault(Guid.Parse(createdOrder.TradingAskId), null);
-                }
-                if (bid == null)
-                {
-                    bid = await db.Bids.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingBidId));
-                }
 
+                Order bid = _orders.GetValueOrDefault(Guid.Parse(createdOrder.TradingBidId), null);
+                Order ask = _orders.GetValueOrDefault(Guid.Parse(createdOrder.TradingAskId), null);
+                if (bid == null)
+                    bid = await db.Bids.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingBidId));
                 if (ask == null)
-                {
                     ask = await db.Asks.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(createdOrder.TradingAskId));
-                }
                 // todo handle cases with null bid or ask
 
                 var (matchedLocalOrder, matchedImportedOrder) = createdOrder.IsBid ? (bid, ask) : (ask, bid);
