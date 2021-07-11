@@ -19,17 +19,16 @@ namespace MatchingEngine.Services
             ILogger<DealEndingSender> logger)
         {
             _scopeFactory = scopeFactory;
+            _logger = logger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                using (var scope = _scopeFactory.CreateScope())
-                {
-                    var dealEndingService = scope.ServiceProvider.GetRequiredService<IDealEndingService>();
-                    await dealEndingService.SendDeals();
-                }
+                using var scope = _scopeFactory.CreateScope();
+                var dealEndingService = scope.ServiceProvider.GetRequiredService<IDealEndingService>();
+                await dealEndingService.SendDeals();
                 await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken).ContinueWith(task => { });
             }
         }
