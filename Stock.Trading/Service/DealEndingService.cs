@@ -61,7 +61,7 @@ namespace MatchingEngine.Services
                         var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
 
                         var unprocessedDeals = await context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
-                            .Where(_ => !_.IsSentToDealEnding && !_.FromInnerTradingBot)
+                            .Where(_ => !_.IsSentToDealEnding)
                             .OrderByDescending(_ => _.DateCreated)
                             .Take(_batchSize)
                             .ToListAsync();
