@@ -159,8 +159,8 @@ namespace MatchingEngine.Controllers
 
             _logger.LogInformation($"SaveOldOrders Bids came:{bids.Count} new:{bidsToSave.Count}. " +
                 $"Asks came:{asks.Count} new:{asksToSave.Count}");
-            _context.AddRange(bidsToSave);
-            _context.AddRange(asksToSave);
+            _context.Bids.AddRange(bidsToSave.Cast<Bid>());
+            _context.Asks.AddRange(asksToSave.Cast<Ask>());
             await _context.SaveChangesAsync();
             return Ok();
         }
