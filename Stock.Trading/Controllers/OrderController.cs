@@ -106,7 +106,7 @@ namespace MatchingEngine.Controllers
         }
 
         [HttpPost("resend-to-marketdata")]
-        public async Task<IActionResult> ResendAllOrdersToMarketData(DateTimeOffset? from = null)
+        public async Task<IActionResult> ResendOrdersToMarketData(DateTimeOffset? from = null)
         {
             if (from == null)
                 from = DateTimeOffset.MinValue;
@@ -139,6 +139,29 @@ namespace MatchingEngine.Controllers
                     $"firstDate:{orders.First().DateCreated:o}");
                 await _marketDataService.SendOldOrders(orders);
             }
+            return Ok();
+        }
+
+        [HttpPost("old-orders")]
+        public async Task<IActionResult> SaveOldOrders([FromBody] List<Order> orders)
+        {
+            var bids = orders.Where(_ => _.IsBid).ToList();
+            var bidIds = bids.Select(_ => _.Id).ToList();
+            var dbBidIds = (await _context.Bids.Where(_ => bidIds.Contains(_.Id)).ToListAsync())
+                .Select(_ => _.Id).ToList();
+            var bidsToSave = bids.Where(_ => !dbBidIds.Contains(_.Id)).ToList();
+
+            var asks = orders.Where(_ => !_.IsBid).ToList();
+            var askIds = asks.Select(_ => _.Id).ToList();
+            var dbAskIds = (await _context.Asks.Where(_ => askIds.Contains(_.Id)).ToListAsync())
+                .Select(_ => _.Id).ToList();
+            var asksToSave = asks.Where(_ => !dbAskIds.Contains(_.Id)).ToList();
+
+            _logger.LogInformation($"SaveOldOrders Bids came:{bids.Count} new:{bidsToSave.Count}. " +
+                $"Asks came:{asks.Count} new:{asksToSave.Count}");
+            _context.AddRange(bidsToSave);
+            _context.AddRange(asksToSave);
+            await _context.SaveChangesAsync();
             return Ok();
         }
 

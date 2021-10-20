@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using TLabs.ExchangeSdk.Trading;
+using Flurl.Http;
+using TLabs.DotnetHelpers;
 
 namespace MatchingEngine.Services
 {
@@ -44,7 +46,7 @@ namespace MatchingEngine.Services
 
         public async Task SendOldOrders(List<MatchingOrder> orders)
         {
-            await _gatewayHttpClient.PostJsonAsync($"marketdata/orders/old-orders", orders);
+            await $"marketdata/orders/old-orders".InternalApi().PostJsonAsync(orders);
         }
 
         public async Task SendActiveOrders(string currencyPairCode, List<MatchingOrder> orders)
