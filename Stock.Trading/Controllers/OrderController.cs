@@ -24,6 +24,7 @@ namespace MatchingEngine.Controllers
         private readonly TradingService _tradingService;
         private readonly MatchingPoolsHandler _matchingPoolsHandler;
         private readonly MarketDataService _marketDataService;
+        private readonly IMapper _mapper;
         private readonly ILogger _logger;
 
         public OrderController(TradingDbContext context,
@@ -31,6 +32,7 @@ namespace MatchingEngine.Controllers
             TradingService tradingService,
             SingletonsAccessor singletonsAccessor,
             MarketDataService marketDataService,
+            IMapper mapper,
             ILogger<OrderController> logger)
         {
             _context = context;
@@ -38,6 +40,7 @@ namespace MatchingEngine.Controllers
             _tradingService = tradingService;
             _matchingPoolsHandler = singletonsAccessor.MatchingPoolsHandler;
             _marketDataService = marketDataService;
+            _mapper = mapper;
             _logger = logger;
         }
 
@@ -159,8 +162,8 @@ namespace MatchingEngine.Controllers
 
             _logger.LogInformation($"SaveOldOrders Bids came:{bids.Count} new:{bidsToSave.Count}. " +
                 $"Asks came:{asks.Count} new:{asksToSave.Count}");
-            _context.Bids.AddRange(bidsToSave.Cast<Bid>());
-            _context.Asks.AddRange(asksToSave.Cast<Ask>());
+            _context.Bids.AddRange(bidsToSave.Select(_ => _mapper.Map<Bid>(_)));
+            _context.Asks.AddRange(asksToSave.Select(_ => _mapper.Map<Ask>(_)));
             await _context.SaveChangesAsync();
             return Ok();
         }
