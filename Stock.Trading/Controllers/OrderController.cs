@@ -143,7 +143,7 @@ namespace MatchingEngine.Controllers
         }
 
         [HttpPost("old-orders")]
-        public async Task<IActionResult> SaveOldOrders([FromBody] List<Order> orders)
+        public async Task<IActionResult> SaveOldOrders([FromBody] List<MatchingOrder> orders)
         {
             var bids = orders.Where(_ => _.IsBid).ToList();
             var bidIds = bids.Select(_ => _.Id).ToList();
