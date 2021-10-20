@@ -1,3 +1,4 @@
+using AutoMapper;
 using Flurl.Http;
 using MatchingEngine.Data;
 using MatchingEngine.HttpClients;
