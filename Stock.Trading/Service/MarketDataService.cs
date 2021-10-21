@@ -61,22 +61,20 @@ namespace MatchingEngine.Services
 
         public async Task SendDealsFromDate(DateTimeOffset from, int pageSize = 1000)
         {
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
-                var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
 
-                var query = context.Deals.Where(_ => _.DateCreated >= from);
-                int pagesCount = (int)Math.Ceiling((await query.CountAsync()) * 1.0 / pageSize);
-                for (int page = 0; page < pagesCount; page++)
-                {
-                    var deals = await query.Include(_ => _.Bid).Include(_ => _.Ask)
-                        .OrderBy(_ => _.DateCreated)
-                        .Skip(page * pageSize).Take(pageSize)
-                        .ToListAsync();
-                    _logger.LogInformation($"SendDeals to MarketData. page:{page}, count:{deals.Count}, " +
-                        $"firstDate:{deals.First().DateCreated:o}");
-                    await SendDeals(deals.Select(_ => _.GetDealResponse()));
-                }
+            var query = context.Deals.Where(_ => _.DateCreated >= from);
+            int pagesCount = (int)Math.Ceiling((await query.CountAsync()) * 1.0 / pageSize);
+            for (int page = 0; page < pagesCount; page++)
+            {
+                var deals = await query.Include(_ => _.Bid).Include(_ => _.Ask)
+                    .OrderBy(_ => _.DateCreated)
+                    .Skip(page * pageSize).Take(pageSize)
+                    .ToListAsync();
+                _logger.LogInformation($"SendDeals to MarketData. page:{page}, count:{deals.Count}, " +
+                    $"firstDate:{deals.First().DateCreated:o}");
+                await SendDeals(deals.Select(_ => _.GetDealResponse()));
             }
         }
 
