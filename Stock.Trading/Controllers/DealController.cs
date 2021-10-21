@@ -112,7 +112,8 @@ namespace Stock.Trading.Controllers
                     _context.DealCopies.Add(new DealCopy(deal));
                 addedCounter++;
             }
-            _logger.LogInformation($"ResaveOldDeals() added {addedCounter}, dealResponses:{dealResponses.Count}, dbDealIds:{dbDealIds.Count}");
+            _logger.LogInformation($"ResaveOldDeals() added {addedCounter}, dealResponses:{dealResponses.Count}, dbDealIds:{dbDealIds.Count}. " +
+                $"Date:{dealResponses?.First()?.DealDateUtc:o}");
             await _context.SaveChangesAsync();
             return Ok();
         }
