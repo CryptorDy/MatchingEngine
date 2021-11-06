@@ -40,7 +40,7 @@ namespace MatchingEngine.Services
                     continue;
 
                 await _matchingPoolsHandler.GetPool(blocking.CurrencyPairCode)
-                    .UnblockOrders(new List<Guid> { blocking.OrderId });
+                    .UnblockLiquidityOrders(new List<Guid> { blocking.OrderId });
                 Remove(blocking.OrderId);
             }
         }

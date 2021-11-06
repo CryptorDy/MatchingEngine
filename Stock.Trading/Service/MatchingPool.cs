@@ -188,91 +188,88 @@ namespace MatchingEngine.Services
             }
         }
 
-        public async Task<SaveExternalOrderResult> UpdateExternalOrder(ExternalTrade externalTrade)
+        public async Task<SaveExternalOrderResult> SaveExternalOrderResult(ExternalTrade externalTrade)
         {
             _logger.LogInformation($"UpdateExternalOrder() start: {externalTrade}");
             if (_currenciesCache.GetCurrencyPair(externalTrade.CurrencyPairCode) != null)
                 externalTrade.Fulfilled = Math.Round(externalTrade.Fulfilled, _currenciesCache.GetAmountDigits(externalTrade.CurrencyPairCode));
             var modifiedOrders = new List<MatchingOrder>();
             var newDeals = new List<Deal>();
+            using var scope = _serviceScopeFactory.CreateScope();
 
-            using (var scope = _serviceScopeFactory.CreateScope())
+            // Find previously matched orders
+            var db = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+            MatchingOrder bid = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingBidId), null);
+            MatchingOrder ask = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingAskId), null);
+            if (bid == null)
             {
-                // Find previously matched orders
-                var db = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-
-                MatchingOrder bid = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingBidId), null);
-                MatchingOrder ask = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingAskId), null);
-                if (bid == null)
-                {
-                    bid = await db.Bids.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(externalTrade.TradingBidId));
-                    _logger.LogWarning($"UpdateExternalOrder() couldn't find bid of {externalTrade} in pool. In DB: {bid}");
-                }
-                if (ask == null)
-                {
-                    ask = await db.Asks.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(externalTrade.TradingAskId));
-                    _logger.LogWarning($"UpdateExternalOrder() couldn't find ask of {externalTrade} in pool. In DB: {ask}");
-                }
-
-                var (matchedLocalOrder, matchedImportedOrder) = externalTrade.IsBid ? (bid, ask) : (ask, bid);
-
-                bool isTooMuchExternallyFulfilled =
-                    matchedLocalOrder.Fulfilled + externalTrade.Fulfilled > matchedLocalOrder.Amount;
-
-                bool isFullfillmentError = matchedLocalOrder.IsCanceled
-                    || !matchedLocalOrder.IsLocal
-                    || isTooMuchExternallyFulfilled;
-                if (isFullfillmentError)
-                    _logger.LogError($"UpdateExternalOrder() error: invalid {externalTrade} for {matchedLocalOrder}");
-                MatchingOrder newImportedOrder = null;
-                // Update matched orders
-                lock (_orders)
-                {
-                    if (matchedImportedOrder != null)
-                        matchedImportedOrder.Blocked = 0;
-
-                    matchedLocalOrder.Blocked = 0;
-                    if (!isFullfillmentError)
-                    {
-                        matchedLocalOrder.Fulfilled += externalTrade.Fulfilled;
-                    }
-                    modifiedOrders.Add(matchedLocalOrder);
-                    RemoveNotActivePoolOrders();
-
-                    if (externalTrade.Fulfilled > 0 && !isFullfillmentError)
-                    {
-                        // Create a separate completed order for the matched part of the imported order
-                        newImportedOrder = new MatchingOrder()
-                        {
-                            Id = Guid.NewGuid(),
-                            IsBid = !externalTrade.IsBid,
-                            CurrencyPairCode = externalTrade.CurrencyPairCode,
-                            DateCreated = matchedImportedOrder?.DateCreated ?? DateTimeOffset.UtcNow,
-                            Exchange = externalTrade.Exchange,
-                            Price = externalTrade.MatchingEngineDealPrice,
-                            Amount = externalTrade.Fulfilled,
-                            Fulfilled = externalTrade.Fulfilled,
-                            ClientType = ClientType.LiquidityBot,
-                            UserId = $"{externalTrade.Exchange}_matched"
-                        };
-                        modifiedOrders.Add(newImportedOrder);
-
-                        // Create deal
-                        newDeals.Add(new Deal(matchedLocalOrder, newImportedOrder,
-                            externalTrade.MatchingEngineDealPrice, externalTrade.Fulfilled));
-                    }
-                    UpdateDatabase(db, modifiedOrders, newDeals).Wait();
-                }
-                await ReportData(db, modifiedOrders, newDeals);
-
-                var result = new SaveExternalOrderResult
-                {
-                    NewExternalOrderId = newDeals.Count > 0 ? newImportedOrder.Id.ToString() : null,
-                    CreatedDealId = newDeals.FirstOrDefault()?.DealId.ToString() ?? null,
-                };
-                _logger.LogInformation($"UpdateExternalOrder() finished. {result}\n newImportedOrder:{newImportedOrder}");
-                return result;
+                bid = await db.Bids.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(externalTrade.TradingBidId));
+                _logger.LogWarning($"UpdateExternalOrder() couldn't find bid of {externalTrade} in pool. In DB: {bid}");
             }
+            if (ask == null)
+            {
+                ask = await db.Asks.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(externalTrade.TradingAskId));
+                _logger.LogWarning($"UpdateExternalOrder() couldn't find ask of {externalTrade} in pool. In DB: {ask}");
+            }
+
+            var (matchedLocalOrder, matchedImportedOrder) = externalTrade.IsBid ? (bid, ask) : (ask, bid);
+
+            bool isTooMuchExternallyFulfilled =
+                matchedLocalOrder.Fulfilled + externalTrade.Fulfilled > matchedLocalOrder.Amount;
+
+            bool isFullfillmentError = matchedLocalOrder.IsCanceled
+                || !matchedLocalOrder.IsLocal
+                || isTooMuchExternallyFulfilled;
+            if (isFullfillmentError)
+                _logger.LogError($"UpdateExternalOrder() error: invalid {externalTrade} for {matchedLocalOrder}");
+            MatchingOrder newImportedOrder = null;
+            // Update matched orders
+            lock (_orders)
+            {
+                if (matchedImportedOrder != null)
+                    matchedImportedOrder.Blocked = 0;
+
+                matchedLocalOrder.Blocked = 0;
+                if (!isFullfillmentError)
+                {
+                    matchedLocalOrder.Fulfilled += externalTrade.Fulfilled;
+                }
+                modifiedOrders.Add(matchedLocalOrder);
+                RemoveNotActivePoolOrders();
+
+                if (externalTrade.Fulfilled > 0 && !isFullfillmentError)
+                {
+                    // Create a separate completed order for the matched part of the imported order
+                    newImportedOrder = new MatchingOrder()
+                    {
+                        Id = Guid.NewGuid(),
+                        IsBid = !externalTrade.IsBid,
+                        CurrencyPairCode = externalTrade.CurrencyPairCode,
+                        DateCreated = matchedImportedOrder?.DateCreated ?? DateTimeOffset.UtcNow,
+                        Exchange = externalTrade.Exchange,
+                        Price = externalTrade.MatchingEngineDealPrice,
+                        Amount = externalTrade.Fulfilled,
+                        Fulfilled = externalTrade.Fulfilled,
+                        ClientType = ClientType.LiquidityBot,
+                        UserId = $"{externalTrade.Exchange}_matched"
+                    };
+                    modifiedOrders.Add(newImportedOrder);
+
+                    // Create deal
+                    newDeals.Add(new Deal(matchedLocalOrder, newImportedOrder,
+                        externalTrade.MatchingEngineDealPrice, externalTrade.Fulfilled));
+                }
+                UpdateDatabase(db, modifiedOrders, newDeals).Wait();
+            }
+            await ReportData(db, modifiedOrders, newDeals);
+
+            var result = new SaveExternalOrderResult
+            {
+                NewExternalOrderId = newDeals.Count > 0 ? newImportedOrder.Id.ToString() : null,
+                CreatedDealId = newDeals.FirstOrDefault()?.DealId.ToString() ?? null,
+            };
+            _logger.LogInformation($"UpdateExternalOrder() finished. {result}\n newImportedOrder:{newImportedOrder}");
+            return result;
         }
 
         public void SendOrdersToMarketData()
@@ -326,7 +323,7 @@ namespace MatchingEngine.Services
             await ReportData(context, modifiedOrders, newDeals);
         }
 
-        public void AppendOrder(MatchingOrder order)
+        public void AddNewOrder(MatchingOrder order)
         {
             _newOrdersBuffer.Post(order);
         }
@@ -394,7 +391,7 @@ namespace MatchingEngine.Services
 
         #region Liquidity
 
-        public async Task UnblockOrders(List<Guid> orderIds)
+        public async Task UnblockLiquidityOrders(List<Guid> orderIds)
         {
             if (orderIds?.Count == 0)
                 return;
@@ -416,7 +413,7 @@ namespace MatchingEngine.Services
             SendOrdersToMarketData();
         }
 
-        public void SaveLiquidityImportUpdate(ImportUpdateDto dto)
+        public void SaveLiquidityImportedOrders(ImportUpdateDto dto)
         {
             var date1 = DateTimeOffset.UtcNow;
             // delete
@@ -441,7 +438,7 @@ namespace MatchingEngine.Services
             var date3 = DateTimeOffset.UtcNow;
             // add
             var ordersToAdd = dto.OrdersToAdd.Select(_ => _.GetOrder()).ToList();
-            ordersToAdd.ForEach(_ => AppendOrder(_mapper.Map<MatchingOrder>(_)));
+            ordersToAdd.ForEach(_ => AddNewOrder(_mapper.Map<MatchingOrder>(_)));
 
             if (_pairCode == Constants.DebugCurrencyPair)
             {

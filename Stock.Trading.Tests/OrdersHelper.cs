@@ -44,7 +44,7 @@ namespace Stock.Trading.Tests
             }
             else
             {
-                matchingPool.AppendOrder(order.Clone());
+                matchingPool.AddNewOrder(order.Clone());
             }
         }
     }

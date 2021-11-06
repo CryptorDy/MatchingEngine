@@ -118,7 +118,7 @@ namespace MatchingEngine.Services
                 await _context.AddOrder(order, true, OrderEventType.Create);
             }
 
-            _matchingPoolsHandler.GetPool(request.CurrencyPairCode).AppendOrder(order);
+            _matchingPoolsHandler.GetPool(request.CurrencyPairCode).AddNewOrder(order);
 
             return order.Id;
         }

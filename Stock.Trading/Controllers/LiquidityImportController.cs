@@ -30,7 +30,7 @@ namespace Stock.Trading.Controllers
         public async Task<SaveExternalOrderResult> ApplyTradeResult([FromBody] ExternalTrade createdOrder)
         {
             var result = await _matchingPoolsHandler.GetPool(createdOrder.CurrencyPairCode)
-                .UpdateExternalOrder(createdOrder);
+                .SaveExternalOrderResult(createdOrder);
             return result;
         }
 
@@ -75,7 +75,7 @@ namespace Stock.Trading.Controllers
                     throw new Exception($"SaveLiquidityImportUpdate() has local orders");
                 }
 
-                _matchingPoolsHandler.GetPool(dto.CurrencyPairCode).SaveLiquidityImportUpdate(dto);
+                _matchingPoolsHandler.GetPool(dto.CurrencyPairCode).SaveLiquidityImportedOrders(dto);
             }));
         }
 
