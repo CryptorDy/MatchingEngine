@@ -118,25 +118,18 @@ namespace MatchingEngine.Services
                 await _context.AddOrder(order, true, OrderEventType.Create);
             }
 
-            _matchingPoolsHandler.GetPool(request.CurrencyPairCode).AddNewOrder(order);
+            _matchingPoolsHandler.GetPool(request.CurrencyPairCode).AddCreateOrderAction(order);
 
             return order.Id;
         }
 
-        public async Task<CancelOrderResponse> CancelOrder(Guid orderId)
+        public async Task CancelOrder(Guid orderId)
         {
-            try
-            {
-                var dbOrder = await _context.GetOrder(orderId);
-                var pool = _matchingPoolsHandler.GetPool(dbOrder.CurrencyPairCode);
-                var result = pool.CancelOrder(orderId);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Delete order {orderId} error", ex);
-                return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
-            }
+            var dbOrder = await _context.GetOrder(orderId);
+            if (dbOrder == null)
+                throw new ArgumentException($"No db order {orderId}, can't get CurrencyPairCode for cancelling");
+            var pool = _matchingPoolsHandler.GetPool(dbOrder.CurrencyPairCode);
+            pool.AddCancelOrderAction(orderId);
         }
     }
 }

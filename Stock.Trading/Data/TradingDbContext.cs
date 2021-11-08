@@ -41,6 +41,8 @@ namespace MatchingEngine.Data
                 .ValueGeneratedOnAdd().HasDefaultValueSql("current_timestamp"); // set curent date
             builder.Entity<OrderEvent>().Property(_ => _.EventType)
                 .HasConversion(new EnumToStringConverter<OrderEventType>()); // save enum as string
+            builder.Entity<OrderEvent>().HasIndex(_ => _.EventType);
+            builder.Entity<OrderEvent>().HasIndex(_ => _.IsSentToDealEnding);
 
             builder.Entity<Deal>().HasIndex(_ => _.IsSentToDealEnding);
             builder.Entity<Deal>().HasIndex(_ => _.FromInnerTradingBot);
@@ -71,11 +73,11 @@ namespace MatchingEngine.Data
             return trackedOrder;
         }
 
-        public async Task UpdateOrder(MatchingOrder order, bool toSave, OrderEventType eventType, string dealIds = null)
+        public async Task UpdateOrder(MatchingOrder order, bool toSave, OrderEventType eventType,
+            bool isSentToDealEnding = false, string dealIds = null)
         {
             _logger.LogDebug($"UpdateOrder() toSave:{toSave}, eventType:{eventType}, order:{order}");
-            OrderEvents.Add(OrderEvent.Create(_mapper, order, eventType, dealIds));
-
+            OrderEvents.Add(OrderEvent.Create(_mapper, order, eventType, isSentToDealEnding, dealIds));
             if (toSave)
             {
                 await SaveChangesAsync();

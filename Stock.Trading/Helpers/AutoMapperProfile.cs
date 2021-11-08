@@ -14,6 +14,7 @@ namespace MatchingEngine.Helpers
             CreateMap<MatchingOrder, Bid>();
             CreateMap<MatchingOrder, Ask>();
             CreateMap<MatchingOrder, OrderEvent>(MemberList.None);
+            CreateMap<OrderEvent, MatchingOrder>(MemberList.None);
         }
     }
 }

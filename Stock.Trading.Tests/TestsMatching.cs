@@ -161,7 +161,7 @@ namespace Stock.Trading.Tests
             foreach (var guid in guidsForCancel)
             {
                 var tradingService = provider.GetRequiredService<TradingService>();
-                var response = tradingService.CancelOrder(guid).Result;
+                tradingService.CancelOrder(guid);
             }
             await Task.Delay(2000);
             var context = provider.GetRequiredService<TradingDbContext>();

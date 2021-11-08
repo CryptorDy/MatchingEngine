@@ -13,9 +13,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using TLabs.DotnetHelpers;
 using TLabs.ExchangeSdk;
 using TLabs.ExchangeSdk.Currencies;
-using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Services
 {
@@ -25,7 +25,7 @@ namespace MatchingEngine.Services
     public class MatchingPool : BackgroundService
     {
         public readonly string _pairCode;
-        private readonly BufferBlock<MatchingOrder> _newOrdersBuffer = new BufferBlock<MatchingOrder>();
+        private readonly BufferBlock<PoolBufferAction> _actionsBuffer = new();
         private readonly ConcurrentDictionary<Guid, MatchingOrder> _orders = new();
 
         private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -33,7 +33,7 @@ namespace MatchingEngine.Services
         private readonly OrdersMatcher _ordersMatcher;
         private readonly MarketDataHolder _marketDataHolder;
         private readonly IDealEndingService _dealEndingService;
-        private readonly ILiquidityDeletedOrdersKeeper _liquidityDeletedOrdersKeeper;
+        private readonly ILiquidityDeletedOrdersKeeper _deletedOrdersKeeper;
         private readonly LiquidityExpireBlocksHandler _liquidityExpireBlocksHandler;
         private readonly IOptions<AppSettings> _settings;
         private readonly IMapper _mapper;
@@ -58,7 +58,7 @@ namespace MatchingEngine.Services
             _ordersMatcher = ordersMatcher;
             _marketDataHolder = marketDataHolder;
             _dealEndingService = dealEndingService;
-            _liquidityDeletedOrdersKeeper = liquidityDeletedOrdersKeeper;
+            _deletedOrdersKeeper = liquidityDeletedOrdersKeeper;
             _liquidityExpireBlocksHandler = liquidityExpireBlocksHandler;
             _settings = settings;
             _mapper = mapper;
@@ -135,7 +135,7 @@ namespace MatchingEngine.Services
 
                     dbOrder.Fulfilled = order.Fulfilled;
                     dbOrder.Blocked = order.Blocked;
-                    await context.UpdateOrder(dbOrder, false, eventType, orderDealIds);
+                    await context.UpdateOrder(dbOrder, false, eventType, dealIds: orderDealIds);
                 }
             }
 
@@ -299,7 +299,7 @@ namespace MatchingEngine.Services
             }
         }
 
-        private async Task Process(MatchingOrder newOrder)
+        private async Task ProcessNewOrder(MatchingOrder newOrder)
         {
             _logger.LogDebug($"Process() started {newOrder}");
             using var scope = _serviceScopeFactory.CreateScope();
@@ -324,44 +324,39 @@ namespace MatchingEngine.Services
             await ReportData(context, modifiedOrders, newDeals);
         }
 
-        public void AddNewOrder(MatchingOrder order)
-        {
-            _newOrdersBuffer.Post(order);
-        }
-
-        public CancelOrderResponse CancelOrder(Guid orderId)
+        private void CancelOrder(Guid orderId)
         {
             _logger.LogDebug($"CancelOrder() start. id:{orderId}");
             using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-            MatchingOrder dbOrder;
+            Models.MatchingOrder dbOrder;
             lock (_orders)
             {
                 dbOrder = context.GetOrder(orderId).Result;
+                string errorText = null;
                 if (dbOrder == null)
-                {
-                    _logger.LogDebug("CancelOrder() Not found.");
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.Error };
-                }
+                    errorText = $"order '{orderId}' not found";
+                else if (dbOrder.Blocked > 0)
+                    errorText = CancelOrderResponseStatus.LiquidityBlocked.ToString();
+                else if (dbOrder.Fulfilled >= dbOrder.Amount)
+                    errorText = CancelOrderResponseStatus.AlreadyFilled.ToString();
+
                 _logger.LogDebug($"CancelOrder() {dbOrder}");
-
-                if (dbOrder.Blocked > 0)
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.LiquidityBlocked, Order = dbOrder };
-                if (dbOrder.IsCanceled)
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyCanceled, Order = dbOrder };
-                if (dbOrder.Fulfilled >= dbOrder.Amount)
-                    return new CancelOrderResponse { Status = CancelOrderResponseStatus.AlreadyFilled, Order = dbOrder };
-
+                if (errorText.HasValue())
+                {
+                    _logger.LogWarning($"CancelOrder {errorText} for {dbOrder}");
+                    return;
+                }
                 var order = GetPoolOrder(orderId);
                 _orders.TryRemove(order.Id, out _);
-                _liquidityDeletedOrdersKeeper.AddRange(new List<Guid> { orderId });
+                _deletedOrdersKeeper.Add(orderId);
 
                 dbOrder.IsCanceled = true;
                 context.UpdateOrder(dbOrder, true, OrderEventType.Cancel).Wait();
             }
+            _dealEndingService.SendOrderCancellings();
             SendOrdersToMarketData();
             _logger.LogDebug($"CancelOrder() finished {dbOrder}");
-            return new CancelOrderResponse { Status = CancelOrderResponseStatus.Success, Order = dbOrder };
         }
 
         /// <summary>Remove orders from pool and notify MarketData</summary>
@@ -369,7 +364,7 @@ namespace MatchingEngine.Services
         /// <param name="clientType">optionally check that only certain clientType is removed</param>
         public void RemovePoolOrders(IEnumerable<Guid> ids, ClientType? clientType = null)
         {
-            _liquidityDeletedOrdersKeeper.AddRange(ids);
+            _deletedOrdersKeeper.AddRange(ids);
             int countDeleted = 0;
             foreach (Guid id in ids)
             {
@@ -439,7 +434,7 @@ namespace MatchingEngine.Services
             var date3 = DateTimeOffset.UtcNow;
             // add
             var ordersToAdd = dto.OrdersToAdd.Select(_ => _.GetOrder()).ToList();
-            ordersToAdd.ForEach(_ => AddNewOrder(_mapper.Map<MatchingOrder>(_)));
+            ordersToAdd.ForEach(_ => AddCreateOrderAction(_mapper.Map<MatchingOrder>(_)));
 
             if (_pairCode == Constants.DebugCurrencyPair)
             {
@@ -500,26 +495,51 @@ namespace MatchingEngine.Services
             }
         }
 
+        public void AddCreateOrderAction(MatchingOrder order)
+        {
+            _actionsBuffer.Post(new PoolBufferAction
+            {
+                ActionType = PoolBufferModelType.CreateOrder,
+                OrderId = order.Id,
+                Order = order,
+            });
+        }
+
+        public void AddCancelOrderAction(Guid orderId)
+        {
+            _actionsBuffer.Post(new PoolBufferAction
+            {
+                ActionType = PoolBufferModelType.CancelOrder,
+                OrderId = orderId,
+            });
+        }
+
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    if (!await _newOrdersBuffer.OutputAvailableAsync(cancellationToken))
-                    {
+                    if (!await _actionsBuffer.OutputAvailableAsync(cancellationToken))
                         continue;
-                    }
+                    var newAction = await _actionsBuffer.ReceiveAsync(cancellationToken);
 
-                    var newOrder = await _newOrdersBuffer.ReceiveAsync(cancellationToken);
-
-                    if (_liquidityDeletedOrdersKeeper.Contains(newOrder.Id))
+                    if (newAction.ActionType == PoolBufferModelType.CancelOrder)
                     {
-                        _logger.LogInformation($"Skipped order processing (already deleted): {newOrder}");
+                        CancelOrder(newAction.OrderId);
                     }
                     else
                     {
-                        await Process(newOrder);
+                        var newOrder = newAction.Order;
+                        if (_deletedOrdersKeeper.Contains(newOrder.Id))
+                        {
+                            if (newOrder.IsLocal)
+                                _logger.LogInformation($"Skipped order processing (already deleted): {newOrder}");
+                        }
+                        else
+                        {
+                            await ProcessNewOrder(newOrder);
+                        }
                     }
                 }
                 catch (TaskCanceledException) { }

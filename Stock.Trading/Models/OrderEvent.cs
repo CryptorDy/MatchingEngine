@@ -25,10 +25,13 @@ namespace MatchingEngine.Models
         /// </summary>
         public string EventDealIds { get; set; }
 
-        /// <summary>
-        /// Is saved in MarketData DB
-        /// </summary>
+
+        /// <summary>Is saved in MarketData DB</summary>
         public bool IsSavedInMarketData { get; set; }
+
+        /// <summary>Only for Cancel type; send to DealEnding to unblock balance</summary>
+        public bool IsSentToDealEnding { get; set; }
+
 
         #region order copy fields
 
@@ -85,11 +88,14 @@ namespace MatchingEngine.Models
 
         public override string ToString() => $"Event {EventType} {EventId} for {(IsBid ? "Bid" : "Ask")}({Id} {CurrencyPairCode})";
 
-        public static OrderEvent Create(AutoMapper.IMapper mapper, MatchingOrder order, OrderEventType type, string dealIds = null)
+        public static OrderEvent Create(AutoMapper.IMapper mapper, MatchingOrder order, OrderEventType type,
+            bool isSentToDealEnding = false, string dealIds = null)
         {
+            bool isCancel = type == OrderEventType.Cancel;
             var orderEvent = mapper.Map<MatchingOrder, OrderEvent>(order);
             orderEvent.EventType = type;
             orderEvent.IsSavedInMarketData = false;
+            orderEvent.IsSentToDealEnding = !isCancel || isSentToDealEnding; // only Cancel needs sending
             orderEvent.EventDealIds = string.IsNullOrWhiteSpace(dealIds) ? null : dealIds;
             return orderEvent;
         }
