@@ -191,41 +191,42 @@ namespace MatchingEngine.Services
         public async Task<SaveExternalOrderResult> SaveExternalOrderResult(ExternalTrade externalTrade)
         {
             _logger.LogInformation($"UpdateExternalOrder() start: {externalTrade}");
-            if (_currenciesCache.GetCurrencyPair(externalTrade.CurrencyPairCode) != null)
-                externalTrade.Fulfilled = Math.Round(externalTrade.Fulfilled, _currenciesCache.GetAmountDigits(externalTrade.CurrencyPairCode));
+            using var scope = _serviceScopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
             var modifiedOrders = new List<MatchingOrder>();
             var newDeals = new List<Deal>();
-            using var scope = _serviceScopeFactory.CreateScope();
-
-            // Find previously matched orders
-            var db = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-            MatchingOrder bid = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingBidId), null);
-            MatchingOrder ask = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingAskId), null);
-            if (bid == null)
-            {
-                bid = await db.Bids.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(externalTrade.TradingBidId));
-                _logger.LogWarning($"UpdateExternalOrder() couldn't find bid of {externalTrade} in pool. In DB: {bid}");
-            }
-            if (ask == null)
-            {
-                ask = await db.Asks.FirstOrDefaultAsync(_ => _.Id == Guid.Parse(externalTrade.TradingAskId));
-                _logger.LogWarning($"UpdateExternalOrder() couldn't find ask of {externalTrade} in pool. In DB: {ask}");
-            }
-
-            var (matchedLocalOrder, matchedImportedOrder) = externalTrade.IsBid ? (bid, ask) : (ask, bid);
-
-            bool isTooMuchExternallyFulfilled =
-                matchedLocalOrder.Fulfilled + externalTrade.Fulfilled > matchedLocalOrder.Amount;
-
-            bool isFullfillmentError = matchedLocalOrder.IsCanceled
-                || !matchedLocalOrder.IsLocal
-                || isTooMuchExternallyFulfilled;
-            if (isFullfillmentError)
-                _logger.LogError($"UpdateExternalOrder() error: invalid {externalTrade} for {matchedLocalOrder}");
             MatchingOrder newImportedOrder = null;
-            // Update matched orders
             lock (_orders)
             {
+                if (_currenciesCache.GetCurrencyPair(externalTrade.CurrencyPairCode) != null)
+                    externalTrade.Fulfilled = Math.Round(externalTrade.Fulfilled, _currenciesCache.GetAmountDigits(externalTrade.CurrencyPairCode));
+
+                // Find previously matched orders
+                MatchingOrder bid = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingBidId), null);
+                MatchingOrder ask = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingAskId), null);
+                if (bid == null)
+                {
+                    bid = db.Bids.FirstOrDefault(_ => _.Id == Guid.Parse(externalTrade.TradingBidId));
+                    _logger.LogWarning($"UpdateExternalOrder() couldn't find bid of {externalTrade} in pool. In DB: {bid}");
+                }
+                if (ask == null)
+                {
+                    ask = db.Asks.FirstOrDefault(_ => _.Id == Guid.Parse(externalTrade.TradingAskId));
+                    _logger.LogWarning($"UpdateExternalOrder() couldn't find ask of {externalTrade} in pool. In DB: {ask}");
+                }
+
+                var (matchedLocalOrder, matchedImportedOrder) = externalTrade.IsBid ? (bid, ask) : (ask, bid);
+
+                bool isTooMuchExternallyFulfilled =
+                    matchedLocalOrder.Fulfilled + externalTrade.Fulfilled > matchedLocalOrder.Amount;
+
+                bool isFullfillmentError = matchedLocalOrder.IsCanceled
+                    || !matchedLocalOrder.IsLocal
+                    || isTooMuchExternallyFulfilled;
+                if (isFullfillmentError)
+                    _logger.LogError($"UpdateExternalOrder() error: invalid {externalTrade} for {matchedLocalOrder}");
+                // Update matched orders
+
                 if (matchedImportedOrder != null)
                     matchedImportedOrder.Blocked = 0;
 
