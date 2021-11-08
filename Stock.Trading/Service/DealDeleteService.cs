@@ -21,19 +21,19 @@ namespace MatchingEngine.Services
         private readonly TradingDbContext _context;
         private readonly TradingService _tradingService;
         private readonly MarketDataService _marketDataService;
-        private readonly DepositoryClient _depositoryClient;
+        private readonly ClientDepository _clientDepository;
         private readonly ILogger _logger;
 
         public DealDeleteService(TradingDbContext context,
             TradingService tradingService,
             MarketDataService marketDataService,
-            DepositoryClient depositoryClient,
+            ClientDepository clientDepository,
             ILogger<DealDeleteService> logger)
         {
             _context = context;
             _tradingService = tradingService;
             _marketDataService = marketDataService;
-            _depositoryClient = depositoryClient;
+            _clientDepository = clientDepository;
             _logger = logger;
         }
 
@@ -194,7 +194,7 @@ namespace MatchingEngine.Services
             foreach (var command in orderTxCommands)
                 _logger.LogInformation($"OrderTx: {command}");
 
-            var orderTxsResult = await _depositoryClient.SendTxCommands(orderTxCommands, false);
+            var orderTxsResult = await _clientDepository.SendTxCommands(orderTxCommands, false);
             _logger.LogWarning($"DeleteDeals() orderTxsResult: {orderTxsResult}");
         }
     }

@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using TLabs.ExchangeSdk.Trading;
+using TLabs.ExchangeSdk;
 using Xunit;
 
 namespace Stock.Trading.Tests

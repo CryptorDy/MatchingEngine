@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using TLabs.ExchangeSdk.Trading;
 using Flurl.Http;
 using TLabs.DotnetHelpers;
 
@@ -54,7 +53,7 @@ namespace MatchingEngine.Services
             await _gatewayHttpClient.PostJsonAsync($"marketdata/orders?currencyPairCode={currencyPairCode}", orders);
         }
 
-        public async Task SendNewDeal(DealResponse deal)
+        public async Task SendNewDeal(TLabs.ExchangeSdk.Trading.MarketdataDeal deal)
         {
             await _gatewayHttpClient.PostJsonAsync($"marketdata/deal", deal);
         }
@@ -78,7 +77,7 @@ namespace MatchingEngine.Services
             }
         }
 
-        public async Task SendDeals(IEnumerable<DealResponse> deals)
+        public async Task SendDeals(IEnumerable<TLabs.ExchangeSdk.Trading.MarketdataDeal> deals)
         {
             await _gatewayHttpClient.PostJsonAsync($"marketdata/deals", deals);
         }

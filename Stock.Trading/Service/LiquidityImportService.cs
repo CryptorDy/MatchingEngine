@@ -4,7 +4,7 @@ using MatchingEngine.Models.LiquidityImport;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
-using TLabs.ExchangeSdk.Trading;
+using TLabs.ExchangeSdk;
 
 namespace MatchingEngine.Services
 {

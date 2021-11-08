@@ -64,7 +64,7 @@ namespace Stock.Trading.Integration.Tests
             response.EnsureSuccessStatusCode();
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var content = await response.Content.ReadAsStringAsync();
-            var deals = JsonConvert.DeserializeObject<List<DealResponse>>(content);
+            var deals = JsonConvert.DeserializeObject<List<MarketdataDeal>>(content);
             Assert.NotEmpty(deals);
             Assert.Single(deals);
         }

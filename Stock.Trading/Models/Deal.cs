@@ -90,9 +90,9 @@ namespace MatchingEngine.Models
         [ForeignKey("BidId")]
         public Bid Bid { get; set; }
 
-        public DealResponse GetDealResponse()
+        public MarketdataDeal GetDealResponse()
         {
-            return new DealResponse()
+            return new MarketdataDeal()
             {
                 DealId = DealId,
                 Price = Price,

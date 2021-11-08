@@ -37,7 +37,7 @@ namespace MatchingEngine.Services
 
         #region GET-requests
 
-        public async Task<List<Deal>> GetDeals(string currencyPairCode, int? lastNum, List<string> userIds = null, 
+        public async Task<List<Deal>> GetDeals(string currencyPairCode, int? lastNum, List<string> userIds = null,
             DateTimeOffset? sinceDate = null, DateTimeOffset? toDate = null, List<string> dealIds = null)
         {
             try
@@ -87,7 +87,7 @@ namespace MatchingEngine.Services
             }
         }
 
-        public DealResponse GetDealResponse(string id)
+        public MarketdataDeal GetDealResponse(string id)
         {
             try
             {
@@ -111,7 +111,7 @@ namespace MatchingEngine.Services
                 request.Price = Math.Round(request.Price, _currenciesCache.GetPriceDigits(request.CurrencyPairCode));
                 request.Amount = Math.Round(request.Amount, _currenciesCache.GetAmountDigits(request.CurrencyPairCode));
             }
-            var order = _mapper.Map<MatchingOrder>(request.GetOrder());
+            var order = _mapper.Map<Models.MatchingOrder>(request.GetOrder());
 
             if (order.ClientType != ClientType.DealsBot)
             {

@@ -50,7 +50,7 @@ namespace Stock.Trading.Controllers
         /// <param name="id">Deal id</param>
         /// <returns>Deal details</returns>
         [HttpGet("{id}")]
-        public DealResponse Get(string id)
+        public MarketdataDeal Get(string id)
         {
             return _service.GetDealResponse(id);
         }
@@ -68,7 +68,7 @@ namespace Stock.Trading.Controllers
         /// <summary>Get deal responses for list of users</summary>
         /// <returns>Deals list</returns>
         [HttpPost("responses")]
-        public async Task<List<DealResponse>> GetDealResponses([FromBody] List<string> userIds,
+        public async Task<List<MarketdataDeal>> GetDealResponses([FromBody] List<string> userIds,
             string currencyPairId = null, int? count = null,
             DateTime? sinceDate = null, DateTimeOffset? toDate = null)
         {
@@ -86,7 +86,7 @@ namespace Stock.Trading.Controllers
 
 
         [HttpPost("resave-from-marketdata")]
-        public async Task<IActionResult> ResaveOldDeals([FromBody] List<DealResponse> dealResponses)
+        public async Task<IActionResult> ResaveOldDeals([FromBody] List<MarketdataDeal> dealResponses)
         {
             var dealIds = dealResponses.Select(_ => _.DealId).ToList();
             var dbDealIds = await _context.Deals.Where(_ => dealIds.Contains(_.DealId)).Select(_ => _.DealId).ToListAsync();

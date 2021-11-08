@@ -3,7 +3,6 @@ using MatchingEngine.Services;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using TLabs.ExchangeSdk.Trading;
 
 namespace Stock.Trading.Tests
 {
@@ -28,7 +27,7 @@ namespace Stock.Trading.Tests
         {
             if (order.IsLocal)
             {
-                var request = new OrderCreateRequest
+                var request = new TLabs.ExchangeSdk.Trading.OrderCreateRequest
                 {
                     ActionId = order.Id.ToString(),
                     IsBid = order.IsBid,

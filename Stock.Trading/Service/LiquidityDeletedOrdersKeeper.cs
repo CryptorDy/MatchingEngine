@@ -7,6 +7,8 @@ namespace MatchingEngine.Services
 {
     public interface ILiquidityDeletedOrdersKeeper
     {
+        void Add(Guid orderId);
+
         void AddRange(IEnumerable<Guid> ids);
 
         bool Contains(Guid id);
@@ -24,6 +26,12 @@ namespace MatchingEngine.Services
         public bool Contains(Guid id)
         {
             return _liquidityDeletedOrderIds.ContainsKey(id);
+        }
+
+        public void Add(Guid orderId)
+        {
+            RemoveOldIds();
+            _liquidityDeletedOrderIds[orderId] = DateTime.Now;
         }
 
         public void AddRange(IEnumerable<Guid> ids)

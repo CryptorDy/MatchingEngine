@@ -19,6 +19,7 @@ using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Swagger;
 using System.IO;
 using TLabs.DotnetHelpers;
+using TLabs.ExchangeSdk;
 using TLabs.ExchangeSdk.Currencies;
 using TLabs.ExchangeSdk.Depository;
 
@@ -67,6 +68,8 @@ namespace MatchingEngine
             services.AddAutoMapper(typeof(Startup));
 
             services.InitFlurl(settings.GatewayServiceUrl);
+            services.AddSdkServices();
+
             services.AddSingleton<GatewayHttpClient>();
             services.AddSingleton<CurrenciesCache>();
 
@@ -76,7 +79,6 @@ namespace MatchingEngine
             services.AddScoped<IDbInitializer, DbInitializer>();
 
             services.AddTransient<SingletonsAccessor>();
-            services.AddTransient<DepositoryClient>();
 
             services.AddHostedService<MatchingPoolsHandler>();
             services.AddSingleton<OrdersMatcher>();

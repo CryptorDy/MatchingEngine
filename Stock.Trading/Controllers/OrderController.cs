@@ -13,7 +13,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using TLabs.DotnetHelpers;
 using TLabs.ExchangeSdk;
-using TLabs.ExchangeSdk.Trading;
 
 namespace MatchingEngine.Controllers
 {
@@ -75,9 +74,9 @@ namespace MatchingEngine.Controllers
         /// </summary>
         /// <param name="request">Order details</param>
         /// <returns>New Order Id</returns>
-        [ProducesResponseType(typeof(OrderCreateResult), 200)]
+        [ProducesResponseType(typeof(TLabs.ExchangeSdk.Trading.OrderCreateResult), 200)]
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] OrderCreateRequest request)
+        public async Task<IActionResult> Post([FromBody] TLabs.ExchangeSdk.Trading.OrderCreateRequest request)
         {
             if (!ModelState.IsValid)
             {
@@ -85,7 +84,7 @@ namespace MatchingEngine.Controllers
             }
 
             var newOrderId = await _tradingService.CreateOrder(request);
-            return Ok(new OrderCreateResult { Id = newOrderId });
+            return Ok(new TLabs.ExchangeSdk.Trading.OrderCreateResult { Id = newOrderId });
         }
 
         /// <summary>
