@@ -98,6 +98,10 @@ namespace MatchingEngine.Controllers
         [HttpDelete("{isBid}/{orderId}")] // Obsolete
         public async Task<CancelOrderResponse> Delete(Guid orderId)
         {
+            var rnd = new Random();
+            await Task.Delay(100 + rnd.Next(0, 613));
+
+
             var response = await _tradingService.CancelOrder(orderId);
             return response;
         }
