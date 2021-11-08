@@ -74,15 +74,6 @@ namespace MatchingEngine.Data
 
         public async Task UpdateOrder(MatchingOrder order, bool toSave, OrderEventType eventType, string dealIds = null)
         {
-            if (order.IsBid)
-            {
-                Bids.Update((Bid)order);
-            }
-            else
-            {
-                Asks.Update((Ask)order);
-            }
-
             _logger.LogDebug($"UpdateOrder() toSave:{toSave}, eventType:{eventType}, order:{order}");
             OrderEvents.Add(OrderEvent.Create(_mapper, order, eventType, dealIds));
 
