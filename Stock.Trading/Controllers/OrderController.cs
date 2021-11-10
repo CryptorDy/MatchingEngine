@@ -91,17 +91,18 @@ namespace MatchingEngine.Controllers
         /// Delete Order by id
         /// </summary>
         /// <param name="orderId">Order id</param>
-        /// <param name="userId">User id</param>
-        /// <returns></returns>
+        /// <param name="toForce">Force cancellation through (ignore Liquidity block)</param>
         [HttpDelete("{orderId}")]
         [HttpDelete("{isBid}/{orderId}")] // Obsolete
-        public async Task<IActionResult> Delete(Guid orderId)
+        public async Task<IActionResult> Delete(Guid orderId, bool toForce = false)
         {
-            var rnd = new Random();
-            await Task.Delay(100 + rnd.Next(0, 613));
+            if (!toForce)
+            {
+                var rnd = new Random();
+                await Task.Delay(100 + rnd.Next(0, 2000)); // temporary delay
+            }
 
-
-            await _tradingService.CancelOrder(orderId);
+            await _tradingService.CancelOrder(orderId, toForce);
             return Ok();
         }
 

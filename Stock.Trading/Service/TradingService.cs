@@ -123,13 +123,13 @@ namespace MatchingEngine.Services
             return order.Id;
         }
 
-        public async Task CancelOrder(Guid orderId)
+        public async Task CancelOrder(Guid orderId, bool toForce = false)
         {
             var dbOrder = await _context.GetOrder(orderId);
             if (dbOrder == null)
                 throw new ArgumentException($"No db order {orderId}, can't get CurrencyPairCode for cancelling");
             var pool = _matchingPoolsHandler.GetPool(dbOrder.CurrencyPairCode);
-            pool.AddCancelOrderAction(orderId);
+            pool.AddCancelOrderAction(orderId, toForce);
         }
     }
 }

@@ -324,19 +324,21 @@ namespace MatchingEngine.Services
             await ReportData(context, modifiedOrders, newDeals);
         }
 
-        private void CancelOrder(Guid orderId)
+        private void CancelOrder(PoolBufferAction cancelAction)
         {
-            _logger.LogDebug($"CancelOrder() start. id:{orderId}");
+            if (cancelAction.ActionType != PoolBufferModelType.CancelOrder)
+                throw new ArgumentException("WrongActionType");
+            _logger.LogDebug($"CancelOrder() start. id:{cancelAction.OrderId}");
             using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
             Models.MatchingOrder dbOrder;
             lock (_orders)
             {
-                dbOrder = context.GetOrder(orderId).Result;
+                dbOrder = context.GetOrder(cancelAction.OrderId).Result;
                 string errorText = null;
                 if (dbOrder == null)
-                    errorText = $"order '{orderId}' not found";
-                else if (dbOrder.Blocked > 0)
+                    errorText = $"order '{cancelAction.OrderId}' not found";
+                else if (dbOrder.Blocked > 0 && !cancelAction.ToForce)
                     errorText = CancelOrderResponseStatus.LiquidityBlocked.ToString();
                 else if (dbOrder.Fulfilled >= dbOrder.Amount)
                     errorText = CancelOrderResponseStatus.AlreadyFilled.ToString();
@@ -347,11 +349,12 @@ namespace MatchingEngine.Services
                     _logger.LogWarning($"CancelOrder {errorText} for {dbOrder}");
                     return;
                 }
-                var order = GetPoolOrder(orderId);
+                var order = GetPoolOrder(cancelAction.OrderId);
                 _orders.TryRemove(order.Id, out _);
-                _deletedOrdersKeeper.Add(orderId);
+                _deletedOrdersKeeper.Add(cancelAction.OrderId);
 
                 dbOrder.IsCanceled = true;
+                dbOrder.Blocked = 0;
                 context.UpdateOrder(dbOrder, true, OrderEventType.Cancel).Wait();
             }
             _dealEndingService.SendOrderCancellings();
@@ -505,12 +508,13 @@ namespace MatchingEngine.Services
             });
         }
 
-        public void AddCancelOrderAction(Guid orderId)
+        public void AddCancelOrderAction(Guid orderId, bool toForce = false)
         {
             _actionsBuffer.Post(new PoolBufferAction
             {
                 ActionType = PoolBufferModelType.CancelOrder,
                 OrderId = orderId,
+                ToForce = toForce,
             });
         }
 
@@ -526,7 +530,7 @@ namespace MatchingEngine.Services
 
                     if (newAction.ActionType == PoolBufferModelType.CancelOrder)
                     {
-                        CancelOrder(newAction.OrderId);
+                        CancelOrder(newAction);
                     }
                     else
                     {

@@ -16,7 +16,10 @@ namespace MatchingEngine.Models
         public PoolBufferModelType ActionType { get; set; }
         public Guid OrderId { get; set; }
 
-        // null if CancelOrder
+        /// <summary>null if CancelOrder</summary>
         public MatchingOrder Order { get; set; }
+
+        /// <summary>Overwrites liquidity block on cancel if true</summary>
+        public bool ToForce { get; set; }
     }
 }
