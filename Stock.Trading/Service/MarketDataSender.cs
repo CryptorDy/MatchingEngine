@@ -66,7 +66,7 @@ namespace MatchingEngine.Services
             {
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
 
-                const int batchSize = 100;
+                const int batchSize = 2;
                 while (true)
                 {
                     var newEvents = await context.OrderEvents.Where(_ => !_.IsSavedInMarketData)
