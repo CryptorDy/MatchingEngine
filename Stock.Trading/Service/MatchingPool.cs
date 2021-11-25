@@ -307,7 +307,7 @@ namespace MatchingEngine.Services
             List<MatchingOrder> modifiedOrders;
             List<Deal> newDeals;
 
-            lock (_orders) //no access to pool (for removing) while matching is performed
+            lock (_orders) // no access to pool (for removing) while matching is performed
             {
                 DateTime start = DateTime.UtcNow;
                 if (newOrder.ClientType != ClientType.LiquidityBot && newOrder.ClientType != ClientType.DealsBot)
@@ -321,7 +321,7 @@ namespace MatchingEngine.Services
                 RemoveNotActivePoolOrders();
                 _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
                     $"new order: {newOrder}, Orders in pool: {_orders.Count};");
-                CheckOrderbookIntersection(newOrder);
+                LogOrderbookIntersections(newOrder);
                 UpdateDatabase(context, modifiedOrders, newDeals).Wait();
             }
             await ReportData(context, modifiedOrders, newDeals);
@@ -481,7 +481,7 @@ namespace MatchingEngine.Services
         /// <summary>
         /// Log when bids are bigger than asks
         /// </summary>
-        private void CheckOrderbookIntersection(MatchingOrder newOrder)
+        private void LogOrderbookIntersections(MatchingOrder newOrder)
         {
             if (_orderbookIntersectionLogsCounter++ % 100 != 0) // only show 1 in 100 logs
                 return;
@@ -521,13 +521,14 @@ namespace MatchingEngine.Services
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
+            PoolBufferAction newAction = null;
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
                     if (!await _actionsBuffer.OutputAvailableAsync(cancellationToken))
                         continue;
-                    var newAction = await _actionsBuffer.ReceiveAsync(cancellationToken);
+                    newAction = await _actionsBuffer.ReceiveAsync(cancellationToken);
 
                     if (newAction.ActionType == PoolBufferModelType.CancelOrder)
                     {
@@ -554,7 +555,7 @@ namespace MatchingEngine.Services
                 catch (TaskCanceledException) { }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Trading processing error");
+                    _logger.LogError(ex, $"{newAction}");
                 }
             }
         }

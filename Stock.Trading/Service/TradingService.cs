@@ -35,7 +35,7 @@ namespace MatchingEngine.Services
             _logger = logger;
         }
 
-        #region GET-requests
+        #region get deals requests
 
         public async Task<List<Deal>> GetDeals(string currencyPairCode, int? lastNum, List<string> userIds = null,
             DateTimeOffset? sinceDate = null, DateTimeOffset? toDate = null, List<string> dealIds = null)

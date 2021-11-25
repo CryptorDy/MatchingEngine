@@ -1,4 +1,5 @@
 using MatchingEngine.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,10 +9,13 @@ namespace MatchingEngine.Services
     public class OrdersMatcher
     {
         private readonly ILiquidityImportService _liquidityImportService;
+        private readonly ILogger _logger;
 
-        public OrdersMatcher(ILiquidityImportService liquidityImportService)
+        public OrdersMatcher(ILiquidityImportService liquidityImportService,
+            ILogger<OrdersMatcher> logger)
         {
             _liquidityImportService = liquidityImportService;
+            _logger = logger;
         }
 
         private bool CanBeFilled(MatchingOrder order) => order.IsActive && order.AvailableAmount > 0;
@@ -47,9 +51,7 @@ namespace MatchingEngine.Services
                 if (isExternalTrade)
                 {
                     if (bid.Blocked != 0 || ask.Blocked != 0)
-                    {
-                        Console.WriteLine($"Incorrect blocked state: {bid}, {ask}");
-                    }
+                        _logger.LogWarning($"Incorrect blocked state: {bid}, {ask}");
 
                     _liquidityImportService.CreateTrade(bid, ask);
                     // liquidity will try to fill all amount of local order

@@ -21,5 +21,8 @@ namespace MatchingEngine.Models
 
         /// <summary>Overwrites liquidity block on cancel if true</summary>
         public bool ToForce { get; set; }
+
+        public override string ToString() =>
+            $"{nameof(PoolBufferAction)}({ActionType}, orderId:{OrderId}, order:{Order})";
     }
 }
