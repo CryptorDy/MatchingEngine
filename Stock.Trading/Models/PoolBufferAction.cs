@@ -8,7 +8,7 @@ namespace MatchingEngine.Models
 {
     public enum PoolBufferModelType
     {
-        CreateOrder = 10, CancelOrder = 20, 
+        CreateOrder = 10, CancelOrder = 20, UpdateImportedOrder = 30, AutoUnblock = 50,
     }
 
     public class PoolBufferAction

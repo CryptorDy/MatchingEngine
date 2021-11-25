@@ -393,24 +393,17 @@ namespace MatchingEngine.Services
 
         #region Liquidity
 
-        public async Task UnblockLiquidityOrders(List<Guid> orderIds)
+        private async Task UnblockOrder(Guid orderId)
         {
-            if (orderIds?.Count == 0)
-                return;
-            List<MatchingOrder> ordersToUnblock = new();
             lock (_orders)
             {
-                foreach (var id in orderIds)
-                {
-                    var order = GetPoolOrder(id);
-                    if (order == null || order.Blocked == 0)
-                        continue;
-                    order.Blocked = 0;
-                    ordersToUnblock.Add(order);
-                }
+                var order = GetPoolOrder(orderId);
+                if (order == null || order.Blocked == 0)
+                    return;
+                order.Blocked = 0;
                 using var scope = _serviceScopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                UpdateDatabase(context, ordersToUnblock, new List<Deal>()).Wait();
+                UpdateDatabase(context, new List<MatchingOrder>() { order }, new List<Deal>()).Wait();
             }
             SendOrdersToMarketData();
         }
@@ -501,6 +494,11 @@ namespace MatchingEngine.Services
             }
         }
 
+        public void AddPoolBufferAction(PoolBufferAction action)
+        {
+            _actionsBuffer.Post(action);
+        }
+
         public void AddCreateOrderAction(MatchingOrder order)
         {
             _actionsBuffer.Post(new PoolBufferAction
@@ -534,6 +532,10 @@ namespace MatchingEngine.Services
                     if (newAction.ActionType == PoolBufferModelType.CancelOrder)
                     {
                         CancelOrder(newAction);
+                    }
+                    else if (newAction.ActionType == PoolBufferModelType.AutoUnblock)
+                    {
+                        await UnblockOrder(newAction.OrderId);
                     }
                     else
                     {

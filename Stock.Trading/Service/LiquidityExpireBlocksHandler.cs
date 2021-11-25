@@ -1,3 +1,4 @@
+using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
 using Microsoft.Extensions.Logging;
 using System;
@@ -39,8 +40,12 @@ namespace MatchingEngine.Services
                 if (blocking.DateBlocked > DateTimeOffset.UtcNow.AddMinutes(-1))
                     continue;
 
-                await _matchingPoolsHandler.GetPool(blocking.CurrencyPairCode)
-                    .UnblockLiquidityOrders(new List<Guid> { blocking.OrderId });
+                _matchingPoolsHandler.GetPool(blocking.CurrencyPairCode)
+                    .AddPoolBufferAction(new PoolBufferAction
+                    {
+                        ActionType = PoolBufferModelType.AutoUnblock,
+                        OrderId = blocking.OrderId,
+                    });
                 Remove(blocking.OrderId);
             }
         }
