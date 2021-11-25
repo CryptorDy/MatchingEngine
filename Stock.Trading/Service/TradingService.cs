@@ -113,7 +113,7 @@ namespace MatchingEngine.Services
             }
 
             var order = _mapper.Map<Models.MatchingOrder>(request.GetOrder());
-            _matchingPoolsHandler.GetPool(request.CurrencyPairCode).AddCreateOrderAction(order);
+            _matchingPoolsHandler.GetPool(request.CurrencyPairCode).EnqueueCreateOrderAction(order);
             return order.Id;
         }
 
@@ -123,7 +123,7 @@ namespace MatchingEngine.Services
             if (dbOrder == null)
                 throw new ArgumentException($"No db order {orderId}, can't get CurrencyPairCode for cancelling");
             var pool = _matchingPoolsHandler.GetPool(dbOrder.CurrencyPairCode);
-            pool.AddCancelOrderAction(orderId, toForce);
+            pool.EnqueuePoolAction(PoolActionType.CancelOrder, orderId, null, toForce);
         }
     }
 }

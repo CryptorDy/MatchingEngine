@@ -6,14 +6,25 @@ using System.Threading.Tasks;
 
 namespace MatchingEngine.Models
 {
-    public enum PoolBufferModelType
+    public enum PoolActionType
     {
         CreateOrder = 10, CancelOrder = 20, UpdateLiquidityOrder = 30, RemoveLiquidityOrder = 40, AutoUnblock = 50,
     }
 
-    public class PoolBufferAction
+    public class PoolAction
     {
-        public PoolBufferModelType ActionType { get; set; }
+        public PoolAction()
+        {
+        }
+
+        public PoolAction(PoolActionType actionType, Guid orderId, MatchingOrder order = null)
+        {
+            ActionType = actionType;
+            OrderId = orderId;
+            Order = order;
+        }
+
+        public PoolActionType ActionType { get; set; }
         public Guid OrderId { get; set; }
 
         /// <summary>null if CancelOrder</summary>
@@ -23,6 +34,6 @@ namespace MatchingEngine.Models
         public bool ToForce { get; set; }
 
         public override string ToString() =>
-            $"{nameof(PoolBufferAction)}({ActionType}, orderId:{OrderId}, order:{Order})";
+            $"{nameof(PoolAction)}({ActionType}, orderId:{OrderId}, order:{Order})";
     }
 }

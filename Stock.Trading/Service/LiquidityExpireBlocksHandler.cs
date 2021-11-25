@@ -31,9 +31,7 @@ namespace MatchingEngine.Services
         public async Task CheckBlockings()
         {
             if (_matchingPoolsHandler == null)
-            {
                 return;
-            }
 
             foreach (var blocking in _orderBlockings.Values.ToList())
             {
@@ -41,11 +39,7 @@ namespace MatchingEngine.Services
                     continue;
 
                 _matchingPoolsHandler.GetPool(blocking.CurrencyPairCode)
-                    .AddPoolBufferAction(new PoolBufferAction
-                    {
-                        ActionType = PoolBufferModelType.AutoUnblock,
-                        OrderId = blocking.OrderId,
-                    });
+                    .EnqueuePoolAction(PoolActionType.AutoUnblock, blocking.OrderId);
                 Remove(blocking.OrderId);
             }
         }

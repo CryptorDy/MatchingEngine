@@ -43,7 +43,7 @@ namespace Stock.Trading.Tests
             }
             else
             {
-                matchingPool.AddCreateOrderAction(order.Clone());
+                matchingPool.EnqueueCreateOrderAction(order.Clone());
             }
         }
     }
