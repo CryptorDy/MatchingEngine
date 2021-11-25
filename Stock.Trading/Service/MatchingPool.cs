@@ -310,6 +310,9 @@ namespace MatchingEngine.Services
             lock (_orders) //no access to pool (for removing) while matching is performed
             {
                 DateTime start = DateTime.UtcNow;
+                if (newOrder.ClientType != ClientType.LiquidityBot && newOrder.ClientType != ClientType.DealsBot)
+                    context.AddOrder(newOrder, true, OrderEventType.Create).Wait();
+
                 (modifiedOrders, newDeals) = _ordersMatcher.Match(_orders.Values, newOrder);
                 if (newOrder.IsActive)
                 {

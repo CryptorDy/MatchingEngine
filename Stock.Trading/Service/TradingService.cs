@@ -111,15 +111,9 @@ namespace MatchingEngine.Services
                 request.Price = Math.Round(request.Price, _currenciesCache.GetPriceDigits(request.CurrencyPairCode));
                 request.Amount = Math.Round(request.Amount, _currenciesCache.GetAmountDigits(request.CurrencyPairCode));
             }
+
             var order = _mapper.Map<Models.MatchingOrder>(request.GetOrder());
-
-            if (order.ClientType != ClientType.DealsBot)
-            {
-                await _context.AddOrder(order, true, OrderEventType.Create);
-            }
-
             _matchingPoolsHandler.GetPool(request.CurrencyPairCode).AddCreateOrderAction(order);
-
             return order.Id;
         }
 
