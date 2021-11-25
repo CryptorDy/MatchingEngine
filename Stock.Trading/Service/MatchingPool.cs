@@ -412,22 +412,24 @@ namespace MatchingEngine.Services
         {
             var date1 = DateTimeOffset.UtcNow;
             // delete
-            RemovePoolOrders(dto.OrdersToDelete.Select(_ => Guid.Parse(_.ActionId)).ToList(), ClientType.LiquidityBot);
+            foreach (var order in dto.OrdersToDelete)
+            {
+                AddPoolBufferAction(new PoolBufferAction
+                {
+                    ActionType = PoolBufferModelType.RemoveLiquidityOrder,
+                    OrderId = Guid.Parse(order.ActionId),
+                });
+            }
 
             var date2 = DateTimeOffset.UtcNow;
             // update
-            lock (_orders)
+            foreach (var order in dto.OrdersToUpdate)
             {
-                foreach (var order in dto.OrdersToUpdate)
+                AddPoolBufferAction(new PoolBufferAction
                 {
-                    var o = _orders.GetValueOrDefault(Guid.Parse(order.ActionId), null);
-                    if (o == null)
-                        continue;
-                    if (o.IsLocal)
-                        throw new ArgumentException($"Local exchange changes are forbidden. {o}");
-                    o.Amount = order.Amount;
-                    o.DateCreated = order.DateCreated;
-                }
+                    ActionType = PoolBufferModelType.UpdateLiquidityOrder,
+                    Order = _mapper.Map<MatchingOrder>(order.GetOrder()),
+                });
             }
 
             var date3 = DateTimeOffset.UtcNow;
@@ -443,6 +445,20 @@ namespace MatchingEngine.Services
                 if (dto.OrdersToAdd.Count > 100 || new Random().Next(100) == 0)
                     _logger.LogDebug($"SaveLiquidityImportUpdate()  Orders came:{dto.OrdersToAdd.Count}/{dto.OrdersToUpdate.Count}/{dto.OrdersToDelete.Count}. " +
                         $"Dates: {date1:HH:mm:ss.fff} {date2:HH:mm:ss.fff} {date3:HH:mm:ss.fff} {date4:HH:mm:ss.fff}. Orders in memory:{_orders.Count}");
+            }
+            SendOrdersToMarketData();
+        }
+        private void UpdateLiquidityOrder(MatchingOrder order)
+        {
+            lock (_orders)
+            {
+                var poolOrder = _orders.GetValueOrDefault(order.Id, null);
+                if (poolOrder == null)
+                    AddCreateOrderAction(order);
+                if (poolOrder.IsLocal)
+                    throw new ArgumentException($"Local exchange changes are forbidden. {poolOrder}");
+                poolOrder.Amount = order.Amount;
+                poolOrder.DateCreated = order.DateCreated;
             }
             SendOrdersToMarketData();
         }
@@ -497,11 +513,13 @@ namespace MatchingEngine.Services
         public void AddPoolBufferAction(PoolBufferAction action)
         {
             _actionsBuffer.Post(action);
+            if (_actionsBuffer.Count > 100 & new Random().Next(50) == 0)
+                _logger.LogWarning($"{_pairCode} actionsBuffer count:{_actionsBuffer.Count}");
         }
 
         public void AddCreateOrderAction(MatchingOrder order)
         {
-            _actionsBuffer.Post(new PoolBufferAction
+            AddPoolBufferAction(new PoolBufferAction
             {
                 ActionType = PoolBufferModelType.CreateOrder,
                 OrderId = order.Id,
@@ -511,7 +529,7 @@ namespace MatchingEngine.Services
 
         public void AddCancelOrderAction(Guid orderId, bool toForce = false)
         {
-            _actionsBuffer.Post(new PoolBufferAction
+            AddPoolBufferAction(new PoolBufferAction
             {
                 ActionType = PoolBufferModelType.CancelOrder,
                 OrderId = orderId,
@@ -530,15 +548,7 @@ namespace MatchingEngine.Services
                         continue;
                     newAction = await _actionsBuffer.ReceiveAsync(cancellationToken);
 
-                    if (newAction.ActionType == PoolBufferModelType.CancelOrder)
-                    {
-                        CancelOrder(newAction);
-                    }
-                    else if (newAction.ActionType == PoolBufferModelType.AutoUnblock)
-                    {
-                        await UnblockOrder(newAction.OrderId);
-                    }
-                    else
+                    if (newAction.ActionType == PoolBufferModelType.CreateOrder)
                     {
                         var newOrder = newAction.Order;
                         if (_deletedOrdersKeeper.Contains(newOrder.Id))
@@ -550,6 +560,26 @@ namespace MatchingEngine.Services
                         {
                             await ProcessNewOrder(newOrder);
                         }
+                    }
+                    if (newAction.ActionType == PoolBufferModelType.CancelOrder)
+                    {
+                        CancelOrder(newAction);
+                    }
+                    if (newAction.ActionType == PoolBufferModelType.UpdateLiquidityOrder)
+                    {
+                        UpdateLiquidityOrder(newAction.Order);
+                    }
+                    else if (newAction.ActionType == PoolBufferModelType.RemoveLiquidityOrder)
+                    {
+                        RemovePoolOrders(new List<Guid> { newAction.OrderId }, ClientType.LiquidityBot);
+                    }
+                    else if (newAction.ActionType == PoolBufferModelType.AutoUnblock)
+                    {
+                        await UnblockOrder(newAction.OrderId);
+                    }
+                    else
+                    {
+                        _logger.LogCritical($"ExecuteAsync {_pairCode} unknown action {newAction}");
                     }
                 }
                 catch (TaskCanceledException) { }
