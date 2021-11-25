@@ -4,6 +4,8 @@ using MatchingEngine.Models.LiquidityImport;
 using MatchingEngine.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Moq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -19,7 +21,7 @@ namespace Stock.Trading.Tests
         [Fact]
         public void EmptyDataReturnEmptyResult()
         {
-            var service = new OrdersMatcher(null);
+            var service = new OrdersMatcher(null, new Mock<Logger<OrdersMatcher>>().Object);
             var (modifiedOrders, newDeals) = service.Match(new List<MatchingOrder>(), OrdersHelper.CheapBid.Clone());
 
             Assert.Empty(modifiedOrders);
@@ -31,7 +33,7 @@ namespace Stock.Trading.Tests
         {
             var pool = new List<MatchingOrder> { OrdersHelper.CheapBid.Clone() };
 
-            var service = new OrdersMatcher(null);
+            var service = new OrdersMatcher(null, new Mock<Logger<OrdersMatcher>>().Object);
             var (modifiedOrders, newDeals) = service.Match(pool, OrdersHelper.ExpensiveAsk.Clone());
 
             Assert.Empty(modifiedOrders);
@@ -53,7 +55,7 @@ namespace Stock.Trading.Tests
                 MatchingOrder bid = ordersToMatch[0], ask = ordersToMatch[1];
                 var pool = new List<MatchingOrder> { bid.Clone() };
 
-                var service = new OrdersMatcher(null);
+                var service = new OrdersMatcher(null, new Mock<Logger<OrdersMatcher>>().Object);
                 var (modifiedOrders, newDeals) = service.Match(pool, ask.Clone());
 
                 decimal expectedDealVolume = Math.Min(bid.AvailableAmount, ask.AvailableAmount);
@@ -82,7 +84,7 @@ namespace Stock.Trading.Tests
                 OrdersHelper.CheapAskWithBlocked.Clone()
             };
 
-            var service = new OrdersMatcher(null);
+            var service = new OrdersMatcher(null, new Mock<Logger<OrdersMatcher>>().Object);
             var (modifiedOrders, newDeals) = service.Match(pool, OrdersHelper.CheapBid.Clone());
 
             Assert.Equal(2, newDeals.Count);

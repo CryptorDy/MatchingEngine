@@ -12,7 +12,7 @@ namespace Stock.Trading.Benchmark
         {
             Console.WriteLine($"test {ordersCount} orders start");
             List<MatchingOrder> orders = new List<MatchingOrder>();
-            var matcher = new OrdersMatcher(null);
+            var matcher = new OrdersMatcher(null, null);
             int deals = 0;
 
             Stopwatch watch = new Stopwatch();

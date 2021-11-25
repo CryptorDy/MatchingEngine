@@ -40,7 +40,8 @@ namespace Stock.Trading.Tests
             services.AddSingleton<IHostedService, MatchingPoolsHandler>(); // if not singleton then mulitple instances are created
             services.AddTransient<TradingService>();
             services.AddSingleton<MarketDataHolder>();
-            services.AddSingleton<OrdersMatcher>(_ => new OrdersMatcher(liquidityImportService.Object));
+            services.AddSingleton<OrdersMatcher>(_ =>
+                new OrdersMatcher(liquidityImportService.Object, new Mock<Logger<OrdersMatcher>>().Object));
             // cant register liquidityImportService because it expects class, not interface
             services.AddSingleton<ILiquidityDeletedOrdersKeeper, LiquidityDeletedOrdersKeeper>();
             services.AddSingleton<LiquidityExpireBlocksHandler>();

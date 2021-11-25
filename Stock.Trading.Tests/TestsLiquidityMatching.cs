@@ -3,6 +3,7 @@ using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
 using MatchingEngine.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using System;
 using System.Collections.Generic;
@@ -30,7 +31,7 @@ namespace Stock.Trading.Tests
             liquidityImportService
                 .Setup(_ => _.CreateTrade(It.IsAny<MatchingOrder>(), It.IsAny<MatchingOrder>()))
                 .Callback<MatchingOrder, MatchingOrder>((resultBid, resultAsk) => { liquidityCallbackCounter++; });
-            var ordersMatcher = new OrdersMatcher(liquidityImportService.Object);
+            var ordersMatcher = new OrdersMatcher(liquidityImportService.Object, new Mock<Logger<OrdersMatcher>>().Object);
             var (modifiedOrders, newDeals) = ordersMatcher.Match(new List<MatchingOrder> { bid.Clone() }, (MatchingOrder)ask.Clone());
 
             Assert.Empty(newDeals);
