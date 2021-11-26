@@ -446,7 +446,10 @@ namespace MatchingEngine.Services
             {
                 var poolOrder = _orders.GetValueOrDefault(order.Id, null);
                 if (poolOrder == null)
+                {
                     EnqueueCreateOrderAction(order);
+                    return;
+                }
                 if (poolOrder.IsLocal)
                     throw new ArgumentException($"Local exchange changes are forbidden. {poolOrder}");
                 poolOrder.Amount = order.Amount;
