@@ -105,7 +105,8 @@ namespace Stock.Trading.Tests
                     ServicesHelper.CreateServiceProvider((resultBid, resultAsk) => { liquidityCallbackCounter++; });
                 var matchingPool = matchingPoolsHandler.GetPool(OrdersHelper.CurrencyPairCode);
 
-                matchingPool.RemovePoolOrders(deletedIds);
+                foreach (var id in deletedIds)
+                    matchingPool.EnqueuePoolAction(PoolActionType.CancelOrder, id);
                 foreach (var order in poolOrders)
                 {
                     await OrdersHelper.CreateOrder(order, tradingService, matchingPool);

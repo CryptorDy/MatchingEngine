@@ -368,7 +368,7 @@ namespace MatchingEngine.Services
         /// <summary>Remove orders from pool and notify MarketData</summary>
         /// <param name="ids">ids to remove</param>
         /// <param name="clientType">optionally check that only certain clientType is removed</param>
-        public void RemovePoolOrders(IEnumerable<Guid> ids, ClientType? clientType = null)
+        private void RemovePoolOrders(IEnumerable<Guid> ids, ClientType? clientType = null)
         {
             _deletedOrdersKeeper.AddRange(ids);
             int countDeleted = 0;
@@ -460,7 +460,8 @@ namespace MatchingEngine.Services
             if (exchange == Exchange.Local)
                 throw new ArgumentException("Local exchange changes are forbidden");
             var ids = _orders.Values.Where(_ => _.Exchange == exchange).Select(_ => _.Id).ToList();
-            RemovePoolOrders(ids, ClientType.LiquidityBot);
+            foreach (var id in ids)
+                EnqueuePoolAction(PoolActionType.RemoveLiquidityOrder, id);
         }
 
         public void RemoveLiquidityOldOrders()
@@ -547,11 +548,11 @@ namespace MatchingEngine.Services
                             await ProcessNewOrder(newOrder);
                         }
                     }
-                    if (newAction.ActionType == PoolActionType.CancelOrder)
+                    else if (newAction.ActionType == PoolActionType.CancelOrder)
                     {
                         CancelOrder(newAction);
                     }
-                    if (newAction.ActionType == PoolActionType.UpdateLiquidityOrder)
+                    else if (newAction.ActionType == PoolActionType.UpdateLiquidityOrder)
                     {
                         UpdateLiquidityOrder(newAction.Order);
                     }
