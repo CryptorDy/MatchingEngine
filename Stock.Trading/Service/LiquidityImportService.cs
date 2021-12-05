@@ -10,7 +10,7 @@ namespace MatchingEngine.Services
 {
     public interface ILiquidityImportService
     {
-        Task CreateTrade(MatchingOrder bid, MatchingOrder ask);
+        Task CreateTrade(LiquidityTrade liquidityTrade);
 
         Task RemoveOrderbook(Exchange exchange, string currencyPairCode);
     }
@@ -27,14 +27,12 @@ namespace MatchingEngine.Services
             _logger = logger;
         }
 
-        public async Task CreateTrade(MatchingOrder bid, MatchingOrder ask)
+        public async Task CreateTrade(LiquidityTrade liquidityTrade)
         {
             try
             {
-                var localOrder = bid.IsLocal ? bid : ask;
-                _logger.LogInformation($"CreateTrade() start {localOrder.Id} {localOrder.CurrencyPairCode}");
-                await _gatewayHttpClient.PostJsonAsync($"liquiditymain/trade/create",
-                    new ExternalMatchingPair { Bid = bid, Ask = ask });
+                _logger.LogInformation($"CreateTrade() start\n {liquidityTrade.Bid}\n {liquidityTrade.Ask}");
+                await _gatewayHttpClient.PostJsonAsync($"liquiditymain/trade/create", liquidityTrade);
                 _logger.LogInformation($"CreateTrade() end");
             }
             catch (Exception e)

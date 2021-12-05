@@ -1,3 +1,4 @@
+using System;
 using TLabs.ExchangeSdk;
 using TLabs.ExchangeSdk.Trading;
 
@@ -5,6 +6,8 @@ namespace MatchingEngine.Models.LiquidityImport
 {
     public class ExternalTrade
     {
+        public Guid Id { get; set; }
+
         public bool IsBid { get; set; }
 
         public decimal Amount { get; set; }

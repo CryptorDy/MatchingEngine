@@ -22,10 +22,12 @@ namespace MatchingEngine.Services
 
         private bool NotBothImported(MatchingOrder order1, MatchingOrder order2) => order1.IsLocal || order2.IsLocal;
 
-        public (List<MatchingOrder> modifiedOrders, List<Deal> newDeals) Match(IEnumerable<MatchingOrder> pool, MatchingOrder newOrder)
+        public (List<MatchingOrder> modifiedOrders, List<Deal> newDeals, List<LiquidityTrade> liquidityTrades)
+            Match(IEnumerable<MatchingOrder> pool, MatchingOrder newOrder)
         {
-            var modifiedOrders = new List<MatchingOrder>();
-            var newDeals = new List<Deal>();
+            List<MatchingOrder> modifiedOrders = new();
+            List<Deal> newDeals = new();
+            List<LiquidityTrade> liquidityTrades = new();
 
             var poolOrdersQuery = pool.Where(o => o.HasSameCurrencyPair(newOrder)
                 && !o.HasSameOrderbookSide(newOrder)
@@ -53,12 +55,22 @@ namespace MatchingEngine.Services
                     if (bid.Blocked != 0 || ask.Blocked != 0)
                         _logger.LogWarning($"Incorrect blocked state: {bid}, {ask}");
 
-                    _liquidityImportService.CreateTrade(bid, ask);
                     // liquidity will try to fill all amount of local order
                     newOrder.Blocked = newOrder.AvailableAmount;
                     poolOrder.Blocked = poolOrder.AvailableAmount;
                     newOrder.LiquidityBlocksCount++;
                     poolOrder.LiquidityBlocksCount++;
+                    var liquidityTrade = new LiquidityTrade
+                    {
+                        Id = Guid.NewGuid(),
+                        BidId = bid.Id,
+                        AskId = ask.Id,
+                        Bid = (Bid)bid,
+                        Ask = (Ask)ask,
+                        IsBid = bid.IsLocal,
+                    };
+                    liquidityTrades.Add(liquidityTrade);
+                    _liquidityImportService.CreateTrade(liquidityTrade);
                 }
                 else
                 {
@@ -76,7 +88,7 @@ namespace MatchingEngine.Services
             if (modifiedOrders.Count > 0)
                 modifiedOrders.Add(newOrder);
 
-            return (modifiedOrders, newDeals);
+            return (modifiedOrders, newDeals, liquidityTrades);
         }
     }
 }

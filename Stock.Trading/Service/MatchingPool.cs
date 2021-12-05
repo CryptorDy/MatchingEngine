@@ -75,12 +75,11 @@ namespace MatchingEngine.Services
             return _orders.GetValueOrDefault(id, null);
         }
 
-        private async Task UpdateDatabase(TradingDbContext context, List<MatchingOrder> modifiedOrders, List<Deal> newDeals)
+        private async Task UpdateDatabase(TradingDbContext context, List<MatchingOrder> modifiedOrders, List<Deal> newDeals,
+            List<LiquidityTrade> newLiquidityTrades = null)
         {
-            if (modifiedOrders.Count == 0 && newDeals.Count == 0)
-            {
+            if (modifiedOrders.Count == 0 && newDeals.Count == 0 && (newLiquidityTrades == null || newLiquidityTrades.Count == 0))
                 return;
-            }
 
             if (modifiedOrders.Count > 0)
             {
@@ -94,9 +93,7 @@ namespace MatchingEngine.Services
                     {
                         // only save copy of imported order (after external trade), not the initial imported order
                         if (!order.IsLocal && order.Fulfilled == 0)
-                        {
                             continue;
-                        }
 
                         // create if external or FromInnerBot and wasn't created yet
                         if (dbOrder == null && (!order.IsLocal || order.ClientType == ClientType.DealsBot))
@@ -145,6 +142,8 @@ namespace MatchingEngine.Services
                 context.Deals.AddRange(newDeals);
                 context.DealCopies.AddRange(newDeals.Select(_ => new DealCopy(_)));
             }
+            if (newLiquidityTrades != null)
+                context.LiquidityTrades.AddRange(newLiquidityTrades);
 
             await context.SaveChangesAsync();
         }
@@ -193,8 +192,10 @@ namespace MatchingEngine.Services
             _logger.LogInformation($"UpdateExternalOrder() start: {externalTrade}");
             using var scope = _serviceScopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+
             var modifiedOrders = new List<MatchingOrder>();
             var newDeals = new List<Deal>();
+            var liquidityTrade = await db.LiquidityTrades.FirstOrDefaultAsync(_ => _.Id == externalTrade.Id);
             MatchingOrder newImportedOrder = null;
             lock (_orders)
             {
@@ -225,8 +226,8 @@ namespace MatchingEngine.Services
                     || isTooMuchExternallyFulfilled;
                 if (isFullfillmentError)
                     _logger.LogError($"UpdateExternalOrder() error: invalid {externalTrade} for {matchedLocalOrder}");
-                // Update matched orders
 
+                // Update matched orders
                 if (matchedImportedOrder != null)
                     matchedImportedOrder.Blocked = 0;
 
@@ -257,8 +258,23 @@ namespace MatchingEngine.Services
                     modifiedOrders.Add(newImportedOrder);
 
                     // Create deal
-                    newDeals.Add(new Deal(matchedLocalOrder, newImportedOrder,
-                        externalTrade.MatchingEngineDealPrice, externalTrade.Fulfilled));
+                    var deal = new Deal(matchedLocalOrder, newImportedOrder,
+                        externalTrade.MatchingEngineDealPrice, externalTrade.Fulfilled);
+                    newDeals.Add(deal);
+
+                    if (liquidityTrade == null) // in case service stopped before liquidityTrade was saved
+                    {
+                        liquidityTrade = new LiquidityTrade(bid, ask)
+                        {
+                            Id = externalTrade.Id,
+                        };
+                        db.LiquidityTrades.Add(liquidityTrade);
+                        _logger.LogWarning($"SaveExternalOrderResult liquidityTrade had to be recreated {liquidityTrade}");
+                    }
+                    liquidityTrade.DealId = deal.DealId;
+                    // TODO change status?
+
+                    db.SaveChanges();
                 }
                 UpdateDatabase(db, modifiedOrders, newDeals).Wait();
             }
@@ -266,8 +282,8 @@ namespace MatchingEngine.Services
 
             var result = new SaveExternalOrderResult
             {
-                NewExternalOrderId = newDeals.Count > 0 ? newImportedOrder.Id.ToString() : null,
-                CreatedDealId = newDeals.FirstOrDefault()?.DealId.ToString() ?? null,
+                NewExternalOrderId = newDeals.Count > 0 ? newImportedOrder.Id : null,
+                CreatedDealId = newDeals.FirstOrDefault()?.DealId ?? null,
             };
             _logger.LogInformation($"UpdateExternalOrder() finished. {result}\n newImportedOrder:{newImportedOrder}");
             return result;
@@ -306,6 +322,7 @@ namespace MatchingEngine.Services
             var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
             List<MatchingOrder> modifiedOrders;
             List<Deal> newDeals;
+            List<LiquidityTrade> liquidityTrades;
 
             lock (_orders) // no access to pool (for removing) while matching is performed
             {
@@ -313,7 +330,7 @@ namespace MatchingEngine.Services
                 if (newOrder.ClientType != ClientType.LiquidityBot && newOrder.ClientType != ClientType.DealsBot)
                     context.AddOrder(newOrder, true, OrderEventType.Create).Wait();
 
-                (modifiedOrders, newDeals) = _ordersMatcher.Match(_orders.Values, newOrder);
+                (modifiedOrders, newDeals, liquidityTrades) = _ordersMatcher.Match(_orders.Values, newOrder);
                 if (newOrder.IsActive)
                 {
                     _orders[newOrder.Id] = newOrder;
