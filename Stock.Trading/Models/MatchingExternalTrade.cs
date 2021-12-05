@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 
 namespace MatchingEngine.Models
 {
-    public class LiquidityTrade
+    public class MatchingExternalTrade
     {
-        public LiquidityTrade()
+        public MatchingExternalTrade()
         {
         }
 
-        public LiquidityTrade(MatchingOrder bid, MatchingOrder ask)
+        public MatchingExternalTrade(MatchingOrder bid, MatchingOrder ask)
         {
             Id = Guid.NewGuid();
             BidId = bid.Id;
@@ -31,7 +31,7 @@ namespace MatchingEngine.Models
         public Bid Bid { get; set; }
         public Ask Ask { get; set; }
 
-        public override string ToString() => $"{nameof(LiquidityTrade)}({Id}, {(DealId.HasValue ? $"Deal: {DealId}, " : "")}" +
+        public override string ToString() => $"{nameof(MatchingExternalTrade)}({Id}, {(DealId.HasValue ? $"Deal: {DealId}, " : "")}" +
             $"\n Bid:{Bid.ToString() ?? BidId.ToString()},\n Ask:{Ask.ToString() ?? AskId.ToString()})";
     }
 }

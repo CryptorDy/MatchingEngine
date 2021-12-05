@@ -10,7 +10,7 @@ namespace MatchingEngine.Services
 {
     public interface ILiquidityImportService
     {
-        Task CreateTrade(LiquidityTrade liquidityTrade);
+        Task CreateTrade(MatchingExternalTrade liquidityTrade);
 
         Task RemoveOrderbook(Exchange exchange, string currencyPairCode);
     }
@@ -27,7 +27,7 @@ namespace MatchingEngine.Services
             _logger = logger;
         }
 
-        public async Task CreateTrade(LiquidityTrade liquidityTrade)
+        public async Task CreateTrade(MatchingExternalTrade liquidityTrade)
         {
             try
             {

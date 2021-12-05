@@ -29,7 +29,7 @@ namespace MatchingEngine.Data
 
         public virtual DbSet<Deal> Deals { get; set; }
         public virtual DbSet<DealCopy> DealCopies { get; set; }
-        public virtual DbSet<LiquidityTrade> LiquidityTrades { get; set; }
+        public virtual DbSet<MatchingExternalTrade> ExternalTrades { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -48,8 +48,8 @@ namespace MatchingEngine.Data
             builder.Entity<Deal>().HasIndex(_ => _.IsSentToDealEnding);
             builder.Entity<Deal>().HasIndex(_ => _.FromInnerTradingBot);
 
-            builder.Entity<LiquidityTrade>().HasKey(_ => _.Id);
-            builder.Entity<LiquidityTrade>().Property(_ => _.DateCreated).ValueGeneratedOnAdd().HasDefaultValueSql("current_timestamp");
+            builder.Entity<MatchingExternalTrade>().HasKey(_ => _.Id);
+            builder.Entity<MatchingExternalTrade>().Property(_ => _.DateCreated).ValueGeneratedOnAdd().HasDefaultValueSql("current_timestamp");
         }
 
         #region Order setters

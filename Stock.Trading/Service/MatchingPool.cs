@@ -76,7 +76,7 @@ namespace MatchingEngine.Services
         }
 
         private async Task UpdateDatabase(TradingDbContext context, List<MatchingOrder> modifiedOrders, List<Deal> newDeals,
-            List<LiquidityTrade> newLiquidityTrades = null)
+            List<MatchingExternalTrade> newLiquidityTrades = null)
         {
             if (modifiedOrders.Count == 0 && newDeals.Count == 0 && (newLiquidityTrades == null || newLiquidityTrades.Count == 0))
                 return;
@@ -143,7 +143,7 @@ namespace MatchingEngine.Services
                 context.DealCopies.AddRange(newDeals.Select(_ => new DealCopy(_)));
             }
             if (newLiquidityTrades != null)
-                context.LiquidityTrades.AddRange(newLiquidityTrades);
+                context.ExternalTrades.AddRange(newLiquidityTrades);
 
             await context.SaveChangesAsync();
         }
@@ -195,7 +195,7 @@ namespace MatchingEngine.Services
 
             var modifiedOrders = new List<MatchingOrder>();
             var newDeals = new List<Deal>();
-            var liquidityTrade = await db.LiquidityTrades.FirstOrDefaultAsync(_ => _.Id == externalTrade.Id);
+            var liquidityTrade = await db.ExternalTrades.FirstOrDefaultAsync(_ => _.Id == externalTrade.Id);
             MatchingOrder newImportedOrder = null;
             lock (_orders)
             {
@@ -264,11 +264,11 @@ namespace MatchingEngine.Services
 
                     if (liquidityTrade == null) // in case service stopped before liquidityTrade was saved
                     {
-                        liquidityTrade = new LiquidityTrade(bid, ask)
+                        liquidityTrade = new MatchingExternalTrade(bid, ask)
                         {
                             Id = externalTrade.Id,
                         };
-                        db.LiquidityTrades.Add(liquidityTrade);
+                        db.ExternalTrades.Add(liquidityTrade);
                         _logger.LogWarning($"SaveExternalOrderResult liquidityTrade had to be recreated {liquidityTrade}");
                     }
                     liquidityTrade.DealId = deal.DealId;
@@ -322,7 +322,7 @@ namespace MatchingEngine.Services
             var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
             List<MatchingOrder> modifiedOrders;
             List<Deal> newDeals;
-            List<LiquidityTrade> liquidityTrades;
+            List<MatchingExternalTrade> liquidityTrades;
 
             lock (_orders) // no access to pool (for removing) while matching is performed
             {

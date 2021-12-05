@@ -22,12 +22,12 @@ namespace MatchingEngine.Services
 
         private bool NotBothImported(MatchingOrder order1, MatchingOrder order2) => order1.IsLocal || order2.IsLocal;
 
-        public (List<MatchingOrder> modifiedOrders, List<Deal> newDeals, List<LiquidityTrade> liquidityTrades)
+        public (List<MatchingOrder> modifiedOrders, List<Deal> newDeals, List<MatchingExternalTrade> liquidityTrades)
             Match(IEnumerable<MatchingOrder> pool, MatchingOrder newOrder)
         {
             List<MatchingOrder> modifiedOrders = new();
             List<Deal> newDeals = new();
-            List<LiquidityTrade> liquidityTrades = new();
+            List<MatchingExternalTrade> liquidityTrades = new();
 
             var poolOrdersQuery = pool.Where(o => o.HasSameCurrencyPair(newOrder)
                 && !o.HasSameOrderbookSide(newOrder)
@@ -60,7 +60,7 @@ namespace MatchingEngine.Services
                     poolOrder.Blocked = poolOrder.AvailableAmount;
                     newOrder.LiquidityBlocksCount++;
                     poolOrder.LiquidityBlocksCount++;
-                    var liquidityTrade = new LiquidityTrade
+                    var liquidityTrade = new MatchingExternalTrade
                     {
                         Id = Guid.NewGuid(),
                         BidId = bid.Id,
