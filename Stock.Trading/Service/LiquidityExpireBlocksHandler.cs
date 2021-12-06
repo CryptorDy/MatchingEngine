@@ -39,7 +39,7 @@ namespace MatchingEngine.Services
                     continue;
 
                 _matchingPoolsHandler.GetPool(blocking.CurrencyPairCode)
-                    .EnqueuePoolAction(PoolActionType.AutoUnblock, blocking.OrderId);
+                    .EnqueuePoolAction(PoolActionType.AutoUnblockOrder, blocking.OrderId);
                 Remove(blocking.OrderId);
             }
         }

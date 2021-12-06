@@ -18,8 +18,8 @@ namespace MatchingEngine.Models.LiquidityImport
         public decimal MatchingEngineDealPrice { get; set; }
 
         public string ExchangeOrderId { get; set; }
-        public string TradingBidId { get; set; }
-        public string TradingAskId { get; set; }
+        public Guid TradingBidId { get; set; }
+        public Guid TradingAskId { get; set; }
 
         public Exchange Exchange { get; set; }
 

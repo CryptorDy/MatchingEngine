@@ -1,3 +1,4 @@
+using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
 using MatchingEngine.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -28,11 +29,12 @@ namespace Stock.Trading.Controllers
         }
 
         [HttpPost("trade-result")]
-        public async Task<SaveExternalOrderResult> ApplyTradeResult([FromBody] ExternalTrade createdOrder)
+        public async Task<IActionResult> ApplyTradeResult([FromBody] ExternalTrade externalTrade)
         {
-            var result = await _matchingPoolsHandler.GetPool(createdOrder.CurrencyPairCode)
-                .SaveExternalOrderResult(createdOrder);
-            return result;
+            var orderId = externalTrade.IsBid ? externalTrade.TradingBidId : externalTrade.TradingAskId;
+            _matchingPoolsHandler.GetPool(externalTrade.CurrencyPairCode)
+                .EnqueuePoolAction(PoolActionType.ExternalTradeResult, orderId, externalTrade: externalTrade);
+            return Ok();
         }
 
         [Obsolete("For LiquidityMain versions <= 1.0.291")]

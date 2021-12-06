@@ -6,6 +6,11 @@ using System.Threading.Tasks;
 
 namespace MatchingEngine.Models
 {
+    public enum MatchingExternalTradeStatus
+    {
+        Created = 0, FinishedFulfilled = 100, FinishedNotFulfilled = 110, FinishedError = 120, FinishedTimeout = 130,
+    }
+
     public class MatchingExternalTrade
     {
         public MatchingExternalTrade()
@@ -15,6 +20,7 @@ namespace MatchingEngine.Models
         public MatchingExternalTrade(MatchingOrder bid, MatchingOrder ask)
         {
             Id = Guid.NewGuid();
+            Status = MatchingExternalTradeStatus.Created;
             BidId = bid.Id;
             AskId = ask.Id;
             Bid = (Bid)bid;
@@ -23,6 +29,7 @@ namespace MatchingEngine.Models
         }
 
         public Guid Id { get; set; }
+        public MatchingExternalTradeStatus Status { get; set; }
         public DateTimeOffset DateCreated { get; set; }
         public Guid BidId { get; set; }
         public Guid AskId { get; set; }

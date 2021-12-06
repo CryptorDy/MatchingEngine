@@ -203,16 +203,16 @@ namespace MatchingEngine.Services
                     externalTrade.Fulfilled = Math.Round(externalTrade.Fulfilled, _currenciesCache.GetAmountDigits(externalTrade.CurrencyPairCode));
 
                 // Find previously matched orders
-                MatchingOrder bid = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingBidId), null);
-                MatchingOrder ask = _orders.GetValueOrDefault(Guid.Parse(externalTrade.TradingAskId), null);
+                MatchingOrder bid = _orders.GetValueOrDefault(externalTrade.TradingBidId, null);
+                MatchingOrder ask = _orders.GetValueOrDefault(externalTrade.TradingAskId, null);
                 if (bid == null)
                 {
-                    bid = db.Bids.FirstOrDefault(_ => _.Id == Guid.Parse(externalTrade.TradingBidId));
+                    bid = db.Bids.FirstOrDefault(_ => _.Id == externalTrade.TradingBidId);
                     _logger.LogWarning($"UpdateExternalOrder() couldn't find bid of {externalTrade} in pool. In DB: {bid}");
                 }
                 if (ask == null)
                 {
-                    ask = db.Asks.FirstOrDefault(_ => _.Id == Guid.Parse(externalTrade.TradingAskId));
+                    ask = db.Asks.FirstOrDefault(_ => _.Id == externalTrade.TradingAskId);
                     _logger.LogWarning($"UpdateExternalOrder() couldn't find ask of {externalTrade} in pool. In DB: {ask}");
                 }
 
@@ -272,8 +272,9 @@ namespace MatchingEngine.Services
                         _logger.LogWarning($"SaveExternalOrderResult liquidityTrade had to be recreated {liquidityTrade}");
                     }
                     liquidityTrade.DealId = deal.DealId;
-                    // TODO change status?
-
+                    liquidityTrade.Status = isFullfillmentError ? MatchingExternalTradeStatus.FinishedError
+                        : externalTrade.Fulfilled > 0 ? MatchingExternalTradeStatus.FinishedFulfilled
+                        : MatchingExternalTradeStatus.FinishedNotFulfilled;
                     db.SaveChanges();
                 }
                 UpdateDatabase(db, modifiedOrders, newDeals).Wait();
@@ -525,7 +526,7 @@ namespace MatchingEngine.Services
         }
 
         public void EnqueuePoolAction(PoolActionType actionType, Guid orderId, MatchingOrder order = null,
-            bool toForce = false)
+            bool toForce = false, ExternalTrade externalTrade = null)
         {
             var action = new PoolAction
             {
@@ -533,6 +534,7 @@ namespace MatchingEngine.Services
                 OrderId = orderId,
                 Order = order,
                 ToForce = toForce,
+                ExternalTrade = externalTrade,
             };
             _actionsBuffer.Post(action);
             if (_actionsBuffer.Count > 100 & new Random().Next(50) == 0)
@@ -580,7 +582,11 @@ namespace MatchingEngine.Services
                     {
                         RemovePoolOrders(new List<Guid> { newAction.OrderId }, ClientType.LiquidityBot);
                     }
-                    else if (newAction.ActionType == PoolActionType.AutoUnblock)
+                    else if (newAction.ActionType == PoolActionType.ExternalTradeResult)
+                    {
+                        var result = await SaveExternalOrderResult(newAction.ExternalTrade);
+                    }
+                    else if (newAction.ActionType == PoolActionType.AutoUnblockOrder)
                     {
                         await UnblockOrder(newAction.OrderId);
                     }
