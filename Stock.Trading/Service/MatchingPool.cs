@@ -187,15 +187,21 @@ namespace MatchingEngine.Services
             }
         }
 
-        public async Task<SaveExternalOrderResult> SaveExternalOrderResult(ExternalTrade externalTrade)
+        public async Task SaveExternalTradeResult(ExternalTrade externalTrade)
         {
-            _logger.LogInformation($"UpdateExternalOrder() start: {externalTrade}");
+            _logger.LogInformation($"SaveExternalTradeResult start: {externalTrade}");
             using var scope = _serviceScopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
 
+            var liquidityTrade = await db.ExternalTrades.FirstOrDefaultAsync(_ => _.Id == externalTrade.Id);
+            if (liquidityTrade != null && liquidityTrade.Status != MatchingExternalTradeStatus.Created)
+            {
+                _logger.LogWarning($"SaveExternalTradeResult already saved: {liquidityTrade}");
+                return;
+            }
+
             var modifiedOrders = new List<MatchingOrder>();
             var newDeals = new List<Deal>();
-            var liquidityTrade = await db.ExternalTrades.FirstOrDefaultAsync(_ => _.Id == externalTrade.Id);
             MatchingOrder newImportedOrder = null;
             lock (_orders)
             {
@@ -208,12 +214,12 @@ namespace MatchingEngine.Services
                 if (bid == null)
                 {
                     bid = db.Bids.FirstOrDefault(_ => _.Id == externalTrade.TradingBidId);
-                    _logger.LogWarning($"UpdateExternalOrder() couldn't find bid of {externalTrade} in pool. In DB: {bid}");
+                    _logger.LogWarning($"SaveExternalTradeResult couldn't find bid of {externalTrade} in pool. In DB: {bid}");
                 }
                 if (ask == null)
                 {
                     ask = db.Asks.FirstOrDefault(_ => _.Id == externalTrade.TradingAskId);
-                    _logger.LogWarning($"UpdateExternalOrder() couldn't find ask of {externalTrade} in pool. In DB: {ask}");
+                    _logger.LogWarning($"SaveExternalTradeResult couldn't find ask of {externalTrade} in pool. In DB: {ask}");
                 }
 
                 var (matchedLocalOrder, matchedImportedOrder) = externalTrade.IsBid ? (bid, ask) : (ask, bid);
@@ -225,7 +231,7 @@ namespace MatchingEngine.Services
                     || !matchedLocalOrder.IsLocal
                     || isTooMuchExternallyFulfilled;
                 if (isFullfillmentError)
-                    _logger.LogError($"UpdateExternalOrder() error: invalid {externalTrade} for {matchedLocalOrder}");
+                    _logger.LogError($"SaveExternalTradeResult error: invalid {externalTrade} for {matchedLocalOrder}");
 
                 // Update matched orders
                 if (matchedImportedOrder != null)
@@ -269,7 +275,7 @@ namespace MatchingEngine.Services
                             Id = externalTrade.Id,
                         };
                         db.ExternalTrades.Add(liquidityTrade);
-                        _logger.LogWarning($"SaveExternalOrderResult liquidityTrade had to be recreated {liquidityTrade}");
+                        _logger.LogWarning($"SaveExternalTradeResult liquidityTrade had to be recreated {liquidityTrade}");
                     }
                     liquidityTrade.DealId = deal.DealId;
                     liquidityTrade.Status = isFullfillmentError ? MatchingExternalTradeStatus.FinishedError
@@ -280,14 +286,7 @@ namespace MatchingEngine.Services
                 UpdateDatabase(db, modifiedOrders, newDeals).Wait();
             }
             await ReportData(db, modifiedOrders, newDeals);
-
-            var result = new SaveExternalOrderResult
-            {
-                NewExternalOrderId = newDeals.Count > 0 ? newImportedOrder.Id : null,
-                CreatedDealId = newDeals.FirstOrDefault()?.DealId ?? null,
-            };
-            _logger.LogInformation($"UpdateExternalOrder() finished. {result}\n newImportedOrder:{newImportedOrder}");
-            return result;
+            _logger.LogInformation($"SaveExternalTradeResult finished. {liquidityTrade}\n newImportedOrder:{newImportedOrder}");
         }
 
         public void SendOrdersToMarketData()
@@ -584,7 +583,7 @@ namespace MatchingEngine.Services
                     }
                     else if (newAction.ActionType == PoolActionType.ExternalTradeResult)
                     {
-                        var result = await SaveExternalOrderResult(newAction.ExternalTrade);
+                        await SaveExternalTradeResult(newAction.ExternalTrade);
                     }
                     else if (newAction.ActionType == PoolActionType.AutoUnblockOrder)
                     {

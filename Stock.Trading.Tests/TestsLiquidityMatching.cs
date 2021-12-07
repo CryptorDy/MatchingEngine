@@ -79,7 +79,7 @@ namespace Stock.Trading.Tests
             Assert.Equal(0, savedBid.AvailableAmount);
 
             // calling from liquidity with result
-            await matchingPool.SaveExternalOrderResult(new ExternalTrade
+            await matchingPool.SaveExternalTradeResult(new ExternalTrade
             {
                 IsBid = bid.IsLocal,
                 TradingBidId = bid.Id.ToString(),

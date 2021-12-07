@@ -1,7 +1,9 @@
+using MatchingEngine.Data;
 using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
 using MatchingEngine.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -15,21 +17,31 @@ namespace Stock.Trading.Controllers
     [Route("api/liquidityimport")]
     public class LiquidityImportController : Controller
     {
+        private readonly TradingDbContext _context;
         private readonly MatchingPoolsHandler _matchingPoolsHandler;
         private readonly LiquidityExpireWatcher _liquidityExpireWatcher;
         private readonly ILogger _logger;
 
-        public LiquidityImportController(
+        public LiquidityImportController(TradingDbContext context,
             SingletonsAccessor singletonsAccessor,
             ILogger<LiquidityImportController> logger)
         {
+            _context = context;
             _matchingPoolsHandler = singletonsAccessor.MatchingPoolsHandler;
             _liquidityExpireWatcher = singletonsAccessor.LiquidityExpireWatcher;
             _logger = logger;
         }
 
-        [HttpPost("trade-result")]
-        public async Task<IActionResult> ApplyTradeResult([FromBody] ExternalTrade externalTrade)
+
+        [HttpGet("trades/{id}")]
+        public async Task<MatchingExternalTrade> GetExternalTrade(Guid id)
+        {
+            var model = await _context.ExternalTrades.FirstOrDefaultAsync(_ => _.Id == id);
+            return model;
+        }
+
+        [HttpPost("trades/result")]
+        public async Task<IActionResult> EnqueueExternalTradeResult([FromBody] ExternalTrade externalTrade)
         {
             var orderId = externalTrade.IsBid ? externalTrade.TradingBidId : externalTrade.TradingAskId;
             _matchingPoolsHandler.GetPool(externalTrade.CurrencyPairCode)
