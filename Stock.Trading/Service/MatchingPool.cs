@@ -25,7 +25,7 @@ namespace MatchingEngine.Services
     public class MatchingPool : BackgroundService
     {
         public readonly string _pairCode;
-        private readonly BufferBlock<PoolAction> _actionsBuffer = new();
+        private readonly BlockingCollection<PoolAction> _actionsBuffer = new();
         private readonly ConcurrentDictionary<Guid, MatchingOrder> _orders = new();
 
         private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -517,9 +517,12 @@ namespace MatchingEngine.Services
                 Order = order,
                 ToForce = toForce,
             };
-            _actionsBuffer.Post(action);
-            if (_actionsBuffer.Count > 100 & new Random().Next(50) == 0)
-                _logger.LogWarning($"{_pairCode} actionsBuffer count:{_actionsBuffer.Count}");
+            _actionsBuffer.Add(action);
+            if (_actionsBuffer.Count > 200 && new Random().Next(50) == 0)
+            {
+                var byActionType = _actionsBuffer.GroupBy(_ => _.ActionType).OrderBy(_ => _.Key).Select(_ => $"{_.Key}: {_.Count()}");
+                _logger.LogWarning($"{_pairCode} actionsBuffer total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}");
+            }
         }
 
         public void EnqueueCreateOrderAction(MatchingOrder order)
@@ -534,9 +537,9 @@ namespace MatchingEngine.Services
             {
                 try
                 {
-                    if (!await _actionsBuffer.OutputAvailableAsync(cancellationToken))
-                        continue;
-                    newAction = await _actionsBuffer.ReceiveAsync(cancellationToken);
+                    bool isReceived = _actionsBuffer.TryTake(out newAction, Timeout.Infinite, cancellationToken);
+                    if (!isReceived)
+                        break; // cancellationToken was called
 
                     if (newAction.ActionType == PoolActionType.CreateOrder)
                     {
@@ -578,6 +581,7 @@ namespace MatchingEngine.Services
                     _logger.LogError(ex, $"{newAction}");
                 }
             }
+            _actionsBuffer.Dispose();
         }
     }
 }
