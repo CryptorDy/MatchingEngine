@@ -369,8 +369,7 @@ namespace MatchingEngine.Services
                     _logger.LogWarning($"CancelOrder {errorText} for {dbOrder}");
                     return;
                 }
-                var order = GetPoolOrder(cancelAction.OrderId);
-                _orders.TryRemove(order.Id, out _);
+                _orders.TryRemove(cancelAction.OrderId, out _);
                 _deletedOrdersKeeper.Add(cancelAction.OrderId);
 
                 dbOrder.IsCanceled = true;
