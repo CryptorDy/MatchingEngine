@@ -366,7 +366,8 @@ namespace MatchingEngine.Services
                 _logger.LogDebug($"CancelOrder() {dbOrder}");
                 if (errorText.HasValue())
                 {
-                    _logger.LogWarning($"CancelOrder {errorText} for {dbOrder}");
+                    if (errorText != CancelOrderResponseStatus.AlreadyFilled.ToString())
+                        _logger.LogWarning($"CancelOrder {errorText} for {dbOrder}");
                     return;
                 }
                 _orders.TryRemove(cancelAction.OrderId, out _);
