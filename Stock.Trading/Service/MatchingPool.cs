@@ -174,12 +174,12 @@ namespace MatchingEngine.Services
                         .Where(d => dealGuids.Contains(d.DealId))
                         .ToDictionary(d => d.DealId, d => d);
 
-                    foreach (var item in newDeals)
+                    foreach (var deal in newDeals)
                     {
-                        var dbDeal = dbDeals[item.DealId];
+                        var dbDeal = dbDeals[deal.DealId];
                         await SendDealToMarketData(dbDeal);
+                        _ = _dealEndingService.SendDeal(deal);
                     }
-                    _ = _dealEndingService.SendDeals();
                 }
             }
             catch (Exception ex)
