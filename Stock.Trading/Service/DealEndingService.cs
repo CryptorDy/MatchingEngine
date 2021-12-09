@@ -73,7 +73,8 @@ namespace MatchingEngine.Services
             try
             {
                 _isSendingDeals = true;
-                while (true)
+                int errorsCount = 0;
+                while (errorsCount == 0)
                 {
                     using (var scope = _scopeFactory.CreateScope())
                     {
@@ -87,8 +88,7 @@ namespace MatchingEngine.Services
                         if (unprocessedDeals.Count == 0)
                             break;
                         _logger.LogDebug($"SendDeals() unprocessed:{unprocessedDeals.Count}");
-
-                        int errorsCount = 0;
+                        errorsCount = 0;
                         foreach (var deal in unprocessedDeals)
                         {
                             try
