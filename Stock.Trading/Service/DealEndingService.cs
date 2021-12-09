@@ -96,7 +96,6 @@ namespace MatchingEngine.Services
                     }
                     await Task.Delay(200);
                 }
-                
             }
             catch (Exception ex)
             {
