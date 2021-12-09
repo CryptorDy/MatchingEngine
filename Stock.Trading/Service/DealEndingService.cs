@@ -60,42 +60,38 @@ namespace MatchingEngine.Services
             try
             {
                 _isSendingDeals = true;
-                while (true)
+                using var scope = _scopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+
+                var unprocessedDeals = await context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
+                    .Where(_ => !_.IsSentToDealEnding)
+                    .OrderByDescending(_ => _.DateCreated)
+                    .Take(_batchSize)
+                    .ToListAsync();
+                if (unprocessedDeals.Count == 0)
+                    return;
+                _logger.LogDebug($"SendDeals() unprocessed:{unprocessedDeals.Count}");
+
+                int errorsCount = 0;
+                foreach (var deal in unprocessedDeals)
                 {
-                    using (var scope = _scopeFactory.CreateScope())
+                    try
                     {
-                        var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-
-                        var unprocessedDeals = await context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
-                            .Where(_ => !_.IsSentToDealEnding)
-                            .OrderByDescending(_ => _.DateCreated)
-                            .Take(_batchSize)
-                            .ToListAsync();
-                        if (unprocessedDeals.Count == 0)
-                            break;
-                        _logger.LogDebug($"SendDeals() unprocessed:{unprocessedDeals.Count}");
-
-                        int errorsCount = 0;
-                        foreach (var deal in unprocessedDeals)
-                        {
-                            try
-                            {
-                                await SendDeal(deal);
-                                deal.IsSentToDealEnding = true;
-                                await context.SaveChangesAsync();
-                                _logger.LogDebug($"SendDeals() sent: {deal.DealId}");
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, $"Error sending to DealEnding: {deal}");
-                                errorsCount++;
-                            }
-                        }
-                        if (errorsCount > 0)
-                            _logger.LogInformation($"SendDeals() end. processed:{unprocessedDeals.Count}, with errors: {errorsCount}");
+                        await SendDeal(deal);
+                        deal.IsSentToDealEnding = true;
+                        await context.SaveChangesAsync();
+                        _logger.LogDebug($"SendDeals() sent: {deal.DealId}");
                     }
-                    await Task.Delay(200);
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error sending to DealEnding: {deal}");
+                        errorsCount++;
+                        if (errorsCount > 5)
+                            break;
+                    }
                 }
+                if (errorsCount > 0)
+                    _logger.LogInformation($"SendDeals() end. processed:{unprocessedDeals.Count}, with errors: {errorsCount}");
             }
             catch (Exception ex)
             {
