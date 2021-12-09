@@ -27,6 +27,7 @@ namespace MatchingEngine.Services
         public readonly string _pairCode;
         private readonly BlockingCollection<PoolAction> _actionsBuffer = new();
         private readonly ConcurrentDictionary<Guid, MatchingOrder> _orders = new();
+        ConcurrentDictionary<PoolActionType, ConcurrentBag<int>> _actionTimes = new();
 
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly CurrenciesCache _currenciesCache;
@@ -443,7 +444,7 @@ namespace MatchingEngine.Services
             var date3 = DateTimeOffset.UtcNow;
             // add
             var ordersToAdd = dto.OrdersToAdd.Select(_ => _.GetOrder()).ToList();
-            ordersToAdd.ForEach(_ => EnqueueCreateOrderAction(_mapper.Map<MatchingOrder>(_)));
+            ordersToAdd.ForEach(_ => EnqueuePoolAction(PoolActionType.CreateLiquidityOrder, _.Id, _mapper.Map<MatchingOrder>(_)));
 
             if (_pairCode == Constants.DebugCurrencyPair)
             {
@@ -464,7 +465,8 @@ namespace MatchingEngine.Services
                 var poolOrder = _orders.GetValueOrDefault(order.Id, null);
                 if (poolOrder == null)
                 {
-                    EnqueueCreateOrderAction(order);
+                    _logger.LogInformation($"LiquidityOrder was lost, enqueue Create instead of Update");
+                    EnqueuePoolAction(PoolActionType.CreateLiquidityOrder, order.Id, order);
                     return;
                 }
                 if (poolOrder.IsLocal)
@@ -513,7 +515,7 @@ namespace MatchingEngine.Services
         /// </summary>
         private void LogOrderbookIntersections(MatchingOrder newOrder)
         {
-            if (_orderbookIntersectionLogsCounter++ % 100 != 0) // only show 1 in 100 logs
+            if (_orderbookIntersectionLogsCounter++ % 1000 != 0) // only show 1 in 100 logs
                 return;
             var biggestBid = _orders.Values.Where(o => o.IsBid).OrderByDescending(_ => _.Price).FirstOrDefault();
             var lowestAsk = _orders.Values.Where(o => !o.IsBid).OrderBy(_ => _.Price).FirstOrDefault();
@@ -536,11 +538,13 @@ namespace MatchingEngine.Services
                 ExternalTrade = externalTrade,
             };
             _actionsBuffer.Add(action);
-            if (_actionsBuffer.Count > 200 && new Random().Next(50) == 0)
+            if (_actionsBuffer.Count > 1 && _pairCode == Constants.DebugCurrencyPair && new Random().Next(50) == 0)
             {
                 var byActionType = _actionsBuffer.GroupBy(_ => _.ActionType).OrderBy(_ => _.Key).Select(_ => $"{_.Key}: {_.Count()}");
-                _logger.LogWarning($"{_pairCode} actionsBuffer timeDelay:{DateTimeOffset.UtcNow - _actionsBuffer.First().DateAdded}; " +
+                _logger.LogInformation($"{_pairCode} actionsBuffer currentDelay:{DateTimeOffset.UtcNow - _actionsBuffer.First().DateAdded}; " +
                     $"total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}");
+                _logger.LogInformation($"{_pairCode} actionsBuffer averageTimes:\n " +
+                    $"{string.Join("\n ", _actionTimes.Select(_ => $"{_.Key}: {_.Value.Count} actions, average time: {_.Value.Average()}"))}");
             }
         }
 
@@ -560,7 +564,10 @@ namespace MatchingEngine.Services
                     if (!isReceived)
                         break; // cancellationToken was called
 
-                    if (newAction.ActionType == PoolActionType.CreateOrder)
+                    var dateStart = DateTime.UtcNow;
+
+                    if (newAction.ActionType == PoolActionType.CreateOrder
+                        || newAction.ActionType == PoolActionType.CreateLiquidityOrder)
                     {
                         var newOrder = newAction.Order;
                         if (_deletedOrdersKeeper.Contains(newOrder.Id))
@@ -597,6 +604,11 @@ namespace MatchingEngine.Services
                     {
                         _logger.LogCritical($"ExecuteAsync {_pairCode} unknown action {newAction}");
                     }
+
+                    var time = DateTime.UtcNow - dateStart;
+                    if (!_actionTimes.ContainsKey(newAction.ActionType))
+                        _actionTimes[newAction.ActionType] = new();
+                    _actionTimes[newAction.ActionType].Add((int)time.TotalMilliseconds);
                 }
                 catch (TaskCanceledException) { }
                 catch (Exception ex)

@@ -10,7 +10,7 @@ namespace MatchingEngine.Models
     public enum PoolActionType
     {
         CreateOrder = 10, CancelOrder = 20,
-        UpdateLiquidityOrder = 100, RemoveLiquidityOrder = 110, // Liquidity import
+        CreateLiquidityOrder = 100, UpdateLiquidityOrder = 110, RemoveLiquidityOrder = 120, // Liquidity import
         ExternalTradeResult = 150, AutoUnblockOrder = 160, // Liquidity trades
     }
 

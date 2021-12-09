@@ -10,6 +10,6 @@ namespace MatchingEngine.Models
     {
         public const int DefaultRequestOrdersCount = 100;
 
-        public const string DebugCurrencyPair = null;
+        public const string DebugCurrencyPair = "BTC_USDT";
     }
 }
