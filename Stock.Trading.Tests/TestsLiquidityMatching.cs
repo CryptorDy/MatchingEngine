@@ -29,10 +29,10 @@ namespace Stock.Trading.Tests
             var liquidityImportService = new Mock<ILiquidityImportService>();
             int liquidityCallbackCounter = 0;
             liquidityImportService
-                .Setup(_ => _.CreateTrade(It.IsAny<MatchingOrder>(), It.IsAny<MatchingOrder>()))
+                .Setup(_ => _.CreateTrade(It.IsAny<MatchingExternalTrade>()))
                 .Callback<MatchingOrder, MatchingOrder>((resultBid, resultAsk) => { liquidityCallbackCounter++; });
             var ordersMatcher = new OrdersMatcher(liquidityImportService.Object, new Mock<Logger<OrdersMatcher>>().Object);
-            var (modifiedOrders, newDeals) = ordersMatcher.Match(new List<MatchingOrder> { bid.Clone() }, (MatchingOrder)ask.Clone());
+            var (modifiedOrders, newDeals, liquidityTrades) = ordersMatcher.Match(new List<MatchingOrder> { bid.Clone() }, (MatchingOrder)ask.Clone());
 
             Assert.Empty(newDeals);
             Assert.Equal(1, liquidityCallbackCounter);
@@ -82,8 +82,8 @@ namespace Stock.Trading.Tests
             await matchingPool.SaveExternalTradeResult(new ExternalTrade
             {
                 IsBid = bid.IsLocal,
-                TradingBidId = bid.Id.ToString(),
-                TradingAskId = ask.Id.ToString(),
+                TradingBidId = bid.Id,
+                TradingAskId = ask.Id,
                 MatchingEngineDealPrice = bid.DateCreated > ask.DateCreated ? ask.Price : bid.Price,
                 Exchange = ask.Exchange,
                 CurrencyPairCode = ask.CurrencyPairCode,

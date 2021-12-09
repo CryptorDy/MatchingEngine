@@ -30,7 +30,7 @@ namespace Stock.Trading.Benchmark
                     DateCreated = DateTimeOffset.UtcNow,
                     UserId = "UserId",
                 };
-                var (modifiedOrders, newDeals) = matcher.Match(orders, newOrder);
+                var (modifiedOrders, newDeals, liquidityTrades) = matcher.Match(orders, newOrder);
                 orders.Add(newOrder);
                 orders.RemoveAll(o => !o.IsActive);
                 deals += newDeals.Count;

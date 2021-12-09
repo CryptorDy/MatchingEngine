@@ -22,7 +22,7 @@ namespace Stock.Trading.Tests
         public void EmptyDataReturnEmptyResult()
         {
             var service = new OrdersMatcher(null, new Mock<Logger<OrdersMatcher>>().Object);
-            var (modifiedOrders, newDeals) = service.Match(new List<MatchingOrder>(), OrdersHelper.CheapBid.Clone());
+            var (modifiedOrders, newDeals, liquidityTrades) = service.Match(new List<MatchingOrder>(), OrdersHelper.CheapBid.Clone());
 
             Assert.Empty(modifiedOrders);
             Assert.Empty(newDeals);
@@ -34,7 +34,7 @@ namespace Stock.Trading.Tests
             var pool = new List<MatchingOrder> { OrdersHelper.CheapBid.Clone() };
 
             var service = new OrdersMatcher(null, new Mock<Logger<OrdersMatcher>>().Object);
-            var (modifiedOrders, newDeals) = service.Match(pool, OrdersHelper.ExpensiveAsk.Clone());
+            var (modifiedOrders, newDeals, liquidityTrades) = service.Match(pool, OrdersHelper.ExpensiveAsk.Clone());
 
             Assert.Empty(modifiedOrders);
             Assert.Empty(newDeals);
@@ -56,7 +56,7 @@ namespace Stock.Trading.Tests
                 var pool = new List<MatchingOrder> { bid.Clone() };
 
                 var service = new OrdersMatcher(null, new Mock<Logger<OrdersMatcher>>().Object);
-                var (modifiedOrders, newDeals) = service.Match(pool, ask.Clone());
+                var (modifiedOrders, newDeals, liquidityTrades) = service.Match(pool, ask.Clone());
 
                 decimal expectedDealVolume = Math.Min(bid.AvailableAmount, ask.AvailableAmount);
                 decimal expectedDealPrice = bid.Price;
@@ -85,7 +85,7 @@ namespace Stock.Trading.Tests
             };
 
             var service = new OrdersMatcher(null, new Mock<Logger<OrdersMatcher>>().Object);
-            var (modifiedOrders, newDeals) = service.Match(pool, OrdersHelper.CheapBid.Clone());
+            var (modifiedOrders, newDeals, liquidityTrades) = service.Match(pool, OrdersHelper.CheapBid.Clone());
 
             Assert.Equal(2, newDeals.Count);
             Assert.Equal(3, modifiedOrders.Count);

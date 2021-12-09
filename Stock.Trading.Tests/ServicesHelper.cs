@@ -31,7 +31,7 @@ namespace Stock.Trading.Tests
 
             var liquidityImportService = new Mock<ILiquidityImportService>();
             liquidityImportService
-                .Setup(_ => _.CreateTrade(It.IsAny<MatchingOrder>(), It.IsAny<MatchingOrder>()))
+                .Setup(_ => _.CreateTrade(It.IsAny<MatchingExternalTrade>()))
                 .Callback(liquidityImportServiceCallback);
 
             services.AddTransient<SingletonsAccessor>();
