@@ -539,7 +539,8 @@ namespace MatchingEngine.Services
             if (_actionsBuffer.Count > 200 && new Random().Next(50) == 0)
             {
                 var byActionType = _actionsBuffer.GroupBy(_ => _.ActionType).OrderBy(_ => _.Key).Select(_ => $"{_.Key}: {_.Count()}");
-                _logger.LogWarning($"{_pairCode} actionsBuffer total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}");
+                _logger.LogWarning($"{_pairCode} actionsBuffer timeDelay:{DateTimeOffset.UtcNow - _actionsBuffer.First().DateAdded}; " +
+                    $"total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}");
             }
         }
 

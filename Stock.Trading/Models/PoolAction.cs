@@ -28,6 +28,7 @@ namespace MatchingEngine.Models
         }
 
         public PoolActionType ActionType { get; set; }
+        public DateTimeOffset DateAdded { get; set; } = DateTimeOffset.UtcNow;
         public Guid OrderId { get; set; }
 
         /// <summary>null if CancelOrder</summary>
