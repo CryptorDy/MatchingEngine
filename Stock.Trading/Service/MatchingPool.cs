@@ -544,7 +544,7 @@ namespace MatchingEngine.Services
                 var byActionType = _actionsBuffer.GroupBy(_ => _.ActionType).OrderBy(_ => _.Key).Select(_ => $"{_.Key}: {_.Count()}");
                 _logger.LogInformation($"{_pairCode} actionsBuffer currentDelay:{DateTimeOffset.UtcNow - _actionsBuffer.First().DateAdded}; " +
                     $" total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}\n " +
-                    $"recreated imported orders:{_liquidityRecreatedOrdersCount}");
+                    $"totalOrders: {_orders.Count}, recreated imported orders:{_liquidityRecreatedOrdersCount}");
                 _logger.LogInformation($"{_pairCode} actionsBuffer averageTimes:\n " +
                     $"{string.Join("\n ", _actionTimes.Select(_ => $"{_.Key}: {_.Value.Count} actions, average time: {_.Value.Average()}"))}");
             }
