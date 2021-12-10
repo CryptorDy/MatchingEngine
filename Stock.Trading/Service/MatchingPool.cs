@@ -119,7 +119,8 @@ namespace MatchingEngine.Services
                     else if (order.Blocked > 0 && dbOrder.Blocked == 0)
                     {
                         eventType = OrderEventType.Block;
-                        _liquidityExpireBlocksHandler.Add(order.Id, _pairCode);
+                        if (order.IsLocal) // imported orders can be locked indefinitely after external order was created
+                            _liquidityExpireBlocksHandler.Add(order.Id, _pairCode);
                     }
                     else if (order.Blocked == 0 && dbOrder.Blocked > 0)
                     {
