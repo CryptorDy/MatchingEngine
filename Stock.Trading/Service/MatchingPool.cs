@@ -195,10 +195,10 @@ namespace MatchingEngine.Services
             using var scope = _serviceScopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
 
-            var liquidityTrade = await db.ExternalTrades.FirstOrDefaultAsync(_ => _.Id == externalTrade.Id);
-            if (liquidityTrade != null && liquidityTrade.Status != MatchingExternalTradeStatus.Created)
+            var dbExternalTrade = await db.ExternalTrades.FirstOrDefaultAsync(_ => _.Id == externalTrade.Id);
+            if (dbExternalTrade != null && dbExternalTrade.Status != MatchingExternalTradeStatus.Created)
             {
-                _logger.LogWarning($"SaveExternalTradeResult already saved: {liquidityTrade}");
+                _logger.LogWarning($"SaveExternalTradeResult already saved: {dbExternalTrade}");
                 return;
             }
 
@@ -269,18 +269,23 @@ namespace MatchingEngine.Services
                     var deal = new Deal(matchedLocalOrder, newImportedOrder,
                         externalTrade.MatchingEngineDealPrice, externalTrade.Fulfilled);
                     newDeals.Add(deal);
+                    var (finalBid, finalAsk) = matchedLocalOrder.IsBid
+                        ? (matchedLocalOrder, newImportedOrder)
+                        : (newImportedOrder, matchedLocalOrder);
 
-                    if (liquidityTrade == null) // in case service stopped before liquidityTrade was saved
+                    if (dbExternalTrade == null) // in case service stopped before liquidityTrade was saved
                     {
-                        liquidityTrade = new MatchingExternalTrade(bid, ask)
+                        dbExternalTrade = new MatchingExternalTrade()
                         {
                             Id = externalTrade.Id,
                         };
-                        db.ExternalTrades.Add(liquidityTrade);
-                        _logger.LogWarning($"SaveExternalTradeResult liquidityTrade had to be recreated {liquidityTrade}");
+                        db.ExternalTrades.Add(dbExternalTrade);
+                        _logger.LogWarning($"SaveExternalTradeResult liquidityTrade had to be recreated {dbExternalTrade}");
                     }
-                    liquidityTrade.DealId = deal.DealId;
-                    liquidityTrade.Status = isFullfillmentError ? MatchingExternalTradeStatus.FinishedError
+                    dbExternalTrade.BidId = finalBid.Id;
+                    dbExternalTrade.AskId = finalAsk.Id;
+                    dbExternalTrade.DealId = deal.DealId;
+                    dbExternalTrade.Status = isFullfillmentError ? MatchingExternalTradeStatus.FinishedError
                         : externalTrade.Fulfilled > 0 ? MatchingExternalTradeStatus.FinishedFulfilled
                         : MatchingExternalTradeStatus.FinishedNotFulfilled;
                     db.SaveChanges();
@@ -288,7 +293,7 @@ namespace MatchingEngine.Services
                 UpdateDatabase(db, modifiedOrders, newDeals).Wait();
             }
             await ReportData(db, modifiedOrders, newDeals);
-            _logger.LogInformation($"SaveExternalTradeResult finished. {liquidityTrade}\n newImportedOrder:{newImportedOrder}");
+            _logger.LogInformation($"SaveExternalTradeResult finished. {dbExternalTrade}\n newImportedOrder:{newImportedOrder}");
         }
 
         public void SendOrdersToMarketData()
@@ -341,7 +346,7 @@ namespace MatchingEngine.Services
                 _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
                     $"new order: {newOrder}, Orders in pool: {_orders.Count};");
                 LogOrderbookIntersections(newOrder);
-                UpdateDatabase(context, modifiedOrders, newDeals).Wait();
+                UpdateDatabase(context, modifiedOrders, newDeals, liquidityTrades).Wait();
             }
             await ReportData(context, modifiedOrders, newDeals);
         }

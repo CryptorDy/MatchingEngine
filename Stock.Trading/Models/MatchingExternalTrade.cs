@@ -1,3 +1,4 @@
+using AutoMapper;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,14 +18,14 @@ namespace MatchingEngine.Models
         {
         }
 
-        public MatchingExternalTrade(MatchingOrder bid, MatchingOrder ask)
+        public MatchingExternalTrade(MatchingOrder bid, MatchingOrder ask, IMapper mapper)
         {
             Id = Guid.NewGuid();
             Status = MatchingExternalTradeStatus.Created;
             BidId = bid.Id;
             AskId = ask.Id;
-            Bid = (Bid)bid;
-            Ask = (Ask)ask;
+            Bid = mapper.Map<Bid>(bid);
+            Ask = mapper.Map<Ask>(ask);
             IsBid = bid.IsLocal;
         }
 
@@ -39,6 +40,6 @@ namespace MatchingEngine.Models
         public Ask Ask { get; set; }
 
         public override string ToString() => $"{nameof(MatchingExternalTrade)}({Id}, {(DealId.HasValue ? $"Deal: {DealId}, " : "")}" +
-            $"\n Bid:{Bid.ToString() ?? BidId.ToString()},\n Ask:{Ask.ToString() ?? AskId.ToString()})";
+            $"\n Bid:{Bid?.ToString() ?? BidId.ToString()},\n Ask:{Ask?.ToString() ?? AskId.ToString()})";
     }
 }

@@ -64,17 +64,12 @@ namespace MatchingEngine.Services
                     poolOrder.Blocked = poolOrder.AvailableAmount;
                     newOrder.LiquidityBlocksCount++;
                     poolOrder.LiquidityBlocksCount++;
-                    var liquidityTrade = new MatchingExternalTrade
-                    {
-                        Id = Guid.NewGuid(),
-                        BidId = bid.Id,
-                        AskId = ask.Id,
-                        Bid = _mapper.Map<Bid>(bid),
-                        Ask = _mapper.Map<Ask>(ask),
-                        IsBid = bid.IsLocal,
-                    };
-                    liquidityTrades.Add(liquidityTrade);
+                    var liquidityTrade = new MatchingExternalTrade(bid, ask, _mapper);
                     _liquidityImportService.CreateTrade(liquidityTrade);
+
+                    liquidityTrade.Bid = null; // prevent save of related entities
+                    liquidityTrade.Ask = null;
+                    liquidityTrades.Add(liquidityTrade);
                 }
                 else
                 {
@@ -83,13 +78,13 @@ namespace MatchingEngine.Services
                     newOrder.Fulfilled += fulfilmentAmount;
                     poolOrder.Fulfilled += fulfilmentAmount;
                 }
-
-                modifiedOrders.Add(poolOrder);
+                if (poolOrder.IsLocal)  // initial liquidity order isn't saved, will be created in DB afterwards
+                    modifiedOrders.Add(poolOrder);
                 if (newOrder.AvailableAmount <= 0)
                     break; // if new order is completely fulfilled/blocked, there's no reason to iterate further
             }
 
-            if (modifiedOrders.Count > 0)
+            if (modifiedOrders.Count > 0 && newOrder.IsLocal)
                 modifiedOrders.Add(newOrder);
 
             return (modifiedOrders, newDeals, liquidityTrades);

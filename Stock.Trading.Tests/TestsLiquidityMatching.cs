@@ -34,15 +34,17 @@ namespace Stock.Trading.Tests
                 .Callback(() => { liquidityCallbackCounter++; });
             var ordersMatcher = new OrdersMatcher(liquidityImportService.Object, new Mock<IMapper>().Object,
                 new Mock<ILogger<OrdersMatcher>>().Object);
-            var (modifiedOrders, newDeals, liquidityTrades) = ordersMatcher.Match(new List<MatchingOrder> { bid.Clone() }, (MatchingOrder)ask.Clone());
+            var (modifiedOrders, newDeals, externalTrades) = ordersMatcher.Match(new List<MatchingOrder> { bid.Clone() }, (MatchingOrder)ask.Clone());
 
             Assert.Empty(newDeals);
             Assert.Equal(1, liquidityCallbackCounter);
-            Assert.Equal(2, modifiedOrders.Count);
+            Assert.Single(modifiedOrders); // initial liquidity order isn't saved, will be created in DB afterwards
             Assert.True(modifiedOrders[0].Blocked > 0);
             Assert.Equal(0, modifiedOrders[0].AvailableAmount);
-            Assert.True(modifiedOrders[1].Blocked > 0);
-            Assert.Equal(0, modifiedOrders[1].AvailableAmount);
+            Assert.Single(externalTrades);
+            var externalTrade = externalTrades.First();
+            Assert.Equal(bid.Id, externalTrade.BidId);
+            Assert.Equal(ask.Id, externalTrade.AskId);
         }
 
         [Fact]
@@ -52,12 +54,14 @@ namespace Stock.Trading.Tests
             decimal totalAmount = bid.Amount;
             var ask = new MatchingOrder(false, OrdersHelper.CurrencyPairCode, 2.5m, totalAmount)
             {
-                Id = Guid.NewGuid(),
+                ClientType = ClientType.LiquidityBot,
                 Exchange = Exchange.Binance,
             };
 
             foreach (decimal fulfilled in new List<decimal> { 0, 2, totalAmount })
             {
+                bid.Id = Guid.NewGuid();
+                ask.Id = Guid.NewGuid();
                 await SimulateExternalTrade(bid.Clone(), ask.Clone(), fulfilled);
             }
         }
