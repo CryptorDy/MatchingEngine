@@ -327,9 +327,9 @@ namespace MatchingEngine.Services
             _logger.LogDebug($"Process() started {newOrder}");
             using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-            List<MatchingOrder> modifiedOrders;
-            List<Deal> newDeals;
-            List<MatchingExternalTrade> liquidityTrades;
+            List<MatchingOrder> modifiedOrders = new();
+            List<Deal> newDeals = new();
+            List<MatchingExternalTrade> liquidityTrades = new();
 
             lock (_orders) // no access to pool (for removing) while matching is performed
             {
@@ -337,16 +337,19 @@ namespace MatchingEngine.Services
                 if (newOrder.ClientType != ClientType.LiquidityBot && newOrder.ClientType != ClientType.DealsBot)
                     context.AddOrder(newOrder, true, OrderEventType.Create).Wait();
 
-                (modifiedOrders, newDeals, liquidityTrades) = _ordersMatcher.Match(_orders.Values, newOrder);
-                if (newOrder.IsActive)
+                if (newOrder.ClientType != ClientType.LiquidityBot)
                 {
-                    _orders[newOrder.Id] = newOrder;
+                    (modifiedOrders, newDeals, liquidityTrades) = _ordersMatcher.Match(_orders.Values, newOrder);
+                    if (newOrder.IsActive)
+                    {
+                        _orders[newOrder.Id] = newOrder;
+                    }
+                    RemoveNotActivePoolOrders();
+                    _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
+                        $"new order: {newOrder}, Orders in pool: {_orders.Count};");
+                    LogOrderbookIntersections(newOrder);
+                    UpdateDatabase(context, modifiedOrders, newDeals, liquidityTrades).Wait();
                 }
-                RemoveNotActivePoolOrders();
-                _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
-                    $"new order: {newOrder}, Orders in pool: {_orders.Count};");
-                LogOrderbookIntersections(newOrder);
-                UpdateDatabase(context, modifiedOrders, newDeals, liquidityTrades).Wait();
             }
             await ReportData(context, modifiedOrders, newDeals);
         }
