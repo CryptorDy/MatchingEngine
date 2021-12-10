@@ -354,6 +354,7 @@ namespace MatchingEngine.Services
             using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
             Models.MatchingOrder dbOrder;
+            _deletedOrdersKeeper.Add(cancelAction.OrderId);
             lock (_orders)
             {
                 dbOrder = context.GetOrder(cancelAction.OrderId).Result;
@@ -373,7 +374,6 @@ namespace MatchingEngine.Services
                     return;
                 }
                 _orders.TryRemove(cancelAction.OrderId, out _);
-                _deletedOrdersKeeper.Add(cancelAction.OrderId);
 
                 dbOrder.IsCanceled = true;
                 dbOrder.Blocked = 0;

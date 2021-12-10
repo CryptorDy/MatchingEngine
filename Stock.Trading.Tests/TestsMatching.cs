@@ -121,7 +121,7 @@ namespace Stock.Trading.Tests
                     await OrdersHelper.CreateOrder(order, tradingService, matchingPool);
                 }
 
-                await Task.Delay(100);
+                await Task.Delay(1000);
                 return liquidityCallbackCounter;
             }
 
@@ -129,6 +129,7 @@ namespace Stock.Trading.Tests
             var ask = new MatchingOrder(false, OrdersHelper.CurrencyPairCode, 2.5m, bid.Amount)
             {
                 Id = Guid.NewGuid(),
+                ClientType = ClientType.LiquidityBot,
                 Exchange = Exchange.Binance,
             };
             var orders = new List<MatchingOrder> { bid, ask };
