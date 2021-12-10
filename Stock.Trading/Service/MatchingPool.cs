@@ -27,7 +27,8 @@ namespace MatchingEngine.Services
         public readonly string _pairCode;
         private readonly BlockingCollection<PoolAction> _actionsBuffer = new();
         private readonly ConcurrentDictionary<Guid, MatchingOrder> _orders = new();
-        ConcurrentDictionary<PoolActionType, ConcurrentBag<int>> _actionTimes = new();
+        private ConcurrentDictionary<PoolActionType, ConcurrentBag<int>> _actionTimes = new();
+        private int _liquidityRecreatedOrdersCount = 0;
 
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly CurrenciesCache _currenciesCache;
@@ -465,7 +466,7 @@ namespace MatchingEngine.Services
                 var poolOrder = _orders.GetValueOrDefault(order.Id, null);
                 if (poolOrder == null)
                 {
-                    _logger.LogInformation($"LiquidityOrder was lost, enqueue Create instead of Update");
+                    _liquidityRecreatedOrdersCount++;
                     EnqueuePoolAction(PoolActionType.CreateLiquidityOrder, order.Id, order);
                     return;
                 }
@@ -542,7 +543,8 @@ namespace MatchingEngine.Services
             {
                 var byActionType = _actionsBuffer.GroupBy(_ => _.ActionType).OrderBy(_ => _.Key).Select(_ => $"{_.Key}: {_.Count()}");
                 _logger.LogInformation($"{_pairCode} actionsBuffer currentDelay:{DateTimeOffset.UtcNow - _actionsBuffer.First().DateAdded}; " +
-                    $"total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}");
+                    $" total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}\n " +
+                    $"recreated imported orders:{_liquidityRecreatedOrdersCount}");
                 _logger.LogInformation($"{_pairCode} actionsBuffer averageTimes:\n " +
                     $"{string.Join("\n ", _actionTimes.Select(_ => $"{_.Key}: {_.Value.Count} actions, average time: {_.Value.Average()}"))}");
             }
