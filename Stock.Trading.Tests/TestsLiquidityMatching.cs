@@ -1,3 +1,4 @@
+using AutoMapper;
 using MatchingEngine.Data;
 using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
@@ -30,8 +31,9 @@ namespace Stock.Trading.Tests
             int liquidityCallbackCounter = 0;
             liquidityImportService
                 .Setup(_ => _.CreateTrade(It.IsAny<MatchingExternalTrade>()))
-                .Callback<MatchingOrder, MatchingOrder>((resultBid, resultAsk) => { liquidityCallbackCounter++; });
-            var ordersMatcher = new OrdersMatcher(liquidityImportService.Object, new Mock<Logger<OrdersMatcher>>().Object);
+                .Callback(() => { liquidityCallbackCounter++; });
+            var ordersMatcher = new OrdersMatcher(liquidityImportService.Object, new Mock<IMapper>().Object,
+                new Mock<ILogger<OrdersMatcher>>().Object);
             var (modifiedOrders, newDeals, liquidityTrades) = ordersMatcher.Match(new List<MatchingOrder> { bid.Clone() }, (MatchingOrder)ask.Clone());
 
             Assert.Empty(newDeals);
@@ -64,7 +66,7 @@ namespace Stock.Trading.Tests
         {
             int liquidityCallbackCounter = 0;
             var (provider, matchingPoolsHandler, tradingService) =
-                ServicesHelper.CreateServiceProvider((resultBid, resultAsk) => { liquidityCallbackCounter++; });
+                ServicesHelper.CreateServiceProvider(() => { liquidityCallbackCounter++; });
             var matchingPool = matchingPoolsHandler.GetPool(OrdersHelper.CurrencyPairCode);
 
             // starting match with imported order

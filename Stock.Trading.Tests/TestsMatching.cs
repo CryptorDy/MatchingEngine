@@ -1,3 +1,4 @@
+using AutoMapper;
 using MatchingEngine.Data;
 using MatchingEngine.Models;
 using MatchingEngine.Models.LiquidityImport;
@@ -21,7 +22,12 @@ namespace Stock.Trading.Tests
         [Fact]
         public void EmptyDataReturnEmptyResult()
         {
-            var service = new OrdersMatcher(null, new Mock<Logger<OrdersMatcher>>().Object);
+            var (provider, matchingPoolsHandler, tradingService) =
+                ServicesHelper.CreateServiceProvider(() => { });
+            var mapper = provider.GetRequiredService<IMapper>();
+
+            var service = new OrdersMatcher(null, mapper,
+                new Mock<ILogger<OrdersMatcher>>().Object);
             var (modifiedOrders, newDeals, liquidityTrades) = service.Match(new List<MatchingOrder>(), OrdersHelper.CheapBid.Clone());
 
             Assert.Empty(modifiedOrders);
@@ -33,7 +39,8 @@ namespace Stock.Trading.Tests
         {
             var pool = new List<MatchingOrder> { OrdersHelper.CheapBid.Clone() };
 
-            var service = new OrdersMatcher(null, new Mock<Logger<OrdersMatcher>>().Object);
+            var service = new OrdersMatcher(null, new Mock<IMapper>().Object,
+                new Mock<ILogger<OrdersMatcher>>().Object);
             var (modifiedOrders, newDeals, liquidityTrades) = service.Match(pool, OrdersHelper.ExpensiveAsk.Clone());
 
             Assert.Empty(modifiedOrders);
@@ -55,7 +62,8 @@ namespace Stock.Trading.Tests
                 MatchingOrder bid = ordersToMatch[0], ask = ordersToMatch[1];
                 var pool = new List<MatchingOrder> { bid.Clone() };
 
-                var service = new OrdersMatcher(null, new Mock<Logger<OrdersMatcher>>().Object);
+                var service = new OrdersMatcher(null, new Mock<IMapper>().Object,
+                new Mock<ILogger<OrdersMatcher>>().Object);
                 var (modifiedOrders, newDeals, liquidityTrades) = service.Match(pool, ask.Clone());
 
                 decimal expectedDealVolume = Math.Min(bid.AvailableAmount, ask.AvailableAmount);
@@ -84,7 +92,8 @@ namespace Stock.Trading.Tests
                 OrdersHelper.CheapAskWithBlocked.Clone()
             };
 
-            var service = new OrdersMatcher(null, new Mock<Logger<OrdersMatcher>>().Object);
+            var service = new OrdersMatcher(null, new Mock<IMapper>().Object,
+                new Mock<ILogger<OrdersMatcher>>().Object);
             var (modifiedOrders, newDeals, liquidityTrades) = service.Match(pool, OrdersHelper.CheapBid.Clone());
 
             Assert.Equal(2, newDeals.Count);
@@ -102,7 +111,7 @@ namespace Stock.Trading.Tests
             {
                 int liquidityCallbackCounter = 0;
                 var (provider, matchingPoolsHandler, tradingService) =
-                    ServicesHelper.CreateServiceProvider((resultBid, resultAsk) => { liquidityCallbackCounter++; });
+                    ServicesHelper.CreateServiceProvider(() => { liquidityCallbackCounter++; });
                 var matchingPool = matchingPoolsHandler.GetPool(OrdersHelper.CurrencyPairCode);
 
                 foreach (var id in deletedIds)
@@ -147,7 +156,7 @@ namespace Stock.Trading.Tests
             var guidsForCancel = guidsAll.OrderBy(_ => _).Take(ordersCanceledCount).ToList();
 
             var (provider, matchingPoolsHandler, _) =
-                ServicesHelper.CreateServiceProvider((resultBid, resultAsk) => { });
+                ServicesHelper.CreateServiceProvider(() => { });
             var matchingPool = matchingPoolsHandler.GetPool(OrdersHelper.CurrencyPairCode);
 
             // add bids and asks to queue

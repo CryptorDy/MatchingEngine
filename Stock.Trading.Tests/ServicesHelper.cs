@@ -18,7 +18,7 @@ namespace Stock.Trading.Tests
     public static class ServicesHelper
     {
         public static (ServiceProvider, MatchingPoolsHandler, TradingService) CreateServiceProvider(
-            Action<MatchingOrder, MatchingOrder> liquidityImportServiceCallback
+            Action liquidityImportServiceCallback
         )
         {
             string testId = Guid.NewGuid().ToString(); // every test needs separate DB
@@ -41,7 +41,8 @@ namespace Stock.Trading.Tests
             services.AddTransient<TradingService>();
             services.AddSingleton<MarketDataHolder>();
             services.AddSingleton<OrdersMatcher>(_ =>
-                new OrdersMatcher(liquidityImportService.Object, new Mock<Logger<OrdersMatcher>>().Object));
+                new OrdersMatcher(liquidityImportService.Object, new Mock<IMapper>().Object,
+                new Mock<ILogger<OrdersMatcher>>().Object));
             // cant register liquidityImportService because it expects class, not interface
             services.AddSingleton<ILiquidityDeletedOrdersKeeper, LiquidityDeletedOrdersKeeper>();
             services.AddSingleton<LiquidityExpireBlocksHandler>();
