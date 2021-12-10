@@ -77,15 +77,17 @@ namespace MatchingEngine.Data
             return trackedOrder;
         }
 
-        public async Task UpdateOrder(MatchingOrder order, bool toSave, OrderEventType eventType,
+        public async Task<OrderEvent> UpdateOrder(MatchingOrder order, bool toSave, OrderEventType eventType,
             bool isSentToDealEnding = false, string dealIds = null)
         {
             _logger.LogDebug($"UpdateOrder() toSave:{toSave}, eventType:{eventType}, order:{order}");
-            OrderEvents.Add(OrderEvent.Create(_mapper, order, eventType, isSentToDealEnding, dealIds));
+            var orderEvent = OrderEvent.Create(_mapper, order, eventType, isSentToDealEnding, dealIds);
+            OrderEvents.Add(orderEvent);
             if (toSave)
             {
                 await SaveChangesAsync();
             }
+            return orderEvent;
         }
 
         #endregion Order setters

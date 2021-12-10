@@ -29,6 +29,7 @@ namespace MatchingEngine.Services
                 using var scope = _scopeFactory.CreateScope();
                 var dealEndingService = scope.ServiceProvider.GetRequiredService<IDealEndingService>();
                 await dealEndingService.SendDeals();
+                await dealEndingService.SendOrderCancellings();
                 await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken).ContinueWith(task => { });
             }
         }

@@ -376,9 +376,9 @@ namespace MatchingEngine.Services
 
                 dbOrder.IsCanceled = true;
                 dbOrder.Blocked = 0;
-                context.UpdateOrder(dbOrder, true, OrderEventType.Cancel).Wait();
+                var cancelEvent = context.UpdateOrder(dbOrder, true, OrderEventType.Cancel).Result;
+                _dealEndingService.CompleteOrderCancelling(cancelEvent, context);
             }
-            _dealEndingService.SendOrderCancellings();
             SendOrdersToMarketData();
             _logger.LogDebug($"CancelOrder() finished {dbOrder}");
         }

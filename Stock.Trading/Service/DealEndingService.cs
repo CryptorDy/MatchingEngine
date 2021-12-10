@@ -22,6 +22,8 @@ namespace MatchingEngine.Services
 
         Task SendDeals();
 
+        Task CompleteOrderCancelling(OrderEvent orderEvent, TradingDbContext context);
+
         Task SendOrderCancellings();
     }
 
@@ -114,10 +116,13 @@ namespace MatchingEngine.Services
             _isSendingDeals = false;
         }
 
-        public async Task<IFlurlResponse> CompleteOrderCancelling(MatchingOrder order)
+        public async Task CompleteOrderCancelling(OrderEvent orderEvent, TradingDbContext context)
         {
-            return await $"dealending/orders/cancel".InternalApi()
-                .PostJsonAsync(order);
+            await $"dealending/orders/cancel".InternalApi()
+                .PostJsonAsync(_mapper.Map<OrderEvent, MatchingOrder>(orderEvent));
+            orderEvent.IsSentToDealEnding = true;
+            await context.SaveChangesAsync();
+            _logger.LogDebug($"SendOrderCancelling() sent: {orderEvent}");
         }
 
         public async Task SendOrderCancellings()
@@ -127,40 +132,36 @@ namespace MatchingEngine.Services
             try
             {
                 _isSendingOrderCancellings = true;
-                while (true)
+                int errorsCount = 0;
+                while (errorsCount == 0)
                 {
-                    using (var scope = _scopeFactory.CreateScope())
+                    using var scope = _scopeFactory.CreateScope();
+                    var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+
+                    var unprocessedEvents = await context.OrderEvents
+                        .Where(_ => !_.IsSentToDealEnding && _.EventType == OrderEventType.Cancel)
+                        .OrderByDescending(_ => _.DateCreated)
+                        .Take(_batchSize).ToListAsync();
+                    if (unprocessedEvents.Count == 0)
+                        break;
+                    _logger.LogDebug($"SendOrderCancellings() unprocessed:{unprocessedEvents.Count}");
+
+                    errorsCount = 0;
+                    foreach (var orderEvent in unprocessedEvents)
                     {
-                        var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-
-                        var unprocessedEvents = await context.OrderEvents
-                            .Where(_ => !_.IsSentToDealEnding && _.EventType == OrderEventType.Cancel)
-                            .OrderByDescending(_ => _.DateCreated)
-                            .Take(_batchSize).ToListAsync();
-                        if (unprocessedEvents.Count == 0)
-                            break;
-                        _logger.LogInformation($"SendOrderCancellings() unprocessed:{unprocessedEvents.Count}");
-
-                        int errorsCount = 0;
-                        foreach (var orderEvent in unprocessedEvents)
+                        try
                         {
-                            try
-                            {
-                                var result = await CompleteOrderCancelling(_mapper.Map<OrderEvent, MatchingOrder>(orderEvent));
-                                orderEvent.IsSentToDealEnding = true;
-                                await context.SaveChangesAsync();
-                                _logger.LogDebug($"SendOrderCancellings() sent: {orderEvent}");
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, $"SendOrderCancellings Error: {orderEvent}");
-                                errorsCount++;
-                            }
+                            await CompleteOrderCancelling(orderEvent, context);
                         }
-                        if (errorsCount > 0)
-                            _logger.LogWarning($"SendDeals() end. processed:{unprocessedEvents.Count}, with errors: {errorsCount}");
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, $"SendOrderCancellings Error: {orderEvent}");
+                            errorsCount++;
+                        }
                     }
-                    await Task.Delay(200);
+                    if (errorsCount > 0)
+                        _logger.LogWarning($"SendDeals() end. processed:{unprocessedEvents.Count}, with errors: {errorsCount}");
+                    await Task.Delay(TimeSpan.FromMinutes(1));
                 }
 
             }
