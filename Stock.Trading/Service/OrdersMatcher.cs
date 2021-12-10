@@ -37,7 +37,8 @@ namespace MatchingEngine.Services
                 && !o.HasSameOrderbookSide(newOrder)
                 && CanBeFilled(o)
                 && NotBothImported(o, newOrder)
-                && o.HasSameTradingBotFlag(newOrder));
+                && o.HasSameTradingBotFlag(newOrder)
+                && o.IsLocal); // TODO remove
             List<MatchingOrder> poolOrders;
             if (newOrder.IsBid)
             {
