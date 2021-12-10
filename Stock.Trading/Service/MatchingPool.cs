@@ -336,19 +336,16 @@ namespace MatchingEngine.Services
                 if (newOrder.ClientType != ClientType.LiquidityBot && newOrder.ClientType != ClientType.DealsBot)
                     context.AddOrder(newOrder, true, OrderEventType.Create).Wait();
 
-                if (newOrder.ClientType != ClientType.LiquidityBot)
+                (modifiedOrders, newDeals, liquidityTrades) = _ordersMatcher.Match(_orders.Values, newOrder);
+                if (newOrder.IsActive)
                 {
-                    (modifiedOrders, newDeals, liquidityTrades) = _ordersMatcher.Match(_orders.Values, newOrder);
-                    if (newOrder.IsActive)
-                    {
-                        _orders[newOrder.Id] = newOrder;
-                    }
-                    RemoveNotActivePoolOrders();
-                    _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
-                        $"new order: {newOrder}, Orders in pool: {_orders.Count};");
-                    LogOrderbookIntersections(newOrder);
-                    UpdateDatabase(context, modifiedOrders, newDeals, liquidityTrades).Wait();
+                    _orders[newOrder.Id] = newOrder;
                 }
+                RemoveNotActivePoolOrders();
+                _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
+                    $"new order: {newOrder}, Orders in pool: {_orders.Count};");
+                LogOrderbookIntersections(newOrder);
+                UpdateDatabase(context, modifiedOrders, newDeals, liquidityTrades).Wait();
             }
             await ReportData(context, modifiedOrders, newDeals);
         }
