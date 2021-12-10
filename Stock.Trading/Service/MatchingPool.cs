@@ -166,7 +166,10 @@ namespace MatchingEngine.Services
                     }
                 }
 
-                SendOrdersToMarketData(); // send even if no orders matched, because we need to display new order
+                lock (_orders)
+                {
+                    SendOrdersToMarketData(); // send even if no orders matched, because we need to display new order
+                }
 
                 if (newDeals.Count > 0)
                 {
