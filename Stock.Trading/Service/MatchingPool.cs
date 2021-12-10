@@ -29,6 +29,8 @@ namespace MatchingEngine.Services
         private readonly ConcurrentDictionary<Guid, MatchingOrder> _orders = new();
         private ConcurrentDictionary<PoolActionType, ConcurrentBag<int>> _actionTimes = new();
         private int _liquidityRecreatedOrdersCount = 0;
+        const int actionsLimit = 1000;
+        private int _actionsLimitSkipped = 0;
 
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly CurrenciesCache _currenciesCache;
@@ -548,7 +550,8 @@ namespace MatchingEngine.Services
             {
                 var byActionType = _actionsBuffer.GroupBy(_ => _.ActionType).OrderBy(_ => _.Key).Select(_ => $"{_.Key}: {_.Count()}");
                 _logger.LogInformation($"{_pairCode} actionsBuffer currentDelay:{DateTimeOffset.UtcNow - _actionsBuffer.First().DateAdded}; " +
-                    $" total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}\n " +
+                    $"liquidity actions skipped: {_actionsLimitSkipped};\n " +
+                    $"total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}\n " +
                     $"totalOrders: {_orders.Count}, recreated imported orders:{_liquidityRecreatedOrdersCount}");
                 _logger.LogInformation($"{_pairCode} actionsBuffer averageTimes:\n " +
                     $"{string.Join("\n ", _actionTimes.Select(_ => $"{_.Key}: {_.Value.Count} actions, average time: {_.Value.Average()}"))}");
@@ -570,6 +573,15 @@ namespace MatchingEngine.Services
                     bool isReceived = _actionsBuffer.TryTake(out newAction, Timeout.Infinite, cancellationToken);
                     if (!isReceived)
                         break; // cancellationToken was called
+
+                    // if _actionsBuffer becomes too big, skip liquidity import events
+                    if (_actionsBuffer.Count > actionsLimit && newAction.ActionType == PoolActionType.CreateLiquidityOrder
+                        || newAction.ActionType == PoolActionType.UpdateLiquidityOrder
+                        || newAction.ActionType == PoolActionType.UpdateLiquidityOrder)
+                    {
+                        _actionsLimitSkipped++;
+                        continue;
+                    }
 
                     var dateStart = DateTime.UtcNow;
 
