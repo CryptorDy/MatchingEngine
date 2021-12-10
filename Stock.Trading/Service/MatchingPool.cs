@@ -494,7 +494,7 @@ namespace MatchingEngine.Services
                 .Select(_ => _.Id).ToList();
             if (ids.Count == 0)
                 return;
-            _logger.LogInformation($"RemoveLiquidityOldOrders() expired {ids.Count} orders");
+            _logger.LogDebug($"RemoveLiquidityOldOrders() expired {ids.Count} orders");
             foreach (var id in ids)
                 EnqueuePoolAction(PoolActionType.RemoveLiquidityOrder, id);
         }

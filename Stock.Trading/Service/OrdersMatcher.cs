@@ -1,3 +1,4 @@
+using AutoMapper;
 using MatchingEngine.Models;
 using Microsoft.Extensions.Logging;
 using System;
@@ -9,12 +10,15 @@ namespace MatchingEngine.Services
     public class OrdersMatcher
     {
         private readonly ILiquidityImportService _liquidityImportService;
+        private readonly IMapper _mapper;
         private readonly ILogger _logger;
 
         public OrdersMatcher(ILiquidityImportService liquidityImportService,
+            IMapper mapper,
             ILogger<OrdersMatcher> logger)
         {
             _liquidityImportService = liquidityImportService;
+            _mapper = mapper;
             _logger = logger;
         }
 
@@ -65,8 +69,8 @@ namespace MatchingEngine.Services
                         Id = Guid.NewGuid(),
                         BidId = bid.Id,
                         AskId = ask.Id,
-                        Bid = (Bid)bid,
-                        Ask = (Ask)ask,
+                        Bid = _mapper.Map<Bid>(bid),
+                        Ask = _mapper.Map<Ask>(ask),
                         IsBid = bid.IsLocal,
                     };
                     liquidityTrades.Add(liquidityTrade);
