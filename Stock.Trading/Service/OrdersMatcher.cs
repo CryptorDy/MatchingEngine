@@ -60,16 +60,16 @@ namespace MatchingEngine.Services
                         _logger.LogWarning($"Incorrect blocked state: {bid}, {ask}");
 
                     // liquidity will try to fill all amount of local order
+                    var externalTrade = new MatchingExternalTrade(bid, ask, _mapper);
+                    _liquidityImportService.CreateTrade(externalTrade);
                     newOrder.Blocked = newOrder.AvailableAmount;
                     poolOrder.Blocked = poolOrder.AvailableAmount;
                     newOrder.LiquidityBlocksCount++;
                     poolOrder.LiquidityBlocksCount++;
-                    var liquidityTrade = new MatchingExternalTrade(bid, ask, _mapper);
-                    _liquidityImportService.CreateTrade(liquidityTrade);
 
-                    liquidityTrade.Bid = null; // prevent save of related entities
-                    liquidityTrade.Ask = null;
-                    liquidityTrades.Add(liquidityTrade);
+                    externalTrade.Bid = null; // prevent save of related entities
+                    externalTrade.Ask = null;
+                    liquidityTrades.Add(externalTrade);
                 }
                 else
                 {

@@ -364,7 +364,7 @@ namespace MatchingEngine.Services
             await ReportData(context, modifiedOrders, newDeals);
 
             time7 = DateTime.UtcNow;
-            if (newOrder.ClientType == ClientType.User && _pairCode == Constants.DebugCurrencyPair)
+            if (newOrder.IsLocal && _pairCode == Constants.DebugCurrencyPair)
                 _logger.LogInformation($"ProcessNewOrder times: {time1:mm.fff} {time2:mm.fff} " +
                     $"{time3:mm.fff} {time4:mm.fff} {time5:mm.fff} {time6:mm.fff} {time7:mm.fff}\n" +
                     $" new order: {newOrder}, Orders in pool: {_orders.Count};");
