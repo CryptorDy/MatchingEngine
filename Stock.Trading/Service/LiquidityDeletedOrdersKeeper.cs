@@ -18,6 +18,7 @@ namespace MatchingEngine.Services
     {
         private readonly ConcurrentDictionary<Guid, DateTime> _liquidityDeletedOrderIds =
             new ConcurrentDictionary<Guid, DateTime>();
+        private readonly Random _random = new();
 
         public LiquidityDeletedOrdersKeeper()
         {
@@ -44,6 +45,8 @@ namespace MatchingEngine.Services
 
         private void RemoveOldIds()
         {
+            if (_random.Next(1000) != 0)
+                return;
             var oldIds = _liquidityDeletedOrderIds.Where(_ => _.Value < DateTime.Now.AddMinutes(-10)).ToList();
             oldIds.ForEach(id => _liquidityDeletedOrderIds.TryRemove(id.Key, out _));
         }
