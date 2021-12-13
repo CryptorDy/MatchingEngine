@@ -86,8 +86,6 @@ namespace MatchingEngine.Services
             if (modifiedOrders.Count == 0 && newDeals.Count == 0 && (newLiquidityTrades == null || newLiquidityTrades.Count == 0))
                 return;
 
-            using var stopwatch = new StopwatchOperation($"UpdateDatabase {_pairCode} {modifiedOrders.FirstOrDefault()}, {newDeals.FirstOrDefault()}",
-                (log) => _logger.LogInformation(log));
             if (modifiedOrders.Count > 0)
             {
                 _logger.LogDebug($"Updating {modifiedOrders.Count} orders");
@@ -306,16 +304,7 @@ namespace MatchingEngine.Services
         {
             try
             {
-                if (_random.Next(1000) == 0)
-                {
-                    using var stopwatch = new StopwatchOperation($"SendOrdersToMarketData {_pairCode} count:{_orders.Count}",
-                        (log) => _logger.LogInformation(log));
-                    _marketDataHolder.SetOrders(_pairCode, _orders);
-                }
-                else
-                {
-                    _marketDataHolder.SetOrders(_pairCode, _orders);
-                }
+                _marketDataHolder.SetOrders(_pairCode, _orders);
             }
             catch (Exception ex)
             {
@@ -346,24 +335,40 @@ namespace MatchingEngine.Services
             List<Deal> newDeals = new();
             List<MatchingExternalTrade> liquidityTrades = new();
 
+            bool logTimes = newOrder.ClientType == ClientType.User;
+            Action<string> logMethod = logTimes
+                ? (log) => _logger.LogInformation(log)
+                : (log) => _logger.LogDebug(log);
+
             lock (_orders) // no access to pool (for removing) while matching is performed
             {
-                DateTime start = DateTime.UtcNow;
+                DateTime time1 = DateTime.UtcNow;
                 if (newOrder.ClientType != ClientType.LiquidityBot && newOrder.ClientType != ClientType.DealsBot)
                     context.AddOrder(newOrder, true, OrderEventType.Create).Wait();
 
+                DateTime time2 = DateTime.UtcNow;
                 (modifiedOrders, newDeals, liquidityTrades) = _ordersMatcher.Match(_orders.Values, newOrder);
                 if (newOrder.IsActive)
                 {
                     _orders[newOrder.Id] = newOrder;
                 }
                 RemoveNotActivePoolOrders();
-                _logger.LogDebug($"Matching completed: {(DateTime.UtcNow - start).TotalMilliseconds}ms; " +
-                    $"new order: {newOrder}, Orders in pool: {_orders.Count};");
+                logMethod($"ProcessNewOrder db save: {(time2 - time1).TotalMilliseconds}, matcher: {(DateTime.UtcNow - time2).TotalMilliseconds}ms;\n" +
+                    $" new order: {newOrder}, Orders in pool: {_orders.Count};");
                 LogOrderbookIntersections(newOrder);
-                UpdateDatabase(context, modifiedOrders, newDeals, liquidityTrades).Wait();
+
+                using (var stopwatch = new StopwatchOperation($"ProcessNewOrder UpdateDatabase {_pairCode} {modifiedOrders.FirstOrDefault()}, {newDeals.FirstOrDefault()}",
+                    logMethod))
+                {
+                    UpdateDatabase(context, modifiedOrders, newDeals, liquidityTrades).Wait();
+                }
             }
-            await ReportData(context, modifiedOrders, newDeals);
+
+            using (var stopwatch = new StopwatchOperation($"ProcessNewOrder ReportData {_pairCode}",
+                logMethod))
+            {
+                await ReportData(context, modifiedOrders, newDeals);
+            }
         }
 
         private void CancelOrder(PoolAction cancelAction)
