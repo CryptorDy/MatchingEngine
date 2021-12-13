@@ -15,6 +15,7 @@ namespace MatchingEngine
         {
             Console.WriteLine($"Version: {Assembly.GetExecutingAssembly().GetName().Version}");
             IWebHost host = BuildWebHost(args);
+            Console.WriteLine($"Program.Main after BuildWebHost");
 
             host.Services.GetRequiredService<CurrenciesCache>().LoadData().Wait(); // load currencies and currency pairs
             using (var scope = host.Services.CreateScope())
@@ -22,12 +23,13 @@ namespace MatchingEngine
                 var dbInitializer = scope.ServiceProvider.GetService<IDbInitializer>();
                 dbInitializer.Init().Wait();
             }
+            Console.WriteLine($"Program.Main after dbInitializer.Init");
             var singletonsAccessor = host.Services.GetRequiredService<SingletonsAccessor>();
             var matchingPoolsHandler = singletonsAccessor.MatchingPoolsHandler;
             host.Services.GetRequiredService<LiquidityExpireBlocksHandler>().SetMatchingPoolsHandler(matchingPoolsHandler);
             singletonsAccessor.LiquidityExpireWatcher.SetMatchingPoolsHandler(matchingPoolsHandler);
             singletonsAccessor.InnerBotExpireWatcher.SetMatchingPoolsHandler(matchingPoolsHandler);
-
+            Console.WriteLine($"Program.Main before host.Run");
             host.Run();
         }
 
