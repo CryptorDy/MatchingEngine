@@ -3,6 +3,7 @@ using MatchingEngine.Helpers;
 using MatchingEngine.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -20,6 +21,7 @@ namespace MatchingEngine.Services
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly CurrenciesCache _currenciesCache;
         private readonly IServiceProvider _provider;
+        private readonly ILogger _logger;
 
         private readonly ConcurrentDictionary<string, MatchingPool> _matchingPools =
             new ConcurrentDictionary<string, MatchingPool>();
@@ -29,11 +31,13 @@ namespace MatchingEngine.Services
         public MatchingPoolsHandler(
             IServiceScopeFactory serviceScopeFactory,
             CurrenciesCache currenciesService,
-            IServiceProvider provider)
+            IServiceProvider provider,
+            ILogger<MatchingPool> logger)
         {
             _scopeFactory = serviceScopeFactory;
             _currenciesCache = currenciesService;
             _provider = provider;
+            _logger = logger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -55,12 +59,16 @@ namespace MatchingEngine.Services
 
         private void InitPools()
         {
+            _logger.LogInformation($"InitPools begin");
+            using var stopwatch = new StopwatchOperation($"InitPools",
+                   (log) => _logger.LogInformation(log));
             lock (_poolsCreationLock)
             {
                 using var scope = _scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
                 var bids = context.Bids.AsNoTracking().Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount).ToList();  // todo use IsActive field
                 var asks = context.Asks.AsNoTracking().Where(_ => !_.IsCanceled && _.Fulfilled < _.Amount).ToList();
+                _logger.LogInformation($"InitPools bids:{bids.Count} asks:{asks.Count}");
                 var activeOrdersByPair = bids.Cast<MatchingOrder>().Union(asks)
                     .GroupBy(_ => _.CurrencyPairCode).ToDictionary(_ => _.Key, _ => _.ToList());
 
