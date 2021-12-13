@@ -31,6 +31,7 @@ namespace MatchingEngine.Services
         private int _liquidityRecreatedOrdersCount = 0;
         const int actionsLimit = 1000;
         private int _actionsLimitSkipped = 0;
+        private readonly Random _random = new();
 
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly CurrenciesCache _currenciesCache;
@@ -85,6 +86,8 @@ namespace MatchingEngine.Services
             if (modifiedOrders.Count == 0 && newDeals.Count == 0 && (newLiquidityTrades == null || newLiquidityTrades.Count == 0))
                 return;
 
+            using var stopwatch = new StopwatchOperation($"UpdateDatabase {_pairCode} {modifiedOrders.FirstOrDefault()}, {newDeals.FirstOrDefault()}",
+                (log) => _logger.LogInformation(log));
             if (modifiedOrders.Count > 0)
             {
                 _logger.LogDebug($"Updating {modifiedOrders.Count} orders");
@@ -303,7 +306,16 @@ namespace MatchingEngine.Services
         {
             try
             {
-                _marketDataHolder.SetOrders(_pairCode, _orders);
+                if (_random.Next(1000) == 0)
+                {
+                    using var stopwatch = new StopwatchOperation($"SendOrdersToMarketData {_pairCode} count:{_orders.Count}",
+                        (log) => _logger.LogInformation(log));
+                    _marketDataHolder.SetOrders(_pairCode, _orders);
+                }
+                else
+                {
+                    _marketDataHolder.SetOrders(_pairCode, _orders);
+                }
             }
             catch (Exception ex)
             {
