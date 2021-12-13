@@ -329,6 +329,9 @@ namespace MatchingEngine.Services
         private async Task ProcessNewOrder(MatchingOrder newOrder)
         {
             _logger.LogDebug($"Process() started {newOrder}");
+            DateTime time1, time2, time3, time4, time5, time6, time7;
+            time1 = DateTime.UtcNow;
+
             using var scope = _serviceScopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
             List<MatchingOrder> modifiedOrders = new();
@@ -336,39 +339,35 @@ namespace MatchingEngine.Services
             List<MatchingExternalTrade> liquidityTrades = new();
 
             bool logTimes = newOrder.ClientType == ClientType.User;
-            Action<string> logMethod = logTimes
-                ? (log) => _logger.LogInformation(log)
-                : (log) => _logger.LogDebug(log);
 
             lock (_orders) // no access to pool (for removing) while matching is performed
             {
-                DateTime time1 = DateTime.UtcNow;
+                time2 = DateTime.UtcNow;
                 if (newOrder.ClientType != ClientType.LiquidityBot && newOrder.ClientType != ClientType.DealsBot)
                     context.AddOrder(newOrder, true, OrderEventType.Create).Wait();
 
-                DateTime time2 = DateTime.UtcNow;
+                time3 = DateTime.UtcNow;
                 (modifiedOrders, newDeals, liquidityTrades) = _ordersMatcher.Match(_orders.Values, newOrder);
                 if (newOrder.IsActive)
                 {
                     _orders[newOrder.Id] = newOrder;
                 }
+                time4 = DateTime.UtcNow;
                 RemoveNotActivePoolOrders();
-                logMethod($"ProcessNewOrder db save: {(time2 - time1).TotalMilliseconds}, matcher: {(DateTime.UtcNow - time2).TotalMilliseconds}ms;\n" +
-                    $" new order: {newOrder}, Orders in pool: {_orders.Count};");
                 LogOrderbookIntersections(newOrder);
 
-                using (var stopwatch = new StopwatchOperation($"ProcessNewOrder UpdateDatabase {_pairCode} {modifiedOrders.FirstOrDefault()}, {newDeals.FirstOrDefault()}",
-                    logMethod))
-                {
-                    UpdateDatabase(context, modifiedOrders, newDeals, liquidityTrades).Wait();
-                }
+                time5 = DateTime.UtcNow;
+                UpdateDatabase(context, modifiedOrders, newDeals, liquidityTrades).Wait();
+                time6 = DateTime.UtcNow;
             }
 
-            using (var stopwatch = new StopwatchOperation($"ProcessNewOrder ReportData {_pairCode}",
-                logMethod))
-            {
-                await ReportData(context, modifiedOrders, newDeals);
-            }
+            await ReportData(context, modifiedOrders, newDeals);
+
+            time7 = DateTime.UtcNow;
+            if (newOrder.ClientType == ClientType.User && _pairCode == Constants.DebugCurrencyPair)
+                _logger.LogInformation($"ProcessNewOrder times: {time1:mm.fff} {time2:mm.fff} " +
+                    $"{time3:mm.fff} {time4:mm.fff} {time5:mm.fff} {time6:mm.fff} {time7:mm.fff}\n" +
+                    $" new order: {newOrder}, Orders in pool: {_orders.Count};");
         }
 
         private void CancelOrder(PoolAction cancelAction)
