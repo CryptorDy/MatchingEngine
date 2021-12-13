@@ -37,6 +37,7 @@ namespace Stock.Trading.Controllers
         public async Task<MatchingExternalTrade> GetExternalTrade(Guid id)
         {
             var model = await _context.ExternalTrades.FirstOrDefaultAsync(_ => _.Id == id);
+            // Note: Bid and Ask models are not loaded
             return model;
         }
 

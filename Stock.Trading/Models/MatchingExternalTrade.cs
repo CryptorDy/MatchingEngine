@@ -1,6 +1,7 @@
 using AutoMapper;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -36,7 +37,11 @@ namespace MatchingEngine.Models
         public Guid AskId { get; set; }
         public Guid? DealId { get; set; }
         public bool IsBid { get; set; }
+
+        [NotMapped]
         public Bid Bid { get; set; }
+
+        [NotMapped]
         public Ask Ask { get; set; }
 
         public override string ToString() => $"{nameof(MatchingExternalTrade)}({Id}, {(DealId.HasValue ? $"Deal: {DealId}, " : "")}" +
