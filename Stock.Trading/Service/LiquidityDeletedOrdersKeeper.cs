@@ -45,7 +45,7 @@ namespace MatchingEngine.Services
 
         private void RemoveOldIds()
         {
-            if (_random.Next(1000) != 0)
+            if (_random.Next(10000) != 0)
                 return;
             var oldIds = _liquidityDeletedOrderIds.Where(_ => _.Value < DateTime.Now.AddMinutes(-10)).ToList();
             oldIds.ForEach(id => _liquidityDeletedOrderIds.TryRemove(id.Key, out _));

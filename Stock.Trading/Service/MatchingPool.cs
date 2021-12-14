@@ -304,7 +304,16 @@ namespace MatchingEngine.Services
         {
             try
             {
-                _marketDataHolder.SetOrders(_pairCode, _orders);
+                if (_pairCode == Constants.DebugCurrencyPair && _random.Next(3000) == 0)
+                {
+                    using var stopwatch = new StopwatchOperation($"SendOrdersToMarketData {_pairCode} count:{_orders.Count}",
+                        (log) => _logger.LogInformation(log));
+                    _marketDataHolder.SetOrders(_pairCode, _orders);
+                }
+                else
+                {
+                    _marketDataHolder.SetOrders(_pairCode, _orders);
+                }
             }
             catch (Exception ex)
             {
@@ -365,8 +374,8 @@ namespace MatchingEngine.Services
 
             time7 = DateTime.UtcNow;
             if (newOrder.IsLocal && _pairCode == Constants.DebugCurrencyPair)
-                _logger.LogInformation($"ProcessNewOrder times: {time1:mm.fff} {time2:mm.fff} " +
-                    $"{time3:mm.fff} {time4:mm.fff} {time5:mm.fff} {time6:mm.fff} {time7:mm.fff}\n" +
+                _logger.LogInformation($"ProcessNewOrder times: {time1:ss.fff} {time2:ss.fff} " +
+                    $"{time3:ss.fff} {time4:ss.fff} {time5:ss.fff} {time6:ss.fff} {time7:ss.fff}\n" +
                     $" new order: {newOrder}, Orders in pool: {_orders.Count};");
         }
 
@@ -563,16 +572,6 @@ namespace MatchingEngine.Services
                 ExternalTrade = externalTrade,
             };
             _actionsBuffer.Add(action);
-            if (_actionsBuffer.Count > 1 && _pairCode == Constants.DebugCurrencyPair && new Random().Next(50) == 0)
-            {
-                var byActionType = _actionsBuffer.GroupBy(_ => _.ActionType).OrderBy(_ => _.Key).Select(_ => $"{_.Key}: {_.Count()}");
-                _logger.LogInformation($"{_pairCode} actionsBuffer currentDelay:{DateTimeOffset.UtcNow - _actionsBuffer.First().DateAdded}; " +
-                    $"liquidity actions skipped: {_actionsLimitSkipped};\n " +
-                    $"total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}\n " +
-                    $"totalOrders: {_orders.Count}, recreated imported orders:{_liquidityRecreatedOrdersCount}");
-                _logger.LogInformation($"{_pairCode} actionsBuffer averageTimes:\n " +
-                    $"{string.Join("\n ", _actionTimes.Select(_ => $"{_.Key}: {_.Value.Count} actions, average time: {_.Value.Average()}"))}");
-            }
         }
 
         public void EnqueueCreateOrderAction(MatchingOrder order)
@@ -650,6 +649,17 @@ namespace MatchingEngine.Services
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"{newAction}");
+                }
+
+                if (_actionsBuffer.Count > 1 && _pairCode == Constants.DebugCurrencyPair && new Random().Next(100) == 0)
+                {
+                    var byActionType = _actionsBuffer.GroupBy(_ => _.ActionType).OrderBy(_ => _.Key).Select(_ => $"{_.Key}: {_.Count()}");
+                    _logger.LogInformation($"{_pairCode} actionsBuffer currentDelay:{DateTimeOffset.UtcNow - _actionsBuffer.First().DateAdded}; " +
+                        $"liquidity actions skipped: {_actionsLimitSkipped};\n " +
+                        $"total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}\n " +
+                        $"totalOrders: {_orders.Count}, recreated imported orders:{_liquidityRecreatedOrdersCount}");
+                    _logger.LogInformation($"{_pairCode} actionsBuffer averageTimes:\n " +
+                        $"{string.Join("\n ", _actionTimes.Select(_ => $"{_.Key}: {_.Value.Count} actions, average time: {_.Value.Average()}"))}");
                 }
             }
             _actionsBuffer.Dispose();
