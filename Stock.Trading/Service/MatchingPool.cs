@@ -138,6 +138,7 @@ namespace MatchingEngine.Services
 
                     dbOrder.Fulfilled = order.Fulfilled;
                     dbOrder.Blocked = order.Blocked;
+                    dbOrder.LiquidityBlocksCount = order.LiquidityBlocksCount;
                     await context.UpdateOrder(dbOrder, false, eventType, dealIds: orderDealIds);
                 }
             }
