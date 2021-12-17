@@ -592,9 +592,9 @@ namespace MatchingEngine.Services
                         break; // cancellationToken was called
 
                     // if _actionsBuffer becomes too big, skip liquidity import events
-                    if (_actionsBuffer.Count > actionsLimit && newAction.ActionType == PoolActionType.CreateLiquidityOrder
+                    if (_actionsBuffer.Count > actionsLimit && (newAction.ActionType == PoolActionType.CreateLiquidityOrder
                         || newAction.ActionType == PoolActionType.UpdateLiquidityOrder
-                        || newAction.ActionType == PoolActionType.UpdateLiquidityOrder)
+                        || newAction.ActionType == PoolActionType.RemoveLiquidityOrder))
                     {
                         _actionsLimitSkipped++;
                         continue;
@@ -622,9 +622,7 @@ namespace MatchingEngine.Services
                     }
                     else if (newAction.ActionType == PoolActionType.UpdateLiquidityOrder)
                     {
-                        _logger.LogInformation($"UpdateLiquidityOrder started {newAction}");
                         UpdateLiquidityOrder(newAction.Order);
-                        _logger.LogInformation($"UpdateLiquidityOrder finished");
                     }
                     else if (newAction.ActionType == PoolActionType.RemoveLiquidityOrder)
                     {
