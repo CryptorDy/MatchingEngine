@@ -41,6 +41,7 @@ namespace Stock.Trading.Tests
             //Assert.Single(modifiedOrders); // initial liquidity order isn't saved, will be created in DB afterwards
             Assert.True(modifiedOrders[0].Blocked > 0);
             Assert.Equal(0, modifiedOrders[0].AvailableAmount);
+            Assert.Equal(1, modifiedOrders[0].LiquidityBlocksCount);
             Assert.Single(externalTrades);
             var externalTrade = externalTrades.First();
             Assert.Equal(bid.Id, externalTrade.BidId);
@@ -83,6 +84,7 @@ namespace Stock.Trading.Tests
             Assert.Equal(1, liquidityCallbackCounter);
             Assert.True(savedBid.Blocked > 0);
             Assert.Equal(0, savedBid.AvailableAmount);
+            Assert.Equal(1, savedBid.LiquidityBlocksCount);
 
             // calling from liquidity with result
             await matchingPool.SaveExternalTradeResult(new ExternalTrade
