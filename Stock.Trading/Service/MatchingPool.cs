@@ -622,7 +622,9 @@ namespace MatchingEngine.Services
                     }
                     else if (newAction.ActionType == PoolActionType.UpdateLiquidityOrder)
                     {
+                        _logger.LogInformation($"UpdateLiquidityOrder started {newAction}");
                         UpdateLiquidityOrder(newAction.Order);
+                        _logger.LogInformation($"UpdateLiquidityOrder finished");
                     }
                     else if (newAction.ActionType == PoolActionType.RemoveLiquidityOrder)
                     {
@@ -659,8 +661,10 @@ namespace MatchingEngine.Services
                         $"liquidity actions skipped: {_actionsLimitSkipped};\n " +
                         $"total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}\n " +
                         $"totalOrders: {_orders.Count}, recreated imported orders:{_liquidityRecreatedOrdersCount}");
-                    _logger.LogInformation($"{_pairCode} actionsBuffer averageTimes:\n " +
-                        $"{string.Join("\n ", _actionTimes.Select(_ => $"{_.Key}: {_.Value.Count} actions, average time: {_.Value.Average()}"))}");
+
+                    var averageTimes = _actionTimes.OrderBy(_ => _.Key)
+                        .Select(_ => $"{_.Key}: {_.Value.Count} actions, average time: {_.Value.Average()}");
+                    _logger.LogInformation($"{_pairCode} actionsBuffer averageTimes:\n {string.Join("\n ", averageTimes)}");
                 }
             }
             _actionsBuffer.Dispose();
