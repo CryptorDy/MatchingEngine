@@ -17,6 +17,7 @@ using Microsoft.Extensions.PlatformAbstractions;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Swagger;
+using System;
 using System.IO;
 using TLabs.DotnetHelpers;
 using TLabs.ExchangeSdk;
@@ -29,6 +30,7 @@ namespace MatchingEngine
     {
         public Startup(IWebHostEnvironment env, ILogger<FlurlCall> flurlLogger)
         {
+            Console.WriteLine($"Startup constr begin");
             var basePath = env.EnvironmentName == "Testing"
                 ? Path.Combine(env.ContentRootPath, "..\\..\\..")
                 : env.ContentRootPath;
@@ -41,6 +43,7 @@ namespace MatchingEngine
 
             Configuration = builder.Build();
             CurrentEnvironment = env;
+            Console.WriteLine($"Startup constr end");
         }
 
         public IConfigurationRoot Configuration { get; }
@@ -49,6 +52,7 @@ namespace MatchingEngine
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            Console.WriteLine($"Startup ConfigureServices begin");
             services.Configure<AppSettings>(Configuration);
             var settings = Configuration.Get<AppSettings>();
 
@@ -99,11 +103,14 @@ namespace MatchingEngine
             services.AddHostedService<LiquidityExpireBlocksBgService>();
             services.AddSingleton<ILiquidityDeletedOrdersKeeper, LiquidityDeletedOrdersKeeper>();
             services.AddHostedService<InnerBotExpireWatcher>();
+
+            Console.WriteLine($"Startup ConfigureServices end");
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory, IMapper mapper)
         {
+            Console.WriteLine($"Startup Configure begin");
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {
@@ -117,6 +124,7 @@ namespace MatchingEngine
             });
 
             mapper.ConfigurationProvider.AssertConfigurationIsValid();
+            Console.WriteLine($"Startup Configure end");
         }
     }
 }

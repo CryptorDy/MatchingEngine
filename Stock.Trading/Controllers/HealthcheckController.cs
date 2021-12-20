@@ -13,6 +13,7 @@ namespace MatchingEngine.Controllers
         [HttpGet]
         public IActionResult Get()
         {
+            Console.WriteLine($"HealthcheckController Get begin");
             var assemblyName = Assembly.GetExecutingAssembly().GetName();
             return Json($"{assemblyName.Name} v{assemblyName.Version}");
         }
