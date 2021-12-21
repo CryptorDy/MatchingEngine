@@ -582,90 +582,95 @@ namespace MatchingEngine.Services
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            PoolAction newAction = null;
             while (!cancellationToken.IsCancellationRequested)
             {
-                try
+                await ProcessActions(cancellationToken);
+            }
+            _actionsBuffer.Dispose();
+        }
+
+        protected async Task ProcessActions(CancellationToken cancellationToken)
+        {
+            PoolAction newAction = null;
+            try
+            {
+                bool isReceived = _actionsBuffer.TryTake(out newAction, Timeout.Infinite, cancellationToken);
+                if (!isReceived)
+                    return; // cancellationToken was called
+
+                // if _actionsBuffer becomes too big, skip liquidity import events
+                if (_actionsBuffer.Count > actionsLimit && (newAction.ActionType == PoolActionType.CreateLiquidityOrder
+                    || newAction.ActionType == PoolActionType.UpdateLiquidityOrder
+                    || newAction.ActionType == PoolActionType.RemoveLiquidityOrder))
                 {
-                    bool isReceived = _actionsBuffer.TryTake(out newAction, Timeout.Infinite, cancellationToken);
-                    if (!isReceived)
-                        break; // cancellationToken was called
+                    _actionsLimitSkipped++;
+                    return;
+                }
 
-                    // if _actionsBuffer becomes too big, skip liquidity import events
-                    if (_actionsBuffer.Count > actionsLimit && (newAction.ActionType == PoolActionType.CreateLiquidityOrder
-                        || newAction.ActionType == PoolActionType.UpdateLiquidityOrder
-                        || newAction.ActionType == PoolActionType.RemoveLiquidityOrder))
-                    {
-                        _actionsLimitSkipped++;
-                        continue;
-                    }
+                var dateStart = DateTime.UtcNow;
 
-                    var dateStart = DateTime.UtcNow;
-
-                    if (newAction.ActionType == PoolActionType.CreateOrder
-                        || newAction.ActionType == PoolActionType.CreateLiquidityOrder)
+                if (newAction.ActionType == PoolActionType.CreateOrder
+                    || newAction.ActionType == PoolActionType.CreateLiquidityOrder)
+                {
+                    var newOrder = newAction.Order;
+                    if (_deletedOrdersKeeper.Contains(newOrder.Id))
                     {
-                        var newOrder = newAction.Order;
-                        if (_deletedOrdersKeeper.Contains(newOrder.Id))
-                        {
-                            if (newOrder.IsLocal)
-                                _logger.LogInformation($"Skipped order processing (already deleted): {newOrder}");
-                        }
-                        else
-                        {
-                            await ProcessNewOrder(newOrder);
-                        }
-                    }
-                    else if (newAction.ActionType == PoolActionType.CancelOrder)
-                    {
-                        CancelOrder(newAction);
-                    }
-                    else if (newAction.ActionType == PoolActionType.UpdateLiquidityOrder)
-                    {
-                        UpdateLiquidityOrder(newAction.Order);
-                    }
-                    else if (newAction.ActionType == PoolActionType.RemoveLiquidityOrder)
-                    {
-                        RemovePoolOrders(new List<Guid> { newAction.OrderId }, ClientType.LiquidityBot);
-                    }
-                    else if (newAction.ActionType == PoolActionType.ExternalTradeResult)
-                    {
-                        await SaveExternalTradeResult(newAction.ExternalTrade);
-                    }
-                    else if (newAction.ActionType == PoolActionType.AutoUnblockOrder)
-                    {
-                        await UnblockOrder(newAction.OrderId);
+                        if (newOrder.IsLocal)
+                            _logger.LogInformation($"Skipped order processing (already deleted): {newOrder}");
                     }
                     else
                     {
-                        _logger.LogCritical($"ExecuteAsync {_pairCode} unknown action {newAction}");
+                        await ProcessNewOrder(newOrder);
                     }
-
-                    var time = DateTime.UtcNow - dateStart;
-                    if (!_actionTimes.ContainsKey(newAction.ActionType))
-                        _actionTimes[newAction.ActionType] = new();
-                    _actionTimes[newAction.ActionType].Add((int)time.TotalMilliseconds);
                 }
-                catch (TaskCanceledException) { }
-                catch (Exception ex)
+                else if (newAction.ActionType == PoolActionType.CancelOrder)
                 {
-                    _logger.LogError(ex, $"{newAction}");
+                    CancelOrder(newAction);
                 }
-
-                if (_actionsBuffer.Count > 1 && _pairCode == Constants.DebugCurrencyPair && new Random().Next(100) == 0)
+                else if (newAction.ActionType == PoolActionType.UpdateLiquidityOrder)
                 {
-                    var byActionType = _actionsBuffer.GroupBy(_ => _.ActionType).OrderBy(_ => _.Key).Select(_ => $"{_.Key}: {_.Count()}");
-                    _logger.LogInformation($"{_pairCode} actionsBuffer currentDelay:{DateTimeOffset.UtcNow - _actionsBuffer.First().DateAdded}; " +
-                        $"liquidity actions skipped: {_actionsLimitSkipped};\n " +
-                        $"total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}\n " +
-                        $"totalOrders: {_orders.Count}, recreated imported orders:{_liquidityRecreatedOrdersCount}");
-
-                    var averageTimes = _actionTimes.OrderBy(_ => _.Key)
-                        .Select(_ => $"{_.Key}: {_.Value.Count} actions, average time: {_.Value.Average()}");
-                    _logger.LogInformation($"{_pairCode} actionsBuffer averageTimes:\n {string.Join("\n ", averageTimes)}");
+                    UpdateLiquidityOrder(newAction.Order);
                 }
+                else if (newAction.ActionType == PoolActionType.RemoveLiquidityOrder)
+                {
+                    RemovePoolOrders(new List<Guid> { newAction.OrderId }, ClientType.LiquidityBot);
+                }
+                else if (newAction.ActionType == PoolActionType.ExternalTradeResult)
+                {
+                    await SaveExternalTradeResult(newAction.ExternalTrade);
+                }
+                else if (newAction.ActionType == PoolActionType.AutoUnblockOrder)
+                {
+                    await UnblockOrder(newAction.OrderId);
+                }
+                else
+                {
+                    _logger.LogCritical($"ExecuteAsync {_pairCode} unknown action {newAction}");
+                }
+
+                var time = DateTime.UtcNow - dateStart;
+                if (!_actionTimes.ContainsKey(newAction.ActionType))
+                    _actionTimes[newAction.ActionType] = new();
+                _actionTimes[newAction.ActionType].Add((int)time.TotalMilliseconds);
             }
-            _actionsBuffer.Dispose();
+            catch (TaskCanceledException) { }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"{newAction}");
+            }
+
+            if (_actionsBuffer.Count > 1 && _pairCode == Constants.DebugCurrencyPair && new Random().Next(100) == 0)
+            {
+                var byActionType = _actionsBuffer.GroupBy(_ => _.ActionType).OrderBy(_ => _.Key).Select(_ => $"{_.Key}: {_.Count()}");
+                _logger.LogInformation($"{_pairCode} actionsBuffer currentDelay:{DateTimeOffset.UtcNow - _actionsBuffer.First().DateAdded}; " +
+                    $"liquidity actions skipped: {_actionsLimitSkipped};\n " +
+                    $"total size: {_actionsBuffer.Count}; {string.Join(", ", byActionType)}\n " +
+                    $"totalOrders: {_orders.Count}, recreated imported orders:{_liquidityRecreatedOrdersCount}");
+
+                var averageTimes = _actionTimes.OrderBy(_ => _.Key)
+                    .Select(_ => $"{_.Key}: {_.Value.Count} actions, average time: {_.Value.Average()}");
+                _logger.LogInformation($"{_pairCode} actionsBuffer averageTimes:\n {string.Join("\n ", averageTimes)}");
+            }
         }
     }
 }
