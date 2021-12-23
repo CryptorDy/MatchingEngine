@@ -100,9 +100,9 @@ namespace MatchingEngine.Services
                     using (var scope = _scopeFactory.CreateScope())
                     {
                         var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-
+                        var maxDate = DateTimeOffset.UtcNow.AddSeconds(-15); // don't send just created events because they send themselves
                         var unprocessedDeals = await context.Deals.Include(_ => _.Bid).Include(_ => _.Ask)
-                            .Where(_ => !_.IsSentToDealEnding)
+                            .Where(_ => !_.IsSentToDealEnding && _.DateCreated < maxDate)
                             .OrderByDescending(_ => _.DateCreated)
                             .Take(_batchSize)
                             .ToListAsync();
