@@ -39,7 +39,8 @@ namespace MatchingEngine.Services
         private static bool _isSendingOrderCancellings = false;
         private static bool _isSendingDeals = false;
 
-        private static ConcurrentDictionary<Guid, bool> _sendingCancellings = new();
+        private static ConcurrentDictionary<Guid, bool> _sendingDealIds = new();
+        private static ConcurrentDictionary<Guid, bool> _sendingCancellingIds = new();
 
         public DealEndingService(
             IServiceScopeFactory serviceScopeFactory,
@@ -55,20 +56,35 @@ namespace MatchingEngine.Services
 
         public async Task SendDeal(Deal deal, TradingDbContext context = null)
         {
-            await _gatewayHttpClient.PostJsonAsync($"dealending/deal", deal);
-            deal.IsSentToDealEnding = true;
-            if (context == null)
+            if (_sendingDealIds.ContainsKey(deal.DealId))
+                return; // prevent double sending
+            try
             {
-                using var scope = _scopeFactory.CreateScope();
-                context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-                context.Update(deal);
-                await context.SaveChangesAsync();
+                _sendingDealIds[deal.DealId] = true;
+
+                await _gatewayHttpClient.PostJsonAsync($"dealending/deal", deal);
+                deal.IsSentToDealEnding = true;
+                if (context == null)
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+                    context.Update(deal);
+                    await context.SaveChangesAsync();
+                }
+                else
+                {
+                    await context.SaveChangesAsync();
+                }
+                _logger.LogDebug($"SendDeal() sent: {deal.DealId}");
             }
-            else
+            catch (Exception e)
             {
-                await context.SaveChangesAsync();
+                _logger.LogError(e, $"{deal}");
             }
-            _logger.LogDebug($"SendDeal() sent: {deal.DealId}");
+            finally
+            {
+                _sendingDealIds.TryRemove(deal.DealId, out _);
+            }
         }
 
         public async Task SendDeals()
@@ -109,7 +125,7 @@ namespace MatchingEngine.Services
                         if (errorsCount > 0)
                             _logger.LogInformation($"SendDeals() end. processed:{unprocessedDeals.Count}, with errors: {errorsCount}");
                     }
-                    await Task.Delay(TimeSpan.FromSeconds(5));
+                    await Task.Delay(TimeSpan.FromSeconds(10));
                 }
             }
             catch (Exception ex)
@@ -121,11 +137,11 @@ namespace MatchingEngine.Services
 
         public async Task CompleteOrderCancelling(OrderEvent orderEvent, TradingDbContext context = null)
         {
-            if (_sendingCancellings.ContainsKey(orderEvent.Id))
+            if (_sendingCancellingIds.ContainsKey(orderEvent.Id))
                 return; // prevent double sending
             try
             {
-                _sendingCancellings[orderEvent.Id] = true;
+                _sendingCancellingIds[orderEvent.Id] = true;
 
                 await $"dealending/orders/cancel".InternalApi()
                     .PostJsonAsync(_mapper.Map<OrderEvent, MatchingOrder>(orderEvent));
@@ -149,7 +165,7 @@ namespace MatchingEngine.Services
             }
             finally
             {
-                _sendingCancellings.TryRemove(orderEvent.Id, out _);
+                _sendingCancellingIds.TryRemove(orderEvent.Id, out _);
             }
         }
 
