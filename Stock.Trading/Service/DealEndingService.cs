@@ -106,7 +106,7 @@ namespace MatchingEngine.Services
                         if (errorsCount > 0)
                             _logger.LogInformation($"SendDeals() end. processed:{unprocessedDeals.Count}, with errors: {errorsCount}");
                     }
-                    await Task.Delay(TimeSpan.FromMinutes(1));
+                    await Task.Delay(TimeSpan.FromSeconds(5));
                 }
             }
             catch (Exception ex)
@@ -159,9 +159,9 @@ namespace MatchingEngine.Services
                             errorsCount++;
                         }
                     }
-                    if (errorsCount > 0)
-                        _logger.LogWarning($"SendDeals() end. processed:{unprocessedEvents.Count}, with errors: {errorsCount}");
-                    await Task.Delay(TimeSpan.FromMinutes(1));
+                    //if (errorsCount > 0)
+                    _logger.LogInformation($"SendDeals() end. processed:{unprocessedEvents.Count}, with errors: {errorsCount}");
+                    await Task.Delay(TimeSpan.FromSeconds(5));
                 }
 
             }
