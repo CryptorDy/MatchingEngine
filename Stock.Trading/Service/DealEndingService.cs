@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -37,6 +38,8 @@ namespace MatchingEngine.Services
         private const int _batchSize = 50;
         private static bool _isSendingOrderCancellings = false;
         private static bool _isSendingDeals = false;
+
+        private static ConcurrentDictionary<Guid, bool> _sendingCancellings = new();
 
         public DealEndingService(
             IServiceScopeFactory serviceScopeFactory,
@@ -118,11 +121,26 @@ namespace MatchingEngine.Services
 
         public async Task CompleteOrderCancelling(OrderEvent orderEvent, TradingDbContext context)
         {
-            await $"dealending/orders/cancel".InternalApi()
-                .PostJsonAsync(_mapper.Map<OrderEvent, MatchingOrder>(orderEvent));
-            orderEvent.IsSentToDealEnding = true;
-            await context.SaveChangesAsync();
-            _logger.LogDebug($"SendOrderCancelling() sent: {orderEvent}");
+            if (_sendingCancellings.ContainsKey(orderEvent.Id))
+                return; // prevent double sending
+            try
+            {
+                _sendingCancellings[orderEvent.Id] = true;
+
+                await $"dealending/orders/cancel".InternalApi()
+                    .PostJsonAsync(_mapper.Map<OrderEvent, MatchingOrder>(orderEvent));
+                orderEvent.IsSentToDealEnding = true;
+                await context.SaveChangesAsync();
+                _logger.LogDebug($"SendOrderCancelling() sent: {orderEvent}");
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"{orderEvent}");
+            }
+            finally
+            {
+                _sendingCancellings.TryRemove(orderEvent.Id, out _);
+            }
         }
 
         public async Task SendOrderCancellings()
@@ -133,13 +151,14 @@ namespace MatchingEngine.Services
             {
                 _isSendingOrderCancellings = true;
                 int errorsCount = 0;
-                while (errorsCount == 0)
+                bool isFullResendAttempt = new Random().Next(20) == 0;
+                while (true)
                 {
                     using var scope = _scopeFactory.CreateScope();
                     var context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
-
+                    var maxDate = DateTimeOffset.UtcNow.AddSeconds(-15); // don't send just created events because they send themselves
                     var unprocessedEvents = await context.OrderEvents
-                        .Where(_ => !_.IsSentToDealEnding && _.EventType == OrderEventType.Cancel)
+                        .Where(_ => !_.IsSentToDealEnding && _.EventType == OrderEventType.Cancel && _.DateCreated < maxDate)
                         .OrderByDescending(_ => _.DateCreated)
                         .Take(_batchSize).ToListAsync();
                     if (unprocessedEvents.Count == 0)
@@ -159,9 +178,13 @@ namespace MatchingEngine.Services
                             errorsCount++;
                         }
                     }
-                    //if (errorsCount > 0)
-                    _logger.LogInformation($"SendDeals() end. processed:{unprocessedEvents.Count}, with errors: {errorsCount}");
-                    await Task.Delay(TimeSpan.FromSeconds(5));
+                    _logger.LogInformation($"SendDeals() end. processed:{unprocessedEvents.Count}, " +
+                        $"with errors: {errorsCount}, isFullResendAttempt:{isFullResendAttempt}");
+                    if (errorsCount == unprocessedEvents.Count) // DealEnding doesn't work at all
+                        break;
+                    if (errorsCount > 0 && !isFullResendAttempt)
+                        break;
+                    await Task.Delay(TimeSpan.FromSeconds(10));
                 }
 
             }
