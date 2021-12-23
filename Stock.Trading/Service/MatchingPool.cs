@@ -352,6 +352,8 @@ namespace MatchingEngine.Services
 
             lock (_orders) // no access to pool (for removing) while matching is performed
             {
+                if (_deletedOrdersKeeper.Contains(newOrder.Id))
+                    return;
                 time2 = DateTime.UtcNow;
                 if (newOrder.ClientType != ClientType.LiquidityBot && newOrder.ClientType != ClientType.DealsBot)
                     context.AddOrder(newOrder, true, OrderEventType.Create).Wait();
@@ -407,12 +409,19 @@ namespace MatchingEngine.Services
                         _logger.LogWarning($"CancelOrder {errorText} for {dbOrder}");
                     return;
                 }
-                _orders.TryRemove(cancelAction.OrderId, out _);
 
                 dbOrder.IsCanceled = true;
                 dbOrder.Blocked = 0;
                 var cancelEvent = context.UpdateOrder(dbOrder, true, OrderEventType.Cancel).Result;
                 _dealEndingService.CompleteOrderCancelling(cancelEvent);
+
+                var poolOrder = _orders.GetValueOrDefault(cancelAction.OrderId, null);
+                if (poolOrder != null)
+                {
+                    poolOrder.IsCanceled = true;
+                    poolOrder.Blocked = 0;
+                }
+                _orders.TryRemove(cancelAction.OrderId, out _);
             }
             SendOrdersToMarketData();
             _logger.LogDebug($"CancelOrder() finished {dbOrder}");
