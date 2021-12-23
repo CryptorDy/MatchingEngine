@@ -23,7 +23,7 @@ namespace MatchingEngine.Services
 
         Task SendDeals();
 
-        Task CompleteOrderCancelling(OrderEvent orderEvent, TradingDbContext context);
+        Task CompleteOrderCancelling(OrderEvent orderEvent, TradingDbContext context = null);
 
         Task SendOrderCancellings();
     }
@@ -119,7 +119,7 @@ namespace MatchingEngine.Services
             _isSendingDeals = false;
         }
 
-        public async Task CompleteOrderCancelling(OrderEvent orderEvent, TradingDbContext context)
+        public async Task CompleteOrderCancelling(OrderEvent orderEvent, TradingDbContext context = null)
         {
             if (_sendingCancellings.ContainsKey(orderEvent.Id))
                 return; // prevent double sending
@@ -130,7 +130,17 @@ namespace MatchingEngine.Services
                 await $"dealending/orders/cancel".InternalApi()
                     .PostJsonAsync(_mapper.Map<OrderEvent, MatchingOrder>(orderEvent));
                 orderEvent.IsSentToDealEnding = true;
-                await context.SaveChangesAsync();
+                if (context == null)
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    context = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+                    context.Update(orderEvent);
+                    await context.SaveChangesAsync();
+                }
+                else
+                {
+                    await context.SaveChangesAsync();
+                }
                 _logger.LogDebug($"SendOrderCancelling() sent: {orderEvent}");
             }
             catch (Exception e)
