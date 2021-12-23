@@ -374,10 +374,10 @@ namespace MatchingEngine.Services
             await ReportData(context, modifiedOrders, newDeals);
 
             time7 = DateTime.UtcNow;
-            if (newOrder.IsLocal && _pairCode == Constants.DebugCurrencyPair)
+            if (newOrder.IsLocal && _random.Next(10) == 0)
                 _logger.LogInformation($"ProcessNewOrder times: {time1:ss.fff} {time2:ss.fff} " +
                     $"{time3:ss.fff} {time4:ss.fff} {time5:ss.fff} {time6:ss.fff} {time7:ss.fff}\n" +
-                    $" new order: {newOrder}, Orders in pool: {_orders.Count};");
+                    $"Orders in pool: {_orders.Count}, new order: {newOrder};");
         }
 
         private void CancelOrder(PoolAction cancelAction)
