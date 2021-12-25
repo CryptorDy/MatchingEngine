@@ -54,11 +54,14 @@ namespace MatchingEngine.Services
                 var ask = newOrder.IsBid ? poolOrder : newOrder;
 
                 bool isExternalTrade = !newOrder.IsLocal || !poolOrder.IsLocal;
+                int maxLiquidityBlocks = 3;
                 if (isExternalTrade)
                 {
                     if (bid.Blocked != 0 || ask.Blocked != 0)
                         _logger.LogWarning($"Incorrect blocked state: {bid}, {ask}");
 
+                    if (newOrder.LiquidityBlocksCount > maxLiquidityBlocks || poolOrder.LiquidityBlocksCount > maxLiquidityBlocks)
+                        continue;
                     // liquidity will try to fill all amount of local order
                     var externalTrade = new MatchingExternalTrade(bid, ask, _mapper);
                     _liquidityImportService.CreateTrade(externalTrade);
