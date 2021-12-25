@@ -81,7 +81,6 @@ namespace MatchingEngine.Data
             bool isSentToDealEnding = false, string dealIds = null)
         {
             _logger.LogDebug($"UpdateOrder() toSave:{toSave}, eventType:{eventType}, order:{order}");
-            Update(order);
             var orderEvent = OrderEvent.Create(_mapper, order, eventType, isSentToDealEnding, dealIds);
             OrderEvents.Add(orderEvent);
             if (toSave)
