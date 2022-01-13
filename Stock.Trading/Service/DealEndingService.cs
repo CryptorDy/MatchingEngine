@@ -31,7 +31,6 @@ namespace MatchingEngine.Services
     public class DealEndingService : IDealEndingService
     {
         private readonly IServiceScopeFactory _scopeFactory;
-        private readonly GatewayHttpClient _gatewayHttpClient;
         private readonly IMapper _mapper;
         private readonly ILogger _logger;
 
@@ -44,12 +43,10 @@ namespace MatchingEngine.Services
 
         public DealEndingService(
             IServiceScopeFactory serviceScopeFactory,
-            GatewayHttpClient gatewayHttpClient,
             IMapper mapper,
             ILogger<DealEndingService> logger)
         {
             _scopeFactory = serviceScopeFactory;
-            _gatewayHttpClient = gatewayHttpClient;
             _mapper = mapper;
             _logger = logger;
         }
@@ -62,7 +59,7 @@ namespace MatchingEngine.Services
             {
                 _sendingDealIds[deal.DealId] = true;
 
-                await _gatewayHttpClient.PostJsonAsync($"dealending/deal", deal);
+                await $"dealending/deal".InternalApi().PostJsonAsync(deal);
                 deal.IsSentToDealEnding = true;
                 if (context == null)
                 {
