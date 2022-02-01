@@ -8,17 +8,28 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using TLabs.ExchangeSdk;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Stock.Trading.Tests
 {
     public class TestsMatching
     {
+        private readonly ITestOutputHelper _output;
+        private ILogger _logger;
+
+        public TestsMatching(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
         [Fact]
         public void EmptyDataReturnEmptyResult()
         {

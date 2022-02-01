@@ -12,22 +12,37 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TLabs.ExchangeSdk.Currencies;
+using Xunit.Abstractions;
 
 namespace Stock.Trading.Tests
 {
     public static class ServicesHelper
     {
         public static (ServiceProvider, MatchingPoolsHandler, TradingService) CreateServiceProvider(
-            Action liquidityImportServiceCallback
-        )
+            Action liquidityImportServiceCallback, ITestOutputHelper output = null, bool useInMemoryDb = true)
         {
             string testId = Guid.NewGuid().ToString(); // every test needs separate DB
             var services = new ServiceCollection();
             services.AddOptions();
             services.Configure<AppSettings>((_) => { });
             services.AddAutoMapper(typeof(Startup));
-            services.AddDbContext<TradingDbContext>(options =>
-                options.UseInMemoryDatabase(databaseName: $"MemoryDb-{testId}"), ServiceLifetime.Transient);
+
+            if (output == null)
+                services.AddLogging(config => config.AddConsole());
+            else
+                services.AddLogging(config => config.AddXunit(output));
+
+            if (useInMemoryDb)
+            {
+                services.AddDbContext<TradingDbContext>(options =>
+                    options.UseInMemoryDatabase(databaseName: $"MemoryDb-{testId}"), ServiceLifetime.Transient);
+            }
+            else
+            {
+                string connStr = $"Server=localhost;Port=5432;Database=stock-trading-test-{testId};User Id=postgres;Password=postgres;MaxPoolSize=10000;Command Timeout=60;";
+                services.AddDbContext<TradingDbContext>(options => options.UseNpgsql(connStr), ServiceLifetime.Transient);
+                //services.AddScoped<IDbInitializer, DbInitializer>();
+            }
 
             var liquidityImportService = new Mock<ILiquidityImportService>();
             liquidityImportService
@@ -39,6 +54,7 @@ namespace Stock.Trading.Tests
 
             services.AddSingleton<IHostedService, MatchingPoolsHandler>(); // if not singleton then mulitple instances are created
             services.AddTransient<TradingService>();
+            services.AddTransient<IDealEndingService, DealEndingService>();
             services.AddSingleton<MarketDataHolder>();
             services.AddSingleton<OrdersMatcher>(_ =>
                 new OrdersMatcher(liquidityImportService.Object, new Mock<IMapper>().Object,
@@ -46,11 +62,15 @@ namespace Stock.Trading.Tests
             // cant register liquidityImportService because it expects class, not interface
             services.AddSingleton<ILiquidityDeletedOrdersKeeper, LiquidityDeletedOrdersKeeper>();
             services.AddSingleton<LiquidityExpireBlocksHandler>();
-
-            var provider = services.AddLogging(config => config.AddConsole())
-                .BuildServiceProvider();
+            
+            var provider = services.BuildServiceProvider();
 
             InitCurrenciesCache(provider.GetRequiredService<CurrenciesCache>());
+            output.WriteLine($"Testing testId:{testId}");
+
+            var context = provider.GetRequiredService<TradingDbContext>();
+            if (!useInMemoryDb)
+                context.Database.Migrate();
 
             return (provider,
                 provider.GetRequiredService<SingletonsAccessor>().MatchingPoolsHandler,
