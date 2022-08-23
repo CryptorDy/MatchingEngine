@@ -1,8 +1,10 @@
-FROM microsoft/dotnet:2.2-aspnetcore-runtime AS base
+FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine AS base
 WORKDIR /app
 EXPOSE 6101
 
-FROM microsoft/dotnet:2.2-sdk AS build
+
+FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine AS build
+
 WORKDIR /src
 COPY . .
 WORKDIR "/src/Stock.Trading"

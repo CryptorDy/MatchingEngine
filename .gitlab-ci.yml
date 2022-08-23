@@ -1,0 +1,29 @@
+stages:
+  - build
+  - push
+  - deploy
+
+build_image:
+  stage: build
+  tags:
+    - shell
+  script:
+    - bash docker-build.sh
+
+push_image:
+  stage: push
+  tags:
+    - shell
+  before_script:
+    - aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 111013178173.dkr.ecr.eu-central-1.amazonaws.com
+  script:
+    - docker push 111013178173.dkr.ecr.eu-central-1.amazonaws.com/stock-matching-engine:${CI_PIPELINE_ID}
+
+deploy_image:
+  stage: deploy
+  tags:
+    - shell
+  before_script:
+    - aws eks update-kubeconfig --region eu-central-1 --name bizon-infra-dev || true
+  script: 
+    - helm upgrade --install stock-matching-engine helm/stock-matching-engine --set image.tag=${CI_PIPELINE_ID}
