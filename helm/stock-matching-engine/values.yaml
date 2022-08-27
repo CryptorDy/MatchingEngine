@@ -21,7 +21,7 @@ env:
     - existingSecret:
         name: stock-matching-engine-dev-credentials
         env:
-          RabbitMqConnection: rabbitmq-connection-string
+          ConnectionStrings__DefaultConnection: postgres-connection-string
 
 imagePullSecrets: []
 nameOverride: ""
