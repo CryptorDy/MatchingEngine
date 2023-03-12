@@ -11,15 +11,15 @@ image:
   tag: "${CI_PIPELINE_ID}"
 
 external_secrets:
-  stock-matching-engine-dev-credentials:
+  stock-matching-engine-prod-credentials:
     region: eu-central-1
     dataFrom:
-      - bizon-dev-credentials
+      - bizon-prod-credentials
 
 env:
   existingSecretMappings:
     - existingSecret:
-        name: stock-matching-engine-dev-credentials
+        name: stock-matching-engine-prod-credentials
         env:
           ConnectionStrings__DefaultConnection: stock-matching-engine-postgres-connection-string
 
@@ -59,11 +59,11 @@ ingress:
   enabled: true
   className: ""
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: matching-engine.ornatetrust.com
+    external-dns.alpha.kubernetes.io/hostname: matching-engine.prod.ornatetrust.com
     kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
   hosts:
-    - host: matching-engine.ornatetrust.com
+    - host: matching-engine.prod.ornatetrust.com
       paths:
         - path: /
           pathType: ImplementationSpecific
